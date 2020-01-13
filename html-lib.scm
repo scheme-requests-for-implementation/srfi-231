@@ -658,7 +658,7 @@
 
 (define-tag menu single-attributes: (compact))
 
-(define-tag meta end-tag?: #f allow-core-attributes?: #f attributes: (charset content dir http-equiv lang name scheme))
+(define-tag meta end-tag?: #f start-newline?: #t allow-core-attributes?: #f attributes: (charset content dir http-equiv lang name scheme))
 
 (define-tag noframes)
 
@@ -689,7 +689,7 @@
 
 (define-tag samp)
 
-(define-tag script start-newline?: #t allow-core-attributes?: #f attributes: (charset language src type) single-attributes: (defer))
+(define-tag script start-newline?: #t allow-core-attributes?: #f attributes: (charset language src type crossorigin integrity) single-attributes: (defer))
 
 (define-tag select start-newline?: #t attributes: (name onblur onchange onfocus size tabindex) single-attributes: (disabled multiple))
 

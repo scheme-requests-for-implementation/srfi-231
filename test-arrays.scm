@@ -1,6 +1,8 @@
-;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
+(declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
+(include "generic-arrays.scm")
 (declare (inlining-limit 0))
 (define tests 100)
+(set! tests tests)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -34,14 +36,14 @@
        ((= ,var ,n))
      ,@body))
 
+;;; requires make-list function
+
 (define (random a #!optional b)
   (if b
       (+ a (random-integer (- b a)))
       (random-integer a)))
 
-(include "generic-arrays.scm")
-
-(declare (generic))
+;; (include "generic-arrays.scm")
 
 (pp "Interval error tests")
 
@@ -233,10 +235,10 @@
      (interval-projections (make-interval (list->vector lower)
                                           (list->vector upper))
                            right-dimension)
-     (list (make-interval (list->vector (reverse (list-tail (reverse lower) (- (length lower) left-dimension))))
-			  (list->vector (reverse (list-tail (reverse upper) (- (length upper) left-dimension)))))
-	   (make-interval (list->vector (list-tail lower left-dimension))
-			  (list->vector (list-tail upper left-dimension)))))))
+     (list (make-interval (list->vector (take lower left-dimension))
+			  (list->vector (take upper left-dimension)))
+	   (make-interval (list->vector (drop lower left-dimension))
+			  (list->vector (drop upper left-dimension)))))))
 
 
 (pp "interval-contains-multi-index? error tests")
@@ -289,6 +291,10 @@
 (test (interval-subset? (make-interval '#(1 2 3) '#(4 5 6)) #f)
       "interval-subset?: Not all arguments are intervals: ")
 
+(test (interval-subset? (make-interval '#(1) '#(2))
+                        (make-interval '#(0 0) '#(1 2)))
+      "interval-subset?: The arguments do not have the same dimension: ")
+
 (pp "interval-subset? result tests")
 
 (do ((i 0 (+ i 1)))
@@ -338,19 +344,19 @@
 (test (interval-for-each 1 (make-interval '#(3) '#(4)))
       "interval-for-each: Argument is not a procedure: ")
 
-(define (iota a b)
+(define (local-iota a b)
   (if (= a b)
       '()
-      (cons a (iota (+ a 1) b))))
+      (cons a (local-iota (+ a 1) b))))
 
 (define (all-elements lower upper)
   (if (null? (cdr lower))
-      (map list (iota (car lower) (car upper)))
+      (map list (local-iota (car lower) (car upper)))
       (apply append (map (lambda (x)
 			   (map (lambda (y)
 				  (cons x y))
 				(all-elements (cdr lower) (cdr upper))))
-			 (iota (car lower) (car upper))))))
+			 (local-iota (car lower) (car upper))))))
 
 (pp "interval-for-each result tests")
 
@@ -377,19 +383,17 @@
 
 (let ((interval (make-interval '#(0 0) '#(100 100))))
   (test (interval-dilate interval 'a '#(-10 10))
-	"interval-dilate: second argument must be a vector: ")
+	"interval-dilate: The second argument is not a vector of exact integers: ")
   (test (interval-dilate 'a '#(10 10) '#(-10 -10))
-	"interval-dilate: first argument is not an interval: ")
+	"interval-dilate: The first argument is not an interval: ")
   (test (interval-dilate interval '#(10 10) 'a)
-	"interval-dilate: third argument must be a vector: ")
+"interval-dilate: The third argument is not a vector of exact integers: "	)
   (test (interval-dilate interval '#(10) '#(-10 -10))
 	"interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: ")
-  (test (interval-dilate interval '#(10 10) '#( -10 a))
-	"interval-dilate: The second and third arguments must contain only exact integers: ")
   (test (interval-dilate interval '#(10 10) '#( -10))
 	"interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: ")
   (test (interval-dilate interval '#(100 100) '#(-100 -100))
-	"interval-dilate: the resulting interval is empty: "))
+	"interval-dilate: The resulting interval is empty: "))
 
 
 
@@ -405,7 +409,7 @@
 			   interval-upper-bounds->list)))))
 
 
-(define (random-interval #!optional (min 1) (max 11) )
+(define (random-interval #!optional (min 1) (max 8) )
   ;; a random interval with min <= dimension < max
   ;; positive and negative lower bounds
   (let* ((lower
@@ -414,10 +418,20 @@
 	       (vector->list (make-vector (random min max)))))
 	 (upper
 	  (map (lambda (x)
-		 (+ (random 1 11) x))
+		 (+ (random 1 8) x))
 	       lower)))
     (make-interval (list->vector lower)
 		   (list->vector upper))))
+
+(define (random-subinterval interval)
+  (let* ((lowers (interval-lower-bounds->vector interval))
+         (uppers (interval-upper-bounds->vector interval))
+         (new-lowers (vector-map random lowers uppers))
+         (new-uppers (vector-map (lambda (x) (+ x 1))
+                                 (vector-map random new-lowers uppers)))
+         (subinterval (make-interval new-lowers new-uppers)))
+    subinterval))
+                                 
 
 (define (random-nonnegative-interval #!optional (min 1) (max 11) )
   ;; a random interval with min <= dimension < max
@@ -434,9 +448,9 @@
 		   (list->vector upper))))
 
 (define (random-positive-vector n #!optional (max 5))
-  (##vector-map (lambda (x)
-                  (random 1 max))
-                (make-vector n)))
+  (vector-map (lambda (x)
+                (random 1 max))
+              (make-vector n)))
 
 (define (random-boolean)
   (zero? (random 2)))
@@ -567,15 +581,15 @@
 	 (coefficients
 	  (map (lambda (x) (* (random-sign)
 			      (random 20)))
-	       (iota 0 old-domain-dimension)))
+	       (local-iota 0 old-domain-dimension)))
 	 (old-indexer
 	  (lambda args
 	    (apply + base (map * args coefficients))))
 	 (new-domain->old-domain-coefficients
 	  (map (lambda (x)
 		 (map (lambda (x) (* (random-sign) (random 10)))
-		      (iota 0 new-domain-dimension)))
-	       (iota 0 old-domain-dimension)))
+		      (local-iota 0 new-domain-dimension)))
+	       (local-iota 0 old-domain-dimension)))
 	 (new-domain->old-domain
 	  (lambda args
 	    (apply values (map (lambda (row)
@@ -992,7 +1006,7 @@
 							   (cadr array-builder))
 					       (car array-builder)
 					       )))
-		 (iota 0 (random 1 7))))
+		 (local-iota 0 (random 1 7))))
 	   (result-array-1
 	    (apply array-map
 		   list
@@ -1061,7 +1075,7 @@
 							   (cadr array-builder))
 					       (car array-builder)
 					       )))
-		 (iota 0 (random 1 7))))
+		 (local-iota 0 (random 1 7))))
 	   (result-array-1
 	    (apply array-map
 		   list
@@ -1258,9 +1272,9 @@
 			       'a)
       "specialized-array-share: safe? is not a boolean: ")
 
-(test (myarray= (list->specialized-array (reverse (iota 0 10))
+(test (myarray= (list->specialized-array (reverse (local-iota 0 10))
 					 (make-interval '#(0) '#(10)))
-		(specialized-array-share (list->specialized-array (iota 0 10)
+		(specialized-array-share (list->specialized-array (local-iota 0 10)
 								  (make-interval '#(0) '#(10)))
 					 (make-interval '#(0) '#(10))
 					 (lambda (i)
@@ -1307,7 +1321,7 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((axes (iota 0 (random 1 5)))
+  (let* ((axes (local-iota 0 (random 1 5)))
 	 (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
 	 (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
 	 (a (array->specialized-array (make-array (make-interval lower-bounds
@@ -1358,7 +1372,7 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((axes (iota 0 (random 1 5)))
+  (let* ((axes (local-iota 0 (random 1 5)))
 	 (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
 	 (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
 	 (a (array->specialized-array (make-array (make-interval lower-bounds
@@ -1427,10 +1441,10 @@
 	   (upper-bounds (interval-upper-bounds->vector int))
 	   (translation (list->vector (map (lambda (x)
 					     (random -10 10))
-					   (iota 0 (vector-length lower-bounds))))))
+					   (local-iota 0 (vector-length lower-bounds))))))
       (interval= (interval-translate int translation)
-		 (make-interval (##vector-map + lower-bounds translation)
-				(##vector-map + upper-bounds translation))))))
+		 (make-interval (vector-map + lower-bounds translation)
+				(vector-map + upper-bounds translation))))))
 
 (let* ((specialized-array (array->specialized-array (make-array (make-interval '#(0 0) '#(10 12))
 								list)))
@@ -1457,11 +1471,11 @@
 			   (map - args (vector->list translation)))))))
   
   (test (array-translate 'a 1)
-	"array-translate: the first argument is not an array: ")
+	"array-translate: The first argument is not an array: ")
   (test (array-translate immutable-array '#(1.))
-	"array-translate: the second argument is not a vector of exact integers: ")
+	"array-translate: The second argument is not a vector of exact integers: ")
   (test (array-translate immutable-array '#(0 2 3))
-	"array-translate: the dimension of the first argument (an array) does not equal the dimension of the second argument (a vector): ")
+	"array-translate: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector): ")
   (let ((specialized-result (array-translate specialized-array translation)))
     (test (specialized-array? specialized-result)
 	  #t))
@@ -1558,13 +1572,13 @@
        (permutation '#(1 0)))
   
   (test (array-permute 'a 1)
-	"array-permute: the first argument is not an array: ")
+	"array-permute: The first argument is not an array: ")
   (test (array-permute immutable-array '#(1.))
-	"array-permute: the second argument is not a permutation: ")
+	"array-permute: The second argument is not a permutation: ")
   (test (array-permute immutable-array '#(2))
-	"array-permute: the second argument is not a permutation: ")
+	"array-permute: The second argument is not a permutation: ")
   (test (array-permute immutable-array '#(0 1 2))
-	"array-permute: the dimension of the first argument (an array) does not equal the dimension of the second argument (a permutation): ")
+	"array-permute: The dimension of the first argument (an array) does not equal the dimension of the second argument (a permutation): ")
   (let ((specialized-result (array-permute specialized-array permutation)))
     (test (specialized-array? specialized-result)
 	  #t))
@@ -1723,12 +1737,12 @@
   
   (let ((new-uppers (let ((uppers (map interval-upper-bounds->vector args)))
 		      (fold-left (lambda (arg result)
-				   (##vector-map min arg result))
+				   (vector-map min arg result))
 				 (car uppers)
 				 uppers)))
 	(new-lowers (let ((lowers (map interval-lower-bounds->vector args)))
 		      (fold-left (lambda (arg result)
-				   (##vector-map max arg result))
+				   (vector-map max arg result))
 				 (car lowers)
 				 lowers))))
     ;; (pp (list args new-lowers new-uppers (vector-every < new-lowers new-uppers)))
@@ -1742,7 +1756,7 @@
 	 (number-of-intervals (random 1 4))
 	 (intervals (map (lambda (x)
 			   (random-interval dimension (+ dimension 1)))
-			 (iota 0 number-of-intervals))))
+			 (local-iota 0 number-of-intervals))))
     ;; (pp (list intervals (apply my-interval-intersect intervals)))
     (test (apply my-interval-intersect intervals)
 	  (apply interval-intersect intervals))))
@@ -1777,10 +1791,10 @@
 
 (define (myinterval-scale interval scales)
   (make-interval (interval-lower-bounds->vector interval)
-                 (##vector-map (lambda (u s)
-                                 (quotient (+ u s -1) s))
-                               (interval-upper-bounds->vector interval)
-                               scales)))
+                 (vector-map (lambda (u s)
+                               (quotient (+ u s -1) s))
+                             (interval-upper-bounds->vector interval)
+                             scales)))
 
 (do ((i 0 (fx+ i 1)))
     ((fx= i tests))
@@ -1860,61 +1874,196 @@
                       my-sampled-array)
             #t)))
 
-(pp "test array-extract")
+(pp "test array-extract and array-tile")
 
-(let* ((domain (make-interval '#(0 0) '#(10 10)))
-       (array (make-array domain
-			  list))
-       (specialized-array (array->specialized-array array))
-       (mutable-array (let ((copy (array->specialized-array specialized-array)))
-			(make-array domain
-				    (array-getter copy)
-				    (array-setter copy)))))
-  (test (array-extract 'a 10)
-	"array-extract: The first argument is not an array: ")
-  (test (array-extract array 10)
-	"array-extract: The second argument is not an interval: ")
-  (test (array-extract array (make-interval '#(1 1) '#(11 11)))
-	"array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): ")
-  (let* ((sub-interval (make-interval '#(0 0) '#(5 5)))
-	 (specialized-subarray (array-extract specialized-array sub-interval))
-	 (mutable-subarray     (array-extract mutable-array sub-interval)))
-    (test (myarray= (array-extract array sub-interval)
-		    (make-array sub-interval list))
-	  #t)
-    (do ((i 0 (fx+ i 1)))
-	((fx= i 100))
-      (call-with-values
-	  (lambda ()
-	    (random-multi-index domain))
-	(lambda args
-	  (let ((v (random-real)))
-	    (apply (array-setter specialized-subarray)
-		   v
-		   args)
-	    (apply (array-setter mutable-subarray)
-		   v
-		   args)))))
-    (test (myarray= specialized-subarray
-		    mutable-subarray)
-	  #t)))
+(test (array-extract (make-array (make-interval '#(0 0) '#(1 1)) list)
+                     'a)
+      "array-extract: The second argument is not an interval: ")
 
+(test (array-extract 'a (make-interval '#(0 0) '#(1 1)))
+      "array-extract: The first argument is not an array: ")
+
+(test (array-extract (make-array (make-interval '#(0 0) '#(1 1)) list)
+                     (make-interval '#(0) '#(1)))
+      "array-extract: The dimension of the second argument (an interval) does not equal the dimension of the domain of the first argument (an array): ")
+
+(test (array-extract (make-array (make-interval '#(0 0) '#(1 1)) list)
+                     (make-interval '#(0 0) '#(1 3)))
+      "array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): ")
+(do ((i 0 (fx+ i 1)))
+    ((fx= i tests))
+  (let* ((domain (random-interval))
+         (subdomain (random-subinterval domain))
+         (spec-A (array->specialized-array (make-array domain list)))
+         (spec-A-extract (array-extract spec-A subdomain))
+         (mut-A (let ((A-prime (array->specialized-array spec-A)))
+                  (make-array domain
+                              (array-getter A-prime)
+                              (array-setter A-prime))))
+         (mut-A-extract (array-extract mut-A subdomain))
+         (immutable-A (let ((A-prime (array->specialized-array spec-A)))
+                        (make-array domain
+                                    (array-getter A-prime))))
+         (immutable-A-extract (array-extract immutable-A subdomain))
+         (spec-B (array->specialized-array (make-array domain list)))
+         (spec-B-extract (array-extract spec-B subdomain))
+         (mut-B (let ((B-prime (array->specialized-array spec-B)))
+                  (make-array domain
+                              (array-getter B-prime)
+                              (array-setter B-prime))))
+         (mut-B-extract (array-extract mut-B subdomain)))
+    ;; test that the extracts are the same kind of arrays as the original
+    (if (not (and (specialized-array? spec-A)
+                  (specialized-array? spec-A-extract)
+                  (mutable-array? mut-A)
+                  (mutable-array? mut-A-extract)
+                  (not (specialized-array? mut-A))
+                  (not (specialized-array? mut-A-extract))
+                  (array? immutable-A)
+                  (array? immutable-A-extract)
+                  (not (mutable-array? immutable-A))
+                  (not (mutable-array? immutable-A-extract))
+                  (equal? (array-domain spec-A-extract) subdomain)
+                  (equal? (array-domain mut-A-extract) subdomain)
+                  (equal? (array-domain immutable-A-extract) subdomain)))
+        (error "extract: Aargh!"))
+    ;; test that applying the original setter to arguments in
+    ;; the subdomain gives the same answer as applying the
+    ;; setter of the extracted array to the same arguments.
+    (for-each (lambda (A B A-extract B-extract)
+                (let ((A-setter (array-setter A))
+                      (B-extract-setter (array-setter B-extract)))
+                  (do ((i 0 (fx+ i 1)))
+                      ((fx= i 100)
+                       (test (myarray= spec-A spec-B)
+                             #t)
+                       (test (myarray= spec-A-extract spec-B-extract)
+                             #t))
+                    (call-with-values
+                        (lambda ()
+                          (random-multi-index subdomain))
+                      (lambda multi-index
+                        (let ((val (random-real)))
+                          (apply A-setter val multi-index)
+                          (apply B-extract-setter val multi-index)))))))
+              (list spec-A mut-A)
+              (list spec-B mut-B)
+              (list spec-A-extract mut-A-extract)
+              (list spec-B-extract mut-B-extract))))
+    
+
+(test (array-tile 'a '#(10))
+      "array-tile: The first argument is not an array: ")
+(test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) 'a)
+      "array-tile: The second argument is not a vector of exact positive integers: ")
+(test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(a a))
+      "array-tile: The second argument is not a vector of exact positive integers: ")
+(test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(-1 1))
+      "array-tile: The second argument is not a vector of exact positive integers: ")
+(test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
+      "array-tile: The dimension of the first argument (an array) does not equal the length of the second argument (a vector): ")
+
+(define (ceiling-quotient x d)
+  ;; assumes x and d are positive
+  (quotient (+ x d -1) d))
+
+(define (my-array-tile array sidelengths)
+  ;; an alternate definition more-or-less from the srfi document
+  (let* ((domain
+          (array-domain array))
+         (lowers
+          (##interval-lower-bounds domain))
+         (uppers
+          (##interval-upper-bounds domain))
+         (result-lowers
+          (vector-map (lambda (x)
+                        0)
+                      lowers))
+         (result-uppers
+          (vector-map (lambda (l u s)
+                        (ceiling-quotient (- u l) s))
+                      lowers uppers sidelengths)))
+    (make-array (make-interval result-lowers result-uppers)
+                (lambda i
+                  (let* ((vec-i
+                          (list->vector i))
+                         (result-lowers
+                          (vector-map (lambda (l i s)
+                                        (+ l (* i s)))
+                                      lowers vec-i sidelengths))
+                         (result-uppers
+                          (vector-map (lambda (l u i s)
+                                        (min u (+ l (* (+ i 1) s))))
+                                      lowers uppers vec-i sidelengths)))
+                    (array-extract array
+                                   (make-interval result-lowers result-uppers)))))))
+
+(do ((i 0 (fx+ i 1)))
+    ((fx= i tests))
+  (let* ((domain
+          (random-interval))
+         (array
+          (let ((res (make-array domain list)))
+            (case (random-integer 3)
+              ;; immutable
+              ((0) res)
+              ;; specialized
+              ((1) (array->specialized-array res))
+              (else
+               ;; mutable, but not specialized
+               (let ((res (array->specialized-array res)))
+                 (make-array domain (array-getter res) (array-setter res)))))))
+         (lowers
+          (##interval-lower-bounds domain))
+         (uppers
+          (##interval-upper-bounds domain))
+         (sidelengths
+          (vector-map (lambda (l u)
+                        (let ((dim (- u l)))
+                          (random 1 (ceiling-quotient (* dim 7) 5))))
+                      lowers uppers))
+         (result
+          (array-tile array sidelengths))
+         (test-result
+          (my-array-tile array sidelengths)))
+    
+    ;; extract-array is tested independently, so we just make a few tests.
+
+    ;; test all the subdomain tiles are the same
+    (test (array-every (lambda (r t)
+                         (equal? (array-domain r) (array-domain t)))
+                       result test-result)
+          #t)
+    ;; test that the subarrays are the same type
+    (test (array-every (lambda (r t)
+                         (and 
+                          (eq? (mutable-array? r) (mutable-array? t))
+                          (eq? (mutable-array? r) (mutable-array? array))
+                          (eq? (specialized-array? r) (specialized-array? t))
+                          (eq? (specialized-array? r) (specialized-array? array))))
+                       result test-result)
+          #t)
+    ;; test that the first tile has the right values
+    (test (myarray= (apply (array-getter result) (make-list (vector-length lowers) 0))
+                    (apply (array-getter test-result) (make-list (vector-length lowers) 0)))
+          #t)))
+    
 (pp "array-reverse tests")
 
 (test (array-reverse 'a 'a)
-      "array-reverse: the first argument is not an array: ")
+      "array-reverse: The first argument is not an array: ")
 
 (test (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
                      'a)
-      "array-reverse: the second argument is not a vector of booleans: ")
+      "array-reverse: The second argument is not a vector of booleans: ")
 
 (test (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
                      '#(1 0))
-      "array-reverse: the second argument is not a vector of booleans: ")
+      "array-reverse: The second argument is not a vector of booleans: ")
 
 (test (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
                      '#(#t))
-      "array-reverse: the dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): ")
+      "array-reverse: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): ")
 
 
 (define (myarray-reverse array flip?)
@@ -1960,7 +2109,7 @@
                            (make-array (array-domain temp)
                                        (array-getter temp)
                                        (array-setter temp)))))))
-         (flips (##vector-map (lambda (x) (random-boolean)) (make-vector (interval-dimension domain))))
+         (flips (vector-map (lambda (x) (random-boolean)) (make-vector (interval-dimension domain))))
          (reversed-array (array-reverse Array flips))
          (my-reversed-array (myarray-reverse Array flips)))
     
@@ -1977,6 +2126,117 @@
     (test (myarray= reversed-array
                     my-reversed-array)
           #t)))
+
+(pp "array-assign! tests")
+
+(test (array-assign! 'a 'a)
+      "array-assign!: The first argument is not a mutable array: ")
+
+(test (array-assign! (make-array (make-interval '#(0 0) '#(1 1)) values) 'a)
+      "array-assign!: The first argument is not a mutable array: ")
+
+(test (array-assign! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
+      "array-assign!: The second argument is not an array: ")
+
+(test (array-assign! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values))
+                     (make-array (make-interval '#(0 0) '#(2 1)) values))
+      "array-assign!: The arguments do not have the same domain: ")
+
+(do ((i 0 (fx+ i 1)))
+    ((fx= i tests))
+  (let* ((interval
+          (random-interval 1 6))
+         (subinterval
+          (random-subinterval interval))
+         (specialized-array
+          (array->specialized-array (make-array interval list)))
+         (mutable-array
+          (let ((specialized-array (array->specialized-array (make-array interval list))))
+            (make-array interval
+                        (array-getter specialized-array)
+                        (array-setter specialized-array))))
+         (specialized-subarray
+          (array-extract specialized-array subinterval))
+         (mutable-subarray
+          (array-extract mutable-array subinterval))
+         (new-subarray
+          (array->specialized-array (make-array subinterval (lambda args (reverse args))))))
+    (array-assign! specialized-subarray new-subarray)
+    (array-assign! mutable-subarray new-subarray)
+    (if (not (myarray= specialized-array
+                       (make-array interval
+                                   (lambda multi-index
+                                     (if (apply interval-contains-multi-index? subinterval multi-index)
+                                         (reverse multi-index)
+                                         multi-index)))))
+        (error "arggh"))
+    (test (myarray= mutable-array
+                    (make-array interval
+                                (lambda multi-index
+                                  (if (apply interval-contains-multi-index? subinterval multi-index)
+                                      (reverse multi-index)
+                                      multi-index))))
+          #t)))
+         
+(pp "array-swap! tests")
+
+(test (array-swap! 'a 'a)
+      "array-swap!: The first argument is not a mutable array: ")
+
+(test (array-swap! (make-array (make-interval '#(0 0) '#(1 1)) values) 'a)
+      "array-swap!: The first argument is not a mutable array: ")
+
+(test (array-swap! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
+      "array-swap!: The second argument is not a mutable array: ")
+
+(test (array-swap! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values))
+                   (make-array (make-interval '#(0 0) '#(1 1)) values))
+      "array-swap!: The second argument is not a mutable array: ")
+
+(test (array-swap! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values))
+                   (array->specialized-array (make-array (make-interval '#(0 0) '#(2 1)) values)))
+      "array-swap!: The arguments do not have the same domain: ")
+
+(do ((i 0 (fx+ i 1)))
+    ((fx= i tests))
+  (let* ((interval
+          (random-interval 1 6))
+         (subinterval
+          (random-subinterval interval))
+         (specialized-array  ;; multi-index in order
+          (array->specialized-array (make-array interval list)))
+         (mutable-array      ;; multi-index in reversed ordr
+          (let ((specialized-array
+                 (array->specialized-array
+                  (make-array interval (lambda args (reverse args))))))
+            (make-array interval
+                        (array-getter specialized-array)
+                        (array-setter specialized-array))))
+         (specialized-subarray
+          (array-extract specialized-array subinterval))
+         (mutable-subarray
+          (array-extract mutable-array subinterval)))
+    (if (zero? (random 0 2))
+        (array-swap! specialized-subarray mutable-subarray)
+        (array-swap! mutable-subarray specialized-subarray))
+    (test (myarray= specialized-array
+                    ;; list of args, reversed in subarray
+                    (make-array interval
+                                (lambda multi-index
+                                  (if (apply interval-contains-multi-index? subinterval multi-index)
+                                      (reverse multi-index)
+                                      multi-index))))
+          #t)
+    (test (myarray= mutable-array
+                    ;; list of reversed args, except in subarray
+                    (make-array interval
+                                (lambda multi-index
+                                  (if (apply interval-contains-multi-index? subinterval multi-index)
+                                      multi-index
+                                      (reverse multi-index)))))
+          #t)))
+
+
 
 (pp "Miscellaneous error tests")
 
@@ -2100,6 +2360,48 @@
       (test (myarray= Array new-array)
 	    #t))))
 
+(pp "interval-cartesian-product and array-outer-product")
+
+(define (my-interval-cartesian-product . args)
+  (make-interval (list->vector (apply append (map interval-lower-bounds->list args)))
+                 (list->vector (apply append (map interval-upper-bounds->list args)))))
+
+(test (interval-cartesian-product 'a)
+      "interval-cartesian-product: Not all arguments are intervals: ")
+
+(test (interval-cartesian-product (make-interval '#(0) '#(1)) 'a)
+      "interval-cartesian-product: Not all arguments are intervals: ")
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((intervals
+          (map (lambda (ignore)
+                 (random-interval 1 4))
+               (make-list (random 1 3)))))
+    (test (apply interval-cartesian-product intervals)
+          (apply my-interval-cartesian-product intervals))))
+
+(let ((test-array (make-array  (make-interval '#(0) '#(1)) list)))
+
+  (test (array-outer-product 'a test-array test-array)
+        "array-outer-product: The first argument is not a procedure: ")
+
+  (test (array-outer-product append 'a test-array)
+        "array-outer-product: The second argument is not an array: ")
+
+  (test (array-outer-product append test-array 'a)
+        "array-outer-product: The third argument is not an array: "))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((arrays
+          (map (lambda (ignore)
+                 (make-array (random-interval 1 5) list))
+               (make-list 2))))
+    (test (myarray= (apply array-outer-product append arrays)
+                    (make-array (apply my-interval-cartesian-product (map array-domain arrays))
+                                list))
+          #t)))
 
 (pp "Test code from the SRFI document")
 
@@ -2116,7 +2418,7 @@
       #t)
 
 (test (interval-dilate (make-interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50))
-      "interval-dilate: the resulting interval is empty: ")
+      "interval-dilate: The resulting interval is empty: ")
 
 (define a (make-array (make-interval '#(1 1) '#(11 11))
 		      (lambda (i j)
@@ -2231,14 +2533,191 @@
 			  (else
 			   (error "read-pgm: not a pgm file"))))))))))
 
-(define a (read-pgm "test.pgm"))
+(define (write-pgm pgm-data file #!optional force-ascii)
+  (call-with-output-file
+      file
+    (lambda (port)
+      (let* ((greys
+              (pgm-greys pgm-data))
+	     (pgm-array
+              (pgm-pixels pgm-data))
+	     (domain
+              (array-domain pgm-array))
+	     (rows
+              (fx- (interval-upper-bound domain 0)
+                   (interval-lower-bound domain 0)))
+	     (columns
+              (fx- (interval-upper-bound domain 1)
+                   (interval-lower-bound domain 1))))
+	(if force-ascii
+	    (display "P2" port)
+	    (display "P5" port))
+	(newline port)
+	(display columns port) (display " " port)
+	(display rows port) (newline port)
+	(display greys port) (newline port)
+	(array-for-each (if force-ascii
+                            (let ((next-pixel-in-line 1))
+                              (lambda (p)
+                                (write p port)
+                                (if (fxzero? (fxand next-pixel-in-line 15))
+                                    (begin
+                                      (newline port)
+                                      (set! next-pixel-in-line 1))
+                                    (begin
+                                      (display " " port)
+                                      (set! next-pixel-in-line (fx+ 1 next-pixel-in-line))))))
+                            (if (fx< greys 256)
+                                (lambda (p)
+                                  (write-u8 p port))
+                                (lambda (p)
+                                  (write-u8 (fxand p 255) port)
+                                  (write-u8 (fxarithmetic-shift-right p 8) port))))
+                        pgm-array)))))
 
-(test (and (array? (pgm-pixels a))
-	   (interval= (array-domain (pgm-pixels a))
-		      (make-interval '#(0 0) '#(128 128)))
-	   (= ((array-getter (pgm-pixels a)) 127 127)
-	      225))
-      #t)
+(define test-pgm (read-pgm "girl.pgm"))
+
+(define (array-dot-product a b)
+  (array-fold (lambda (x y)
+                (+ x y))
+              0
+              (array-map
+               (lambda (x y)
+                 (* x y))
+               a b)))
+
+(define (array-convolve source filter)
+  (let* ((source-domain
+          (array-domain source))
+         (S_
+          (array-getter source))
+         (filter-domain
+          (array-domain filter))
+         (F_
+          (array-getter filter))
+         (result-domain
+          (interval-dilate
+           source-domain
+           ;; left bound of an interval is an equality,
+           ;; right bound is an inequality, hence the
+           ;; the difference in the following two expressions
+           (vector-map -
+                       (interval-lower-bounds->vector filter-domain))
+           (vector-map (lambda (x)
+                         (- 1 x))
+                       (interval-upper-bounds->vector filter-domain)))))
+    (make-array result-domain
+                #|
+                This was my first attempt at convolve, but the problem is that
+                it creates two specialized arrays per pixel, which is a lot of
+                overhead (computing an indexer and a setter, for example) for
+                not very much computation.
+                (lambda (i j)
+                  (array-dot-product
+                   (array-extract
+                    (array-translate source (vector (- i) (- j)))
+                    filter-domain)
+                   filter))
+
+                The times are
+(time (let ((greys (pgm-greys test-pgm))) (write-pgm (make-pgm greys (array-map (lambda (p) (round-and-clip p greys)) (array-convolve (pgm-pixels test-pgm) sharpen-filter))) "sharper-test.pgm")))
+    0.514201 secs real time
+    0.514190 secs cpu time (0.514190 user, 0.000000 system)
+    64 collections accounting for 0.144107 secs real time (0.144103 user, 0.000000 system)
+    663257736 bytes allocated
+    676 minor faults
+    no major faults
+(time (let* ((greys (pgm-greys test-pgm)) (edge-array (array->specialized-array (array-map abs (array-convolve (pgm-pixels test-pgm) edge-filter)))) (max-pixel (array-fold max 0 edge-array)) (normalizer (/ greys max-pixel))) (write-pgm (make-pgm greys (array-map (lambda (p) (- greys (round-and-clip (* p normalizer) greys))) edge-array)) "edge-test.pgm")))
+    0.571130 secs real time
+    0.571136 secs cpu time (0.571136 user, 0.000000 system)
+    57 collections accounting for 0.154109 secs real time (0.154093 user, 0.000000 system)
+    695631496 bytes allocated
+    959 minor faults
+    no major faults
+
+
+In the following, where we just package up a little array for each result pixel
+that computes the componentwise products when we need them, the times are
+
+(time (let ((greys (pgm-greys test-pgm))) (write-pgm (make-pgm greys (array-map (lambda (p) (round-and-clip p greys)) (array-convolve (pgm-pixels test-pgm) sharpen-filter))) "sharper-test.pgm")))
+    0.095921 secs real time
+    0.095922 secs cpu time (0.091824 user, 0.004098 system)
+    6 collections accounting for 0.014276 secs real time (0.014275 user, 0.000000 system)
+    62189720 bytes allocated
+    678 minor faults
+    no major faults
+(time (let* ((greys (pgm-greys test-pgm)) (edge-array (array->specialized-array (array-map abs (array-convolve (pgm-pixels test-pgm) edge-filter)))) (max-pixel (array-fold max 0 edge-array)) (normalizer (inexact (/ greys max-pixel)))) (write-pgm (make-pgm greys (array-map (lambda (p) (- greys (round-and-clip (* p normalizer) greys))) edge-array)) "edge-test.pgm")))
+    0.165065 secs real time
+    0.165066 secs cpu time (0.165061 user, 0.000005 system)
+    13 collections accounting for 0.033885 secs real time (0.033878 user, 0.000000 system)
+    154477720 bytes allocated
+    966 minor faults
+    no major faults
+            |#
+                (lambda (i j)
+                  (array-fold
+                   (lambda (p q)
+                     (+ p q))
+                   0
+                   (make-array
+                    filter-domain
+                    (lambda (k l)
+                      (* (S_ (+ i k)
+                             (+ j l))
+                         (F_ k l))))))
+                )))
+
+(define sharpen-filter
+  (list->specialized-array
+   '(0 -1  0
+    -1  5 -1
+     0 -1  0)
+   (make-interval '#(-1 -1) '#(2 2))))
+
+(define edge-filter
+  (list->specialized-array
+   '(0 -1  0
+    -1  4 -1
+     0 -1  0)
+   (make-interval '#(-1 -1) '#(2 2))))
+
+(define (round-and-clip pixel max-grey)
+  (max 0 (min (exact (round pixel)) max-grey)))
+
+(time
+ (let ((greys (pgm-greys test-pgm)))
+   (write-pgm
+    (make-pgm
+     greys
+     (array-map (lambda (p)
+                  (round-and-clip p greys))
+                (array-convolve
+                 (pgm-pixels test-pgm)
+                 sharpen-filter)))
+    "sharper-test.pgm")))
+
+(time
+ (let* ((greys (pgm-greys test-pgm))
+        (edge-array
+         (array->specialized-array
+          (array-map
+           abs
+           (array-convolve
+            (pgm-pixels test-pgm)
+            edge-filter))))
+        (max-pixel
+         (array-fold max 0 edge-array))
+        (normalizer
+         (inexact (/ greys max-pixel))))
+   (write-pgm
+    (make-pgm
+     greys
+     (array-map (lambda (p)
+                  (- greys
+                     (round-and-clip (* p normalizer) greys)))
+                edge-array))
+    "edge-test.pgm")))
+
 
 (define m (array->specialized-array (make-array (make-interval '#(0 0) '#(40 30)) (lambda (i j) (exact->inexact (+ i j))))))
 
@@ -2261,8 +2740,6 @@
 (test (operator-max-norm m) 1940.)
 
 (test (operator-one-norm m) 1605.)
-
-(define vector-map ##vector-map)
 
 (define (all-second-differences image direction)
   (let ((image-domain (array-domain image)))
@@ -2311,85 +2788,116 @@
   (display "\nSecond-difference images in the direction $k\\times (1,-1)$, $k=1,2,...$, wherever they're defined:\n")
   (expose (all-second-differences image '#(1 -1))))
 
-(define (1D-Haar-loop a)
-  (let ((getter (array-getter a))
-	(setter (array-setter a))
-	(n (interval-upper-bound (array-domain a) 0)))
-    (do ((i 0 (fx+ i 2)))
-	((fx= i n))
-      (let* ((a_i   (getter i))
-	     (a_i+1 (getter (fx+ i 1)))
-	     (scaled-sum        (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
-	     (scaled-difference (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
-	(setter scaled-sum i)
-	(setter scaled-difference (fx+ i 1))))))
-
-(define (1D-Haar-transform a)
-  ;; works only on specialized arrays with domains $[0, 2^k)$ for some $k$
-  (let ((n (interval-upper-bound (array-domain a) 0)))
-    (if (fx< 1 n)
-	(begin
-	  ;; calculate the scaled sums and differences
-	  (1D-Haar-loop a)
-	  ;; Apply the transform to the subarray of scaled sums
-	  (1D-Haar-transform (array-sample a '#(2)))))))
-
-(define (1D-Haar-inverse-transform a)
-  ;; works only on specialized arrays with domains $[0, 2^k)$ for some $k$
-  (let* ((n (interval-upper-bound (array-domain a) 0)))
-    (if (fx< 1 n)
-	(begin
-	  ;; Apply the inverse transform to get the array of scaled sums
-	  (1D-Haar-inverse-transform (array-sample a '#(2)))
-	  ;; reconstruct the array values from the scaled sums and differences
-	  (1D-Haar-loop a)))))
-
 (define (make-separable-transform 1D-transform)
-  (lambda (array)
-    ;; Works on arrays of any dimension.
+  (lambda (a)
     (let* ((n
-	    (array-dimension array))
+	    (array-dimension a))
 	   (permutation
 	    ;; we start with the identity permutation
 	    (let ((result (make-vector n)))
 	      (do ((i 0 (fx+ i 1)))
 		  ((fx= i n) result)
 		(vector-set! result i i)))))
-      ;; We apply the one-dimensional transform in each coordinate direction.
+      ;; We apply the one-dimensional transform to all pencils
+      ;; in each coordinate direction.
       (do ((d 0 (fx+ d 1)))
 	  ((fx= d n))
 	;; Swap the d'th and n-1'st coordinates
 	(vector-set! permutation (fx- n 1) d)
 	(vector-set! permutation d (fx- n 1))
-	;; Apply the transform in the d'th coordinate direction
-	;; to all \"pencils\" in that direction
 	;; array-permute re-orders the coordinates to put the
 	;; d'th coordinate at the end, array-curry returns
 	;; an $n-1$-dimensional array of one-dimensional subarrays,
 	;; and 1D-transform is applied to each of those
 	;; one-dimensional sub-arrays.
 	(array-for-each 1D-transform
-			(array-curry (array-permute array permutation)
-				     1))
+			(array-curry (array-permute a permutation) 1))
 	;; return the permutation to the identity
 	(vector-set! permutation d d)
 	(vector-set! permutation (fx- n 1) (fx- n 1))))))
 
-(define Haar-transform
+(define (recursively-apply-transform-and-downsample transform)
+  (lambda (a)
+    (let ((sample-vector (make-vector (array-dimension a) 2)))
+      (define (helper a)
+        (if (fx< 1 (interval-upper-bound (array-domain a) 0))
+            (begin
+              (transform a)
+              (helper (array-sample a sample-vector)))))
+      (helper a))))
+
+(define (recursively-downsample-and-apply-transform transform)
+  (lambda (a)
+    (let ((sample-vector (make-vector (array-dimension a) 2)))
+      (define (helper a)
+        (if (fx< 1 (interval-upper-bound (array-domain a) 0))
+            (begin
+              (helper (array-sample a sample-vector))
+              (transform a))))
+      (helper a))))
+
+(define (1D-Haar-loop a)
+  (let ((a_ (array-getter a))
+	(a! (array-setter a))
+	(n (interval-upper-bound (array-domain a) 0)))
+    (do ((i 0 (fx+ i 2)))
+	((fx= i n))
+      (let* ((a_i               (a_ i))
+	     (a_i+1             (a_ (fx+ i 1)))
+	     (scaled-sum        (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
+	     (scaled-difference (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
+	(a! scaled-sum i)
+	(a! scaled-difference (fx+ i 1))))))
+
+(define 1D-Haar-transform
+  (recursively-apply-transform-and-downsample 1D-Haar-loop))
+
+(define 1D-Haar-inverse-transform
+  (recursively-downsample-and-apply-transform 1D-Haar-loop))
+
+(define hyperbolic-Haar-transform
   (make-separable-transform 1D-Haar-transform))
-(define Haar-inverse-transform
+
+(define hyperbolic-Haar-inverse-transform
   (make-separable-transform 1D-Haar-inverse-transform))
 
-(let* ((image
-        (array->specialized-array
-         (make-array (make-interval '#(0 0) '#(4 4))
-                     (lambda (i j)
-                       (if (fx< i 2) 1. -1.)))))
-       (image-copy (array->specialized-array image))
-       (mutable-image
-        (make-array (array-domain image-copy)
-                    (array-getter image-copy)
-                    (array-setter image-copy))))
+(define Haar-transform
+  (recursively-apply-transform-and-downsample
+   (make-separable-transform 1D-Haar-loop)))
+
+(define Haar-inverse-transform
+  (recursively-downsample-and-apply-transform
+   (make-separable-transform 1D-Haar-loop)))
+
+(let ((image
+       (array->specialized-array
+        (make-array (make-interval '#(0 0) '#(4 4))
+                    (lambda (i j)
+                      (case i
+                        ((0) 1.)
+                        ((1) -1.)
+                        (else 0.)))))))
+  (display "\nInitial image: \n")
+  (pretty-print (list (array-domain image)
+		      (array->list image)))
+  (hyperbolic-Haar-transform image)
+  (display "\nArray of hyperbolic Haar wavelet coefficients: \n")
+  (pretty-print (list (array-domain image)
+		      (array->list image)))
+  (hyperbolic-Haar-inverse-transform image)
+  (display "\nReconstructed image: \n")
+  (pretty-print (list (array-domain image)
+		      (array->list image))))
+
+
+(let ((image
+       (array->specialized-array
+        (make-array (make-interval '#(0 0) '#(4 4))
+                    (lambda (i j)
+                      (case i
+                        ((0) 1.)
+                        ((1) -1.)
+                        (else 0.)))))))
   (display "\nInitial image: \n")
   (pretty-print (list (array-domain image)
 		      (array->list image)))
@@ -2398,54 +2906,132 @@
   (pretty-print (list (array-domain image)
 		      (array->list image)))
   (Haar-inverse-transform image)
-  (display "\nArray reconstructed from Haar wavelet coefficients: \n")
+  (display "\nReconstructed image: \n")
   (pretty-print (list (array-domain image)
-		      (array->list image)))
-  (display "\nInitial image: \n")
-  (pretty-print (list (array-domain mutable-image)
-		      (array->list mutable-image)))
-  (Haar-transform mutable-image)
-  (display "\nArray of Haar wavelet coefficients: \n")
-  (pretty-print (list (array-domain mutable-image)
-		      (array->list mutable-image)))
-  (Haar-inverse-transform mutable-image)
-  (display "\nArray reconstructed from Haar wavelet coefficients: \n")
-  (pretty-print (list (array-domain mutable-image)
-		      (array->list mutable-image))))
+		      (array->list image))))
 
-;;; Some timings
+ 
+(define (array-display A)
+  ;; Displays a two-dimensional array row by row.
+  (array-for-each (lambda (row)
+                    (array-for-each (lambda (x)
+                                      (display x)
+                                      (display "\t"))
+                                    row)
+                    (newline))
+                  (array-curry A 1)))
 
-(pp "Timing generic storage class")
+(define (LU-decomposition A)
+  ;; Assumes the domain of A is [0,n)\\times [0,n)
+  ;; and that Gaussian elimination can be applied
+  ;; without pivoting.
+  (let ((n
+         (interval-upper-bound (array-domain A) 0))
+        (A_
+         (array-getter A)))
+    (do ((i 0 (fx+ i 1)))
+        ((= i (fx- n 1)) A)
+      (let* ((pivot
+              (A_ i i))
+             (column/row-domain
+              ;; both will be one-dimensional
+              (make-interval (vector (+ i 1))
+                             (vector n)))
+             (column
+              ;; the column below the (i,i) entry
+              (specialized-array-share A
+                                       column/row-domain
+                                       (lambda (k)
+                                         (values k i))))
+             (row
+              ;; the row to the right of the (i,i) entry
+              (specialized-array-share A
+                                       column/row-domain
+                                       (lambda (k)
+                                         (values i k))))
 
-(let* ((rows 1024)
-       (specialized-image
-        (array->specialized-array
-         (make-array (make-interval '#(0 0) (vector rows rows))
-                     (lambda (i j)
-                       (if (fx< (* 2 i) rows) 1. -1.)))))
-       (mutable-image
-        (make-array (array-domain specialized-image)
-                    (array-getter specialized-image)
-                    (array-setter specialized-image))))
-  (time (begin (Haar-transform specialized-image)
-               (Haar-inverse-transform specialized-image)))
-  (time (begin (Haar-transform mutable-image)
-               (Haar-inverse-transform mutable-image))))
+             ;; the subarray to the right and
+             ;;below the (i,i) entry
+             (subarray
+              (array-extract
+               A (make-interval
+                  (vector (fx+ i 1) (fx+ i 1))
+                  (vector n         n)))))
+        ;; compute multipliers
+        (array-assign!
+         column
+         (array-map (lambda (x)
+                      (/ x pivot))
+                    column))
+        ;; subtract the outer product of i'th
+        ;; row and column from the subarray
+        (array-assign!
+         subarray
+         (array-map -
+                    subarray
+                    (array-outer-product * column row)))))))
 
-(pp "Timing f64 storage class")
 
-(let* ((rows 1024)
-       (specialized-image
-        (array->specialized-array
-         (make-array (make-interval '#(0 0) (vector rows rows))
-                     (lambda (i j)
-                       (if (fx< (* 2 i) rows) 1. -1.)))
-         f64-storage-class))
-       (mutable-image
-        (make-array (array-domain specialized-image)
-                    (array-getter specialized-image)
-                    (array-setter specialized-image))))
-  (time (begin (Haar-transform specialized-image)
-               (Haar-inverse-transform specialized-image)))
-  (time (begin (Haar-transform mutable-image)
-               (Haar-inverse-transform mutable-image))))
+(define A
+  ;; A Hilbert matrix
+  (array->specialized-array
+   (make-array (make-interval '#(0 0)
+                              '#(4 4))
+               (lambda (i j)
+                 (/ (+ 1 i j))))))
+
+(display "\nHilbert matrix:\n\n")
+(array-display A)
+
+(LU-decomposition A)
+
+(display "\nLU decomposition of Hilbert matrix:\n\n")
+
+(array-display A)
+
+;;; Functions to extract the lower- and upper-triangular
+;;; matrices of the LU decomposition of A.
+
+(define (L a)
+  (let ((a_ (array-getter a))
+        (d  (array-domain a)))
+    (make-array
+     d
+     (lambda (i j)
+       (cond ((= i j) 1)        ;; diagonal
+             ((> i j) (a_ i j)) ;; below diagonal
+             (else 0))))))      ;; above diagonal
+
+(define (U a)
+  (let ((a_ (array-getter a))
+        (d  (array-domain a)))
+    (make-array
+     d
+     (lambda (i j)
+       (cond ((<= i j) (a_ i j)) ;; diagonal and above
+             (else 0))))))       ;; below diagonal
+
+(display "\nLower triangular matrix of decomposition of Hilbert matrix:\n\n")
+(array-display (L A))
+
+(display "\nUpper triangular matrix of decomposition of Hilbert matrix:\n\n")
+(array-display (U A))
+
+;;; We'll define a brief, not-very-efficient matrix multiply routine.
+
+(define (matrix-multiply a b)
+  (let ((a-rows
+         (array-curry a 1))
+        (b-columns
+         (array-curry (array-permute b '#(1 0)) 1)))
+    (array-outer-product array-dot-product a-rows b-columns)))
+
+;;; We'll check that the product of the result of LU
+;;; decomposition of A is again A.
+
+(define product (matrix-multiply (L A) (U A)))
+
+(display "\nProduct of lower and upper triangular matrices ")
+(display "of LU decomposition of Hilbert matrix:\n\n")
+(array-display product)
+

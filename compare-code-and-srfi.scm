@@ -38,7 +38,7 @@
 		(loop result (read))))))))
 
 (define srfi-names
-  (with-input-from-file "srfi-122.scm"
+  (with-input-from-file "srfi-179.scm"
     (lambda ()
       (let loop ((obj (read)))
 	(if (not (and (list? obj)

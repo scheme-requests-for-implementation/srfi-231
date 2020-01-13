@@ -1,18 +1,15 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nonempty Intervals and Generalized Arrays</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link type="test/css" rel="stylesheet" href="http://srfi.schemers.org/srfi.css">
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
         tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
       });</script>
-    <script crossorigin="anonymous"
-	    integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv"
-	    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
-	    type="text/javascript"></script>
+    <script integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" crossorigin="anonymous" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </head>
   <body>
     <h1>Title</h1>
@@ -20,28 +17,25 @@
     <h2>Author</h2>
     <p>Bradley J. Lucier</p>
     <h2>Status</h2>
-    <p>This SRFI is currently in <em>final</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi minus 122 at srfi dot schemers dot org">srfi-122@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-122">archive</a>.  There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-122">git repository</a> of this document, a reference implementation, a test file, and other materials.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi minus 179 at srfi dot schemers dot org">srfi-179@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-179">archive</a>.  There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-179">git repository</a> of this document, a reference implementation, a test file, and other materials.</p>
     <ul>
-      <li>Received: 2015/7/23</li>
-      <li>Draft #1 published: 2015/7/27</li>
-      <li>Draft #2 published: 2015/7/31</li>
-      <li>Draft #3 published: 2015/7/31</li>
-      <li>Draft #4 published: 2015/9/03</li>
-      <li>Draft #5 published: 2015/9/18</li>
-      <li>Draft #6 published: 2015/10/19</li>
-      <li>Draft #7 published: 2016/8/15</li>
-      <li>Draft #8 published: 2016/8/19</li>
-      <li>Draft #9 published: 2016/8/25</li>
-      <li>Draft #10 published: 2016/8/30</li>
-      <li>Draft #11 published: 2016/9/7</li>
-      <li>Draft #12 published: 2016/9/17</li>
-      <li>Draft #13 published: 2016/11/18</li>
-      <li>Draft #14 published: 2016/11/28</li>
-      <li>Draft #15 published: 2016/12/15</li>
-      <li>Finalized: 2016/12/24</li>
-      <li>Note that the author has made a revised version available.  See <a href="https://srfi-email.schemers.org/srfi-122/msg/7159647">his message</a>.</li>  The new changes are not fixes to errors, so they have not been incorporated here.</ul>
+      <li>Received: 2020/1/11</li></ul>
     <h2>Abstract</h2>
-    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of a rectangular interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$, a subset of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called <i>intervals</i>, which encapsulate the cross product of nonempty intervals of exact integers. Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
+    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of nonempty intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
+    <h2>Rationale</h2>
+    <p>This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.</p>
+    <ul>
+      <li>Provide a <b>general API</b> (Application Program Interface) that specifies the minimal required properties of any given array, without requiring any specific implementation strategy from the programmer for that array.</li>
+      <li>Provide a <b>single, efficient implementation for dense arrays</b> (which we call <i>specialized arrays</i>).</li>
+      <li>Provide <b>useful array transformations</b> by exploiting the algebraic structure of affine one-to-one mappings on multi-indices.</li>
+      <li>Separate <b>the routines that specify the work to be done</b> (<code>array-map</code>, <code>array-outer-product</code>, etc.) from <b>the routines that actually do the work</b> (<code>array-&gt;specialized-array</code>, <code>array-assign!</code>, <code>array-fold</code>, etc.). This approach <b>avoids temporary intermediate arrays</b> in computations.</li>
+      <li>Encourage <b>bulk processing of arrays</b> rather than word-by-word operations.</li></ul>
+    <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-122/">SRFI-122</a> in the following ways:</p>
+    <ul>
+      <li>The procedures <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-assign!</code>, and <code>array-swap!</code> have been added.</li>
+      <li>The discussion of Haar transforms as examples of separable transforms has been corrected.</li>
+      <li>The documentation has a few more examples of image processing algorithms.</li>
+      <li>Some matrix examples have been added to this document and test-arrays.scm.</li></ul>
     <h2>Overview</h2>
     <h3>Bawden-style arrays</h3>
     <p>In a <a href="https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[0,u_0)\times\cdots\times [0,u_{d-1})$.  I'll note that his function <code>array-set!</code> put the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a routine <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a function from the interval $[0,u_0)\times\cdots\times [0,u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden called the mapping specified in <code>make-shared-array</code> <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
@@ -51,12 +45,13 @@
     <h3>Our extensions of Bawden-style arrays</h3>
     <p>We incorporate Bawden-style arrays into this SRFI, but extend them in two relatively minor ways that we find quite useful.</p>
     <p>First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as well as upper bounds, so domains are rectangular, $d$-dimensional intervals $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$.</p>
-    <p>Second, we introduce the notion of a <i>storage class</i>, an object that contains functions that manipulate, store, check, etc., different types of values. A <code>generic-storage-class</code> can manipulate any Scheme value, whereas,e.g., a <code>u1-storage-class</code> can store only the values 0 and 1 in each element of a body.</p>
+    <p>Second, we introduce the notion of a <i>storage class</i>, an object that contains functions that manipulate, store, check, etc., different types of values. A <code>generic-storage-class</code> can manipulate any Scheme value, whereas, e.g., a <code>u1-storage-class</code> can store only the values 0 and 1 in each element of a body.</p>
     <p>We also require that our affine maps be one-to-one, so that if $\vec i\neq\vec j$ then $T(\vec i)\neq T(\vec j)$.  Without this property, modifying the $\vec i$th component of $A$ would cause the $\vec j$th component to change.</p>
     <h3>Common transformations on Bawden-style arrays</h3>
     <p>Requiring the transformations $T_{BA}:D_B\to D_A$ to be affine may seem  esoteric and restricting, but in fact many common and useful array transformations can be expressed in this way.  We give several examples below: </p>
     <ul>
       <li><b>Restricting the domain of an array: </b>  If the domain of $B$, $D_B$, is a subset of the domain of $A$, then $T_{BA}(\vec i)=\vec i$ is a one-to-one affine mapping.  We define <code>array-extract</code> to define this common operation; it's like looking at a rectangular sub-part of a spreadsheet. We use it to extract the common part of overlapping domains of three arrays in an image processing example below. </li>
+      <li><b>Tiling an array: </b>For various reasons (parallel processing, optimizing cache localization, GPU programming, etc.) one may wish to process a large array as a number of subarrays of the same dimensions, which we call <i>tiling</i> the array.  The routine <code>array-tile</code> returns a new array, each entry of which is a subarray extracted (in the sense of <code>array-extract</code>) from the input array.</li>
       <li><b>Translating the domain of an array: </b>If $\vec d$ is a vector of integers, then $T_{BA}(\vec i)=\vec i-\vec d$ is a one-to-one affine map of $D_B=\{\vec i+\vec d\mid \vec i\in D_A\}$ onto $D_A$. We call $D_B$ the <i>translate</i> of $D_A$, and we define <code>array-translate</code> to provide this operation.</li>
       <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.</li>
       <li><b>Currying an array: </b>Let's denote the cross product of two intervals $\text{Int}_1$ and $\text{Int}_2$ by $\text{Int}_1\times\text{Int}_2$; if $\vec j=(j_0,\ldots,j_{r-1})\in \text{Int}_1$ and $\vec i=(i_0,\ldots,i_{s-1})\in \text{Int}_2$, then $\vec j\times\vec i$, which we define to be $(j_0,\ldots,j_{r-1},i_0,\ldots,i_{s-1})$, is in $\text{Int}_1\times\text{Int}_2$. If $D_A=\text{Int}_1\times\text{Int}_2$ and $\vec j\in\text{Int}_1$, then $T_{BA}(\vec i)=\vec j\times\vec i$ is a one-to-one affine mapping from $D_B=\text{Int}_2$ into $D_A$.  For each vector $\vec j$ we can compute a new array in this way; we provide <code>array-curry</code> for this operation, which returns an array whose domain is $\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\text{Int}_2$. Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.</li>
@@ -83,6 +78,8 @@
     <h3>Array-map does not produce a specialized array</h3>
     <p>Daniel Friedman and David Wise wrote a famous paper <a href="http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR44">CONS should not Evaluate its Arguments</a>. In the spirit of that paper, our procedure <code>array-map</code> does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of <code>array-map</code> each time they are accessed.   This immutable array can be passed on to further applications of <code>array-map</code> for further processing, without generating the storage bodies for intermediate arrays.</p>
     <p>We provide the procedure <code>array-&gt;specialized-array</code> to transform a generalized array (like that returned by <code>array-map</code>) to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ operations.</p>
+    <h3>Notational convention</h3>
+    <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of functions that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
     <h2>Issues and Notes</h2>
     <ul>
       <li><b>Relationship to <a href="http://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="http://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
@@ -91,10 +88,7 @@
         <a href="http://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains. 
         <code>interval-projections</code> can be thought of as currying the 
         characteristic function of the interval,  encapsulated here as <code>interval-contains-multi-index?</code>.</li>
-      <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.  There are 
-        natural operations on intervals, like 
-        <pre><code>(interval-cross-product interval1 interval2 ...)</code></pre>(the inverse of <code>interval-projections</code>),
-               which don't seem terribly natural for arrays.</li>
+      <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
       <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li>
       <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would a compatible extension of this SRFI.</li>
       <li><b>No low-level specialized-array constructor. </b>While the author of the SRFI uses mainly <code>(make-array ...)</code>, <code>array-map</code>, and <code>array-&gt;specialized-array</code> to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple <code>(make-array ...)</code> mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.</li></ul>
@@ -123,7 +117,8 @@
         <a href="#interval-intersect">interval-intersect</a>,
         <a href="#interval-translate">interval-translate</a>,
         <a href="#interval-permute">interval-permute</a>,
-        <a href="#interval-scale">interval-scale</a>.</dd>
+        <a href="#interval-scale">interval-scale</a>,
+        <a href="#interval-cartesian-product">interval-cartesian-product</a>.</dd>
       <dt>Storage Classes</dt>
       <dd><a href="#make-storage-class">make-storage-class</a>,
         <a href="#storage-class?">storage-class?</a>,
@@ -166,10 +161,12 @@
         <a href="#array-&gt;specialized-array">array-&gt;specialized-array</a>,
         <a href="#array-curry">array-curry</a>,
         <a href="#array-extract">array-extract</a>,
+        <a href="#array-tile">array-tile</a>,
         <a href="#array-translate">array-translate</a>,
         <a href="#array-permute">array-permute</a>,
         <a href="#array-reverse">array-reverse</a>,
         <a href="#array-sample">array-sample</a>,
+        <a href="#array-outer-product">array-outer-product</a>,
         <a href="#array-map">array-map</a>,
         <a href="#array-for-each">array-for-each</a>,
         <a href="#array-fold">array-fold</a>,
@@ -177,7 +174,9 @@
         <a href="#array-any">array-any</a>,
         <a href="#array-every">array-every</a>,
         <a href="#array-&gt;list">array-&gt;list</a>,
-        <a href="#list-&gt;specialized-array">list-&gt;specialized-array</a>.</dd></dl>
+        <a href="#list-&gt;specialized-array">list-&gt;specialized-array</a>,
+        <a href="#array-assign!">array-assign!</a>,
+        <a href="#array-swap!">array-swap!</a>.</dd></dl>
     <h2>Miscellaneous Functions</h2>
     <p>This document refers to <i>translations</i> and <i>permutations</i>.
        A translation is a vector of exact integers.  A permutation of dimension $n$
@@ -356,6 +355,12 @@
     <p><b>Procedure: </b><code><a name="interval-scale">interval-scale</a> <var>interval</var> <var>scales</var></code></p>
     <p>If <code><var>interval</var></code> is a $d$-dimensional interval $[0,u_1)\times\cdots\times[0,u_{d-1})$ with all lower bounds zero, and <code><var>scales</var></code> is a length-$d$ vector of positive exact integers, which we'll denote by $\vec s$, then <code>interval-scale</code> returns the interval $[0,\operatorname{ceiling}(u_1/s_1))\times\cdots\times[0,\operatorname{ceiling}(u_{d-1}/s_{d-1})$.</p>
     <p>It is an error if  <code><var>interval</var></code> and <code><var>scales</var></code> do not satisfy this condition.</p>
+    <p><b>Procedure: </b><code><a name="interval-cartesian-product">interval-cartesian-product</a> <var>interval</var> . <var>intervals</var></code></p>
+    <p>Implements the Cartesian product of the intervals in <code>(cons <var>interval</var> <var>intervals</var>)</code>. Returns</p>
+    <pre><code>
+(make-interval (list-&gt;vector (apply append (map array-lower-bounds-&gt;list (cons interval intervals))))
+               (list-&gt;vector (apply append (map array-upper-bounds-&gt;list (cons interval intervals)))))</code></pre>
+    <p>It is an error if any argument is not an interval.</p>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
@@ -451,7 +456,7 @@
     <p>defines an array for which <code>(array-getter a)</code> returns 1 when i=j and 0 otherwise.</p>
     <p>Example: </p>
     <pre><code>
-(define sparse-array
+(define a   ;; a sparse array
   (let ((domain
          (make-interval '#(0 0)
                         '#(1000000 1000000)))
@@ -474,11 +479,15 @@
                i
                (cons (cons j v)
                      (vector-ref sparse-rows i)))))))))
-  ((array-getter sparse-array) 12345 6789)  =&gt; 0.
-  ((array-getter sparse-array) 0 0) =&gt; 0.
-  ((array-setter sparse-array) 1.0 0 0) =&gt; undefined
-  ((array-getter sparse-array) 12345 6789)  =&gt; 0.
-  ((array-getter sparse-array) 0 0) =&gt; 1.</code></pre>
+
+(define a_ (array-getter a))
+(define a! (array-setter a))
+
+(a_ 12345 6789)  =&gt; 0.
+(a_ 0 0) =&gt; 0.
+(a! 1.0 0 0) =&gt; undefined
+(a_ 12345 6789)  =&gt; 0.
+(a_ 0 0) =&gt; 1.</code></pre>
     <p><b>Procedure: </b><code><a name="array?">array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if  <code><var>obj</var></code> is an array and <code>#f</code> otherwise.</p>
     <p><b>Procedure: </b><code><a name="array-domain">array-domain</a> <var>array</var></code></p>
@@ -489,14 +498,16 @@
       It is an error to call <code>array-domain</code> or <code>array-getter</code> if <code><var>array</var></code> is not an array.</p>
     <p>Example: </p>
     <pre><code>
-  (define a (make-array (make-interval '#(1 1) '#(11 11))
-                        (lambda (i j)
-                          (if (= i j)
-                              1
-                              0))))
-  ((array-getter a) 3 3) =&gt; 1
-  ((array-getter a) 2 3) =&gt; 0
-  ((array-getter a) 11 0) =&gt; is an error</code></pre>
+(define a (make-array (make-interval '#(1 1) '#(11 11))
+                      (lambda (i j)
+                        (if (= i j)
+                            1
+                            0))))
+(defina a_ (array-getter a))
+
+(a_ 3 3) =&gt; 1
+(a_ 2 3) =&gt; 0
+(a_ 11 0) =&gt; is an error</code></pre>
     <p><b>Procedure: </b><code><a name="array-dimension">array-dimension</a> <var>array</var></code></p>
     <p>Shorthand for <code>(interval-dimension (array-domain <var>array</var>))</code>.  It is an error to call this function if <code><var>array</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a name="mutable-array?">mutable-array?</a> <var>obj</var></code></p>
@@ -603,24 +614,15 @@ indexer:       (lambda multi-index
     <p>This &quot;shearing&quot; operation cannot be achieved by combining the procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-translate</code>, <code>array-curry</code>, <code>array-reverse</code>, and <code>array-sample</code>.</p>
     <p><b>Procedure: </b><code><a name="array-&gt;specialized-array">array-&gt;specialized-array</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>If <code><var>array</var></code> is an array whose elements can be manipulated by the storage-class
-      <code><var>result-storage-class</var></code>, then the specialized-array returned by <code>array-&gt;specialized-array</code> can be defined by:</p>
+      <code><var>result-storage-class</var></code>, then the specialized-array returned by <code>array-&gt;specialized-array</code> can be defined conceptually by:</p>
     <pre><code>
 (let* ((domain
         (array-domain <var>array</var>))
-       (getter
-        (array-getter <var>array</var>))
        (result
         (make-specialized-array domain
                                 <var>result-storage-class</var>
-                                <var>safe?</var>))
-       (result-setter
-        (array-setter result)))
-  (interval-for-each (lambda multi-index
-                       (apply result-setter
-                              (apply getter
-                                     multi-index)
-                              multi-index))
-                     domain)
+                                <var>safe?</var>)))
+  (array-assign! result <var>array</var>)
   result)</code></pre>
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
     <p>It is an error if <code><var>result-storage-class</var></code> does not satisfy these conditions, or if <code><var>safe?</var></code> is not a boolean.</p>
@@ -628,20 +630,23 @@ indexer:       (lambda multi-index
     <p>If <code><var>array</var></code> is an array whose domain is an interval  $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$, and <code><var>inner-dimension</var></code> is an exact integer strictly between $0$ and $d$, then <code>array-curry</code> returns an immutable array with domain $[l_0,u_0)\times\cdots\times[l_{d-\text{inner-dimension}-1},u_{d-\text{inner-dimension}-1})$, each of whose entries is in itself an array with domain $[l_{d-\text{inner-dimension}},u_{d-\text{inner-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$.</p>
     <p>For example, if <code>A</code> and <code>B</code> are defined by </p>
     <pre><code>
-  (define interval (make-interval '#(0 0 0 0)
-                                  '#(10 10 10 10)))
-  (define A (make-array interval list))
-  (define B (array-curry A 1))
+(define interval (make-interval '#(0 0 0 0)
+                                '#(10 10 10 10)))
+(define A (make-array interval list))
+(define B (array-curry A 1))
+
+(define A_ (array-getter A))
+(define B_ (array-getter B))
   </code></pre>
     <p>so</p>
     <pre><code>
-  ((array-getter A) i j k l) =&gt; (list i j k l)</code></pre>
+(A_ i j k l) =&gt; (list i j k l)</code></pre>
     <p>then <code>B</code> is an immutable array with domain <code>(make-interval '#(0 0 0) '#(10 10 10))</code>, each
       of whose elements is itself an (immutable) array and </p>
     <pre><code>
 (equal?
- ((array-getter A) i j k l)
- ((array-getter ((array-getter B) i j k)) l)) =&gt; #t
+ (A_ i j k l)
+ ((array-getter (B_ i j k)) l)) =&gt; #t
 </code></pre>
     <p>for all multi-indices <code>i j k l</code> in <code>interval</code>.</p>
     <p>The subarrays are immutable, mutable, or specialized according to whether the array argument is immutable, mutable, or specialized.</p>
@@ -700,14 +705,17 @@ indexer:       (lambda multi-index
                  (append outer-multi-index
                          inner-multi-index))))))))</code></pre>
     <p>It is an error to call <code>array-curry</code> if its arguments do not satisfy these conditions.</p>
+    <p>Please see the note in the discussion of <a href="#array-tile">array-tile</a>.</p>
     <p>Example:</p>
     <pre><code>
 (define a (make-array (make-interval '#(0 0)
                                      '#(10 10))
                       list))
-((array-getter a) 3 4)  =&gt; (3 4)
+(define a_ (array-getter a))
+(a_ 3 4)  =&gt; (3 4)
 (define curried-a (array-curry a 1))
-((array-getter ((array-getter curried-a) 3)) 4)
+(define curried-a_ (array-getter curried-a))
+((array-getter (curried-a_ 3)) 4)
                     =&gt; (3 4)</code></pre>
     <p><b>Procedure: </b><code><a name="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
     <p>Returns a new array with the same getter (and setter, if appropriate) of the first argument, defined on the second argument.</p>
@@ -730,6 +738,19 @@ indexer:       (lambda multi-index
               (array-getter <var>array</var>))
 </code></pre>
     <p>It is an error if the arguments of <code>array-extract</code> do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="array-tile">array-tile</a> <var>A</var> <var>S</var></code></p>
+    <p>Assume that <code><var>A</var></code> is an array and <code><var>S</var></code> is a vector of positive, exact integers.  The routine <code>array-tile</code> returns a new immutable array $T$, each entry of which is a subarray of <code>A</code> whose domain has sidelengths given (mostly) by the entries of <code><var>S</var></code>.  These subarrays completely &quot;tile&quot; <code><var>A</var></code>, in the sense that every entry in <code><var>A</var></code> is an entry of precisely one entry of the result $T$.</p>
+    <p>More formally, if <code><var>S</var></code> is the vector $(s_0,\ldots,s_{d-1})$, and the domain of <code><var>A</var></code> is the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero and upper bounds given by
+      $$
+      \operatorname{ceiling}((u_0-l_0)/s_0),\ldots,\operatorname{ceiling}((u_{d-1}-l_{d-1})/s_{d-1}).
+      $$
+      The $i_0,\ldots,i_{d-1}$ entry of $T$ is <code>(array-extract <var>A</var> D_i)</code> with the interval <code>D_i</code> given by
+      $$
+      [l_0+i_0*s_0,\min(l_0+(i_0+1)s_0,u_0))\times\cdots\times[l_{d-1}+i_{d-1}*s_{d-1},\min(l_{d-1}+(i_{d-1}+1)s_{d-1},u_{d-1})).
+      $$
+      (The &quot;minimum&quot; operators are necessary if $u_j-l_j$ is not divisible by $s_j$.) Thus, each entry of $T$ will be a specialized, mutable, or immutable array, depending on the type of the input array <code><var>A</var></code>.</p>
+    <p>It is an error if the arguments of <code>array-tile</code> do not satisfy these conditions.</p>
+    <p><b>Note: </b>The routines <code>array-tile</code> and <code>array-curry</code> both decompose an array into subarrays, but in different ways.  For example, if <code><var>A</var></code> is defined as <code>(make-array (make-interval '#(0 0) '#(10 10)) list)</code>, then <code>(array-tile <var>A</var> '#(1 10))</code> returns an array with domain <code>(make-interval '#(0 0) '#(10 1))</code>, each element of which is an array with domain <code>(make-interval '#(0 0) '#(1 10))</code> (i.e., a two-dimensional array whose elements are two-dimensional arrays), while <code>(array-curry <var>A</var> 1)</code> returns an array with domain <code>(make-interval '#(0) '#(10))</code>, each element of which has domain <code>(make-interval '#(0) '#(10))</code> (i.e., a one-dimensional array whose elements are one-dimensional arrays).</p>
     <p><b>Procedure: </b><code><a name="array-translate">array-translate</a> <var>array</var> <var>translation</var></code></p>
     <p>Assumes that <code><var>array</var></code> is a valid array, <code><var>translation</var></code> is a valid translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain <code>(interval-translate (array-domain array) translation)</code>.</p>
     <p>If <code><var>array</var></code> is a specialized array, returns a new specialized array</p>
@@ -744,8 +765,8 @@ indexer:       (lambda multi-index
                multi-index
                (vector-&gt;list <var>translation</var>)))))
 </code></pre>
-<p>that shares the body of <code><var>array</var></code>.</p>
-    <P>If <code><var>array</var></code> is not a specialized array but is a mutable array, returns a new mutable array</p>
+    <p>that shares the body of <code><var>array</var></code>.</p>
+    <p>If <code><var>array</var></code> is not a specialized array but is a mutable array, returns a new mutable array</p>
     <pre><code>
 (make-array 
  (interval-translate (array-domain <var>array</var>)
@@ -823,7 +844,7 @@ indexer:       (lambda multi-index
          (uppers (interval-upper-bounds-&gt;list domain)))
     (lambda (multi-index)
       (map (lambda (i_k flip?_k l_k u_k)
-             (if flip?
+             (if flip?_k
                  (- (+ l_k u_k -1) i_k)
                  i_k))
            multi-index
@@ -890,6 +911,16 @@ indexer:       (lambda multi-index
    (apply (array-getter <code><var>array</var></code>)
           (map * multi-index (vector-&gt;list <code><var>scales</var></code>)))))</code></pre>
     <p>It is an error if <code><var>array</var></code> and <code><var>scales</var></code> don't satisfy these requirements.</p>
+    <p><b>Procedure: </b><code><a name="array-outer-product">array-outer-product</a> <var>op</var> <var>array1</var> <var>array2</var></code></p>
+    <p>Implements the outer product of <code><var>array1</var></code> and <code><var>array2</var></code> with the operator <code><var>op</var></code>, similar to the APL function with the same name.</p>
+    <p>Assume that <code><var>array1</var></code> and <code><var>array2</var></code> are arrays and that <code><var>op</var></code> is a function of two arguments. Assume that <code>(list-tail l n)</code> returns the list remaining after the first <code><var>n</var></code> items of the list <code><var>l</var></code> have been removed, and <code>(list-take l n)</code> returns a new list consisting of the first <code><var>n</var></code> items of the list <code><var>l</var></code>. Then <code><var>array-outer-product</var></code> returns the immutable array</p>
+    <pre><code>
+(make-array (interval-cartesian-product (array-domain array1)
+                                        (array-domain array2))
+            (lambda args
+              (op (apply (array-getter array1) (list-take args (array-dimension array1)))
+                  (apply (array-getter array2) (list-tail args (array-dimension array1))))))</code></pre>
+    <p>This operation can be considered a partial inverse to <code>array-curry</code>.  It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Procedure: </b><code><a name="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain and <code><var>f</var></code> is a procedure, then <code>array-map</code>
       returns a new array with the same domain and getter</p>
@@ -901,7 +932,28 @@ indexer:       (lambda multi-index
               (map array-getter
                    (cons <var>array</var> <var>arrays</var>)))))</code></pre>
     <p>It is assumed that <code><var>f</var></code> is appropriately defined to be evaluated in this context.</p>
+    <p>It is expected that <code>array-map</code> and <code>array-for-each</code> will specialize the construction of</p>
+    <pre><code>
+(lambda multi-index
+  (apply <var>f</var>
+         (map (lambda (g)
+                (apply g multi-index))
+              (map array-getter
+                   (cons <var>array</var>
+                         <var>arrays</var>)))))</code></pre>
     <p>It is an error to call <code>array-map</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Note: </b>The ease of constructing temporary arrays without allocating storage makes it trivial to imitate, e.g., Javascript's map with index. For example, we can add the index to each element of an array <code><var>a</var></code> by </p>
+    <pre><code>
+(array-map +
+           a
+           (make-array (array-domain a)
+                       (lambda (i) i)))</code></pre>
+    <p>or even</p>
+    <pre><code>
+(make-array (array-domain a)
+            (let ((a_ (array-getter a)))
+              (lambda (i)
+                (+ (a_ i) i))))</code></pre>
     <p><b>Procedure: </b><code><a name="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain  and <code><var>f</var></code> is an appropriate procedure, then <code>array-for-each</code>
       calls</p>
@@ -970,6 +1022,14 @@ indexer:       (lambda multi-index
     <p>Stores the elements of <code><var>array</var></code> into a newly-allocated list in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a name="list-&gt;specialized-array">list-&gt;specialized-array</a> <var>l</var> <var>interval</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Returns a specialized-array with domain <code><var>interval</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  It is an error if <code><var>l</var></code> is not a list, if <code><var>interval</var></code> is not an interval, if the length of <code><var>l</var></code> is not the same as the volume of  <code><var>interval</var></code>, if <code><var>result-storage-class</var></code> (when given) is not a storage class, if <code><var>safe?</var></code> (when given) is not a boolean, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised if <code><var>safe</var></code> is <code>#t</code>.</p>
+    <p><b>Procedure: </b><code><a name="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
+    <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array, both with the same domains, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
+    <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and associates each value to the same multi-index in <code><var>destination</var></code>.</p>
+    <p>It is an error if the arguments don't satisfy these assumptions.</p>
+    <p><b>Procedure: </b><code><a name="array-swap!">array-swap!</a> <var>A</var> <var>B</var></code></p>
+    <p>Assumes that <code><var>A</var></code> and <code><var>B</var></code> are mutable arrays with the same domain, and that the elements of each of them can ge stored in the other.</p>
+    <p>Evaluates <code>(array-getter <var>A</var>)</code> on the multi-indices in <code>(array-domain <var>A</var>)</code> in lexicographical order, and associates each value to the same multi-index in <code><var>B</var></code>; similarly it assigns the values of <code>(array-getter <var>B</var>)</code> applied to the  multi-indices of <code>(array-domain <var>B</var>)</code> to the associated indices in <code><var>A</var></code>.</p>
+    <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <h2>Implementation</h2>
     <p>We provide an implementation in Gambit-C; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
@@ -1005,8 +1065,8 @@ indexer:       (lambda multi-index
       <li>Arrays must have a getter, but may have no setter.</li></ul>
     <h2>Other examples</h2>
     <p>Image processing applications provided significant motivation for this SRFI.</p>
-    <p><b>Reading an image file in PGM format. </b>On a system with eight-bit chars, one
-      can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
+    <p><b>Manipulating images in PGM format. </b>On a system with eight-bit chars, one
+      can write routines to read and write greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
       order in array-&gt;specialized-array guarantees the the correct order of execution of the input procedures:</p>
     <pre><code>
 (define make-pgm   cons)
@@ -1110,7 +1170,146 @@ indexer:       (lambda multi-index
                     (error &quot;not a pgm file&quot;))))
           (if (&lt; greys 256)
               u8-storage-class
-              u16-storage-class)))))))</code></pre>
+              u16-storage-class)))))))
+
+(define (write-pgm pgm-data file #!optional force-ascii)
+  (call-with-output-file
+      file
+    (lambda (port)
+      (let* ((greys
+              (pgm-greys pgm-data))
+	     (pgm-array
+              (pgm-pixels pgm-data))
+	     (domain
+              (array-domain pgm-array))
+	     (rows
+              (fx- (interval-upper-bound domain 0)
+                   (interval-lower-bound domain 0)))
+	     (columns
+              (fx- (interval-upper-bound domain 1)
+                   (interval-lower-bound domain 1))))
+	(if force-ascii
+	    (display &quot;P2&quot; port)
+	    (display &quot;P5&quot; port))
+	(newline port)
+	(display columns port) (display  port)
+	(display rows port) (newline port)
+	(display greys port) (newline port)
+	(array-for-each
+         (if force-ascii
+             (let ((next-pixel-in-line 1))
+               (lambda (p)
+                 (write p port)
+                 (if (fxzero? (fxand next-pixel-in-line 15))
+                     (begin
+                       (newline port)
+                       (set! next-pixel-in-line 1))
+                     (begin
+                       (display  port)
+                       (set! next-pixel-in-line
+                             (fx+ 1 next-pixel-in-line))))))
+             (if (fx&lt; greys 256)
+                 (lambda (p)
+                   (write-u8 p port))
+                 (lambda (p)
+                   (write-u8 (fxand p 255) port)
+                   (write-u8 (fxarithmetic-shift-right p 8)
+                             port))))
+         pgm-array)))))
+</code></pre>
+    <p>One can write a a routine to convolve an image with a filter as follows: </p>
+    <pre><code>
+(define (array-convolve source filter)
+  (let* ((source-domain
+          (array-domain source))
+         (S_
+          (array-getter source))
+         (filter-domain
+          (array-domain filter))
+         (F_
+          (array-getter filter))
+         (result-domain
+          (interval-dilate
+           source-domain
+           ;; the left bound of an interval is an equality,
+           ;; the right bound is an inequality, hence the
+           ;; the difference in the following two expressions
+           (vector-map -
+                       (interval-lower-bounds-&gt;vector filter-domain))
+           (vector-map (lambda (x)
+                         (- 1 x))
+                       (interval-upper-bounds-&gt;vector filter-domain)))))
+    (make-array result-domain
+                (lambda (i j)
+                  (array-fold
+                   (lambda (p q)
+                     (+ p q))
+                   0
+                   (make-array
+                    filter-domain
+                    (lambda (k l)
+                      (* (S_ (+ i k)
+                             (+ j l))
+                         (F_ k l))))))
+                )))
+</code></pre>
+    <p>together with some filters</p>
+    <pre><code>
+(define sharpen-filter
+  (list-&gt;specialized-array
+   '(0 -1  0
+    -1  5 -1
+     0 -1  0)
+   (make-interval '#(-1 -1) '#(2 2))))
+
+(define edge-filter
+  (list-&gt;specialized-array
+   '(0 -1  0
+    -1  4 -1
+     0 -1  0)
+   (make-interval '#(-1 -1) '#(2 2))))
+</code></pre>
+    <p>Our computations might results in pixel values outside the valid range, so we define </p>
+    <pre><code>
+(define (round-and-clip pixel max-grey)
+  (max 0 (min (exact (round pixel)) max-grey)))
+</code></pre>
+    <p>We can then compute edges and sharpen a test image as follows: </p><code>
+    <pre>
+(define test-pgm (read-pgm &quot;girl.pgm&quot;))
+
+(let ((greys (pgm-greys test-pgm)))
+  (write-pgm
+   (make-pgm
+    greys
+    (array-map (lambda (p)
+                 (round-and-clip p greys))
+               (array-convolve
+                (pgm-pixels test-pgm)
+                sharpen-filter)))
+   &quot;sharper-test.pgm&quot;))
+
+(let* ((greys (pgm-greys test-pgm))
+       (edge-array
+        (array-&gt;specialized-array
+         (array-map
+          abs
+          (array-convolve
+           (pgm-pixels test-pgm)
+           edge-filter))))
+       (max-pixel
+        (array-fold max 0 edge-array))
+       (normalizer
+        (inexact (/ greys max-pixel))))
+  (write-pgm
+   (make-pgm
+    greys
+    (array-map (lambda (p)
+                 (- greys
+                    (round-and-clip (* p normalizer) greys)))
+               edge-array))
+   &quot;edge-test.pgm&quot;))
+</pre></code>
     <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
@@ -1227,142 +1426,367 @@ Second-differences in the direction $k\times (1,-1)$:
 
 </pre>
     <p>You can see that with differences in the direction of only the first coordinate, the domains of the difference arrays get smaller in the first coordinate while staying the same in the second coordinate, and with differences in the diagonal directions, the domains of the difference arrays get smaller in both coordinates.</p>
-    <p><b>Separable operators. </b>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can compute the multidimensional transform as follows:</p>
+    <p><b>Separable operators. </b>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the <a href="https://arxiv.org/abs/1210.1944">Fast Hyperbolic Wavelet Transform</a>.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can compute the multidimensional transform as follows:</p>
     <pre><code>
 (define (make-separable-transform 1D-transform)
-  (lambda (array)
-    ;; Works on arrays of any dimension.
+  (lambda (a)
     (let* ((n
-            (array-dimension array))
-           (permutation
-            ;; we start with the identity permutation
-            (let ((result (make-vector n)))
-              (do ((i 0 (fx+ i 1)))
-                  ((fx= i n) result)
-                (vector-set! result i i)))))
-      ;; We apply the one-dimensional transform
+	    (array-dimension a))
+	   (permutation
+	    ;; we start with the identity permutation
+	    (let ((result (make-vector n)))
+	      (do ((i 0 (fx+ i 1)))
+		  ((fx= i n) result)
+		(vector-set! result i i)))))
+      ;; We apply the one-dimensional transform to all pencils
       ;; in each coordinate direction.
       (do ((d 0 (fx+ d 1)))
-          ((fx= d n))
-        ;; Swap the d'th and n-1'st coordinates
-        (vector-set! permutation (fx- n 1) d)
-        (vector-set! permutation d (fx- n 1))
-        ;; Apply the transform in the d'th coordinate
-        ;; direction to all &quot;pencils&quot; in that direction.
-        ;; array-permute re-orders the coordinates to
-        ;; put the d'th coordinate at the end, array-curry
-        ;; returns an $n-1$-dimensional array of
-        ;; one-dimensional subarrays, and 1D-transform
-        ;; is applied to each of those sub-arrays.
-        (array-for-each
-         1D-transform
-         (array-curry (array-permute array permutation)
-                      1))
-        ;; return the permutation to the identity
-        (vector-set! permutation d d)
-        (vector-set! permutation (fx- n 1) (fx- n 1))))))
- </code></pre>
-    <p>We can test this by turning a one-dimensional Haar wavelet transform into a multi-dimensional Haar transform:</p>
+	  ((fx= d n))
+	;; Swap the d'th and n-1'st coordinates
+	(vector-set! permutation (fx- n 1) d)
+	(vector-set! permutation d (fx- n 1))
+	;; array-permute re-orders the coordinates to put the
+	;; d'th coordinate at the end, array-curry returns
+	;; an $n-1$-dimensional array of one-dimensional subarrays,
+	;; and 1D-transform is applied to each of those
+	;; one-dimensional sub-arrays.
+	(array-for-each 1D-transform
+			(array-curry (array-permute a permutation) 1))
+	;; return the permutation to the identity
+	(vector-set! permutation d d)
+	(vector-set! permutation (fx- n 1) (fx- n 1))))))
+</code></pre>
+    <p>Wavelet transforms in particular are calculated by recursively applying a transform to an array and then downsampling the array; the inverse transform recursively downsamples and then applies a transform.  So we define the following primitives: </p>
+    <pre><code>
+(define (recursively-apply-transform-and-downsample transform)
+  (lambda (a)
+    (let ((sample-vector (make-vector (array-dimension a) 2)))
+      (define (helper a)
+        (if (fx&lt; 1 (interval-upper-bound (array-domain a) 0))
+            (begin
+              (transform a)
+              (helper (array-sample a sample-vector)))))
+      (helper a))))
+
+(define (recursively-downsample-and-apply-transform transform)
+  (lambda (a)
+    (let ((sample-vector (make-vector (array-dimension a) 2)))
+      (define (helper a)
+        (if (fx&lt; 1 (interval-upper-bound (array-domain a) 0))
+            (begin
+              (helper (array-sample a sample-vector))
+              (transform a))))
+      (helper a))))
+</code></pre>
+    <p>By adding a single loop that calculates scaled sums and differences of adjacent elements in a one-dimensional array, we can define various <a name="Haar">Haar wavelet transforms</a> as follows:</p>
     <pre><code>
 (define (1D-Haar-loop a)
-  (let ((getter (array-getter a))
-        (setter (array-setter a))
-        (n (interval-upper-bound (array-domain a) 0)))
+  (let ((a_ (array-getter a))
+	(a! (array-setter a))
+	(n (interval-upper-bound (array-domain a) 0)))
     (do ((i 0 (fx+ i 2)))
-        ((fx= i n))
-      (let* ((a_i
-              (getter i))
-             (a_i+1 
-              (getter (fx+ i 1)))
-             (scaled-sum
-              (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
-             (scaled-difference
-              (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
-          (setter scaled-sum i)
-          (setter scaled-difference (fx+ i 1))))))
-  
-(define (1D-Haar-transform a)
-  ;; works only on mutable arrays with domains
-  ;; $[0, 2^k)$ for some $k$
-  (let ((n (interval-upper-bound (array-domain a) 0)))
-    (if (fx&lt; 1 n)
-        (begin
-          ;; calculate the scaled sums and differences
-          (1D-Haar-loop a)
-          ;; Apply the transform to the
-          ;; sub-array of scaled sums
-          (1D-Haar-transform (array-sample a '#(2)))))))
+	((fx= i n))
+      (let* ((a_i               (a_ i))
+	     (a_i+1             (a_ (fx+ i 1)))
+	     (scaled-sum        (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
+	     (scaled-difference (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
+	(a! scaled-sum i)
+	(a! scaled-difference (fx+ i 1))))))
 
-(define (1D-Haar-inverse-transform a)
-  ;; works only on mutable arrays with domains
-  ;; $[0, 2^k)$ for some $k$
-  (let* ((n (interval-upper-bound (array-domain a) 0)))
-    (if (fx&lt; 1 n)
-        (begin
-          ;; Apply the inverse transform to
-          ;; get the array of scaled sums
-          (1D-Haar-inverse-transform
-           (array-sample a '#(2)))
-          ;; reconstruct the array values from
-          ;; the scaled sums and differences
-          (1D-Haar-loop a)))))
+(define 1D-Haar-transform
+  (recursively-apply-transform-and-downsample 1D-Haar-loop))
 
-(define Haar-transform
+(define 1D-Haar-inverse-transform
+  (recursively-downsample-and-apply-transform 1D-Haar-loop))
+
+(define hyperbolic-Haar-transform
   (make-separable-transform 1D-Haar-transform))
 
-(define Haar-inverse-transform
+(define hyperbolic-Haar-inverse-transform
   (make-separable-transform 1D-Haar-inverse-transform))
+
+(define Haar-transform
+  (recursively-apply-transform-and-downsample
+   (make-separable-transform 1D-Haar-loop)))
+
+(define Haar-inverse-transform
+  (recursively-downsample-and-apply-transform
+   (make-separable-transform 1D-Haar-loop)))
 </code></pre>
-    <p>We then define an image that is a multiple of a single, two-dimensional Haar wavelet, compute its transform (which should be nonzero for only a single Haar coefficient), and then the inverse transform:</p>
+    <p>We then define an image that is a multiple of a single, two-dimensional hyperbolic Haar wavelet, compute its hyperbolic Haar transform (which should have only one nonzero coefficient), and then the inverse transform:</p>
     <pre><code>
 (let ((image
        (array-&gt;specialized-array
         (make-array (make-interval '#(0 0) '#(4 4))
                     (lambda (i j)
-                      (if (fx&lt; i 2) 1. -1.))))))
-  (display &quot;\nInitial image: \n&quot;)
+                      (case i
+                        ((0) 1.)
+                        ((1) -1.)
+                        (else 0.)))))))
+  (display &quot;
+Initial image: 
+&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image)))
-  (Haar-transform image)
-  (display &quot;\nArray of Haar wavelet coefficients: \n&quot;)
+		      (array-&gt;list image)))
+  (hyperbolic-Haar-transform image)
+  (display &quot;\nArray of hyperbolic Haar wavelet coefficients: \n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image)))
-  (Haar-inverse-transform image)
+		      (array-&gt;list image)))
+  (hyperbolic-Haar-inverse-transform image)
   (display &quot;\nReconstructed image: \n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image))))
+		      (array-&gt;list image))))
 </code></pre>
     <p>This yields: </p>
     <pre>
 Initial image: 
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt; 
- (1. 1. 1. 1. 1. 1. 1. 1. -1. -1. -1. -1. -1. -1. -1. -1.))
+ (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Array of Haar wavelet coefficients: 
-(#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (0. 0. 0. 0. 0. 0. 0. 0. 3.9999999999999987
-  0. 0. 0. 0. 0. 0. 0.))
+Array of hyperbolic Haar wavelet coefficients: 
+(#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt; 
+ (0. 0. 0. 0. 2.8284271247461894 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.))
 
 Reconstructed image: 
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (.9999999999999993
-  .9999999999999993
-  .9999999999999993
-  .9999999999999993
-  .9999999999999993
-  .9999999999999993
-  .9999999999999993
-  .9999999999999993
-  -.9999999999999993
-  -.9999999999999993
-  -.9999999999999993
-  -.9999999999999993
-  -.9999999999999993
-  -.9999999999999993
-  -.9999999999999993
-  -.9999999999999993))
+ (.9999999999999996
+  .9999999999999996
+  .9999999999999996
+  .9999999999999996
+  -.9999999999999996
+  -.9999999999999996
+  -.9999999999999996
+  -.9999999999999996
+  0.
+  0.
+  0.
+  0.
+  0.
+  0.
+  0.
+  0.))
 </pre>
-    <p>In perfect arithmetic, this Haar transform is <i>orthonormal</i>, in that the sum of the squares of the elements of the image is the same as the sum of the squares of the Haar coefficients of the image.  We can see that this is approximately true here.</p>
+    <p>In perfect arithmetic, this hyperbolic Haar transform is <i>orthonormal</i>, in that the sum of the squares of the elements of the image is the same as the sum of the squares of the hyperbolic Haar coefficients of the image.  We can see that this is approximately true here.</p>
+    <p>We can apply the (nonhyperbolic) Haar transform to the same image as follows: </p>
+    <pre>
+ (let ((image
+       (array-&gt;specialized-array
+        (make-array (make-interval '#(0 0) '#(4 4))
+                    (lambda (i j)
+                      (case i
+                        ((0) 1.)
+                        ((1) -1.)
+                        (else 0.)))))))
+  (display &quot;\nInitial image: \n&quot;)
+  (pretty-print (list (array-domain image)
+		      (array-&gt;list image)))
+  (Haar-transform image)
+  (display &quot;\nArray of Haar wavelet coefficients: \n&quot;)
+  (pretty-print (list (array-domain image)
+		      (array-&gt;list image)))
+  (Haar-inverse-transform image)
+  (display &quot;\nReconstructed image: \n&quot;)
+  (pretty-print (list (array-domain image)
+		      (array-&gt;list image))))
+</pre>
+    <p>This yields: </p>
+    <pre>
+Initial image: 
+(#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt; 
+ (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
+
+Array of Haar wavelet coefficients: 
+(#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
+ (0. 0. 0. 0. 1.9999999999999998 0. 1.9999999999999998 0. 0. 0. 0. 0. 0. 0. 0. 0.))
+
+Reconstructed image: 
+(#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
+ (.9999999999999997
+  .9999999999999997
+  .9999999999999997
+  .9999999999999997
+  -.9999999999999997
+  -.9999999999999997
+  -.9999999999999997
+  -.9999999999999997
+  0.
+  0.
+  0.
+  0.
+  0.
+  0.
+  0.
+  0.))
+</pre>
+    <p>You see in this example that this particular image has two, not one, nonzero coefficients in the two-dimensional Haar transform, which is again approximately orthonormal.</p>
+    <p><b>Matrix multiplication and Gaussian elimination. </b>While we have avoided conflating matrices and arrays, we give here some examples of matrix operations defined using operations from this SRFI.</p>
+    <p>Given a nonsingular square matrix $A$ we can overwrite $A$ with lower-triangular matrix $L$ with ones on the diagonal and upper-triangular
+      matrix $U$ so that $A=LU$ as follows. (We assume &quot;pivoting&quot; isn't needed.) For example, if $$A=\begin{pmatrix} a_{11}&amp;a_{12}&amp;a_{13}\\ a_{21}&amp;a_{22}&amp;a_{23}\\ a_{31}&amp;a_{32}&amp;a_{33}\end{pmatrix}=\begin{pmatrix} 1&amp;0&amp;0\\ \ell_{21}&amp;1&amp;0\\ \ell_{31}&amp;\ell_{32}&amp;1\end{pmatrix}\begin{pmatrix} u_{11}&amp;u_{12}&amp;u_{13}\\ 0&amp;u_{22}&amp;u_{23}\\ 0&amp;0&amp;u_{33}\end{pmatrix}$$ then $A$ is overwritten with
+      $$
+      \begin{pmatrix} u_{11}&amp;u_{12}&amp;u_{13}\\ \ell_{21}&amp;u_{22}&amp;u_{23}\\ \ell_{31}&amp;\ell_{32}&amp;u_{33}\end{pmatrix}.
+      $$
+      The code uses <code>array-assign!</code>, <code>specialized-array-share</code>, <code>array-extract</code>, and <code>array-outer-product</code>.</p>
+    <pre><code>
+(define (LU-decomposition A)
+  ;; Assumes the domain of A is [0,n)\times [0,n)
+  ;; and that Gaussian elimination can be applied
+  ;; without pivoting.
+  (let ((n
+         (interval-upper-bound (array-domain A) 0))
+        (A_
+         (array-getter A)))
+    (do ((i 0 (fx+ i 1)))
+        ((= i (fx- n 1)) A)
+      (let* ((pivot
+              (A_ i i))
+             (column/row-domain
+              ;; both will be one-dimensional
+              (make-interval (vector (+ i 1))
+                             (vector n)))
+             (column
+              ;; the column below the (i,i) entry
+              (specialized-array-share A
+                                       column/row-domain
+                                       (lambda (k)
+                                         (values k i))))
+             (row
+              ;; the row to the right of the (i,i) entry
+              (specialized-array-share A
+                                       column/row-domain
+                                       (lambda (k)
+                                         (values i k))))
+
+             ;; the subarray to the right and
+             ;;below the (i,i) entry
+             (subarray
+              (array-extract
+               A (make-interval
+                  (vector (fx+ i 1) (fx+ i 1))
+                  (vector n         n)))))
+        ;; compute multipliers
+        (array-assign!
+         column
+         (array-map (lambda (x)
+                      (/ x pivot))
+                    column))
+        ;; subtract the outer product of i'th
+        ;; row and column from the subarray
+        (array-assign!
+         subarray
+         (array-map -
+                    subarray
+                    (array-outer-product * column row)))))))
+
+(define A
+  (array-&gt;specialized-array
+   (make-array (make-interval '#(0 0)
+                              '#(4 4))
+               (lambda (i j)
+                 (/ (+ 1 i j))))))
+
+(define (array-display A)
+  (array-for-each
+   (lambda (row)
+     (array-for-each (lambda (x)
+                       (display x)
+                       (display &quot;\t&quot;))
+                     row)
+     (newline))
+   (array-curry A 1)))
+
+(display &quot;\nHilbert matrix:\n\n&quot;)
+
+(array-display A)
+
+;;; which displays:
+;;; 1       1/2     1/3     1/4
+;;; 1/2     1/3     1/4     1/5
+;;; 1/3     1/4     1/5     1/6
+;;; 1/4     1/5     1/6     1/7
+
+(LU-decomposition A)
+
+(display &quot;\nLU decomposition of Hilbert matrix:\n\n&quot;)
+
+(array-display A)
+
+;;; which displays:
+;;; 1       1/2     1/3     1/4
+;;; 1/2     1/12    1/12    3/40
+;;; 1/3     1       1/180   1/120
+;;; 1/4     9/10    3/2     1/2800
+
+</code></pre>
+    <p>We can now define matrix multiplication as follows to check our result:</p>
+    <pre><code>
+;;; Functions to extract the lower- and upper-triangular
+;;; matrices of the LU decomposition of A.
+
+(define (L a)
+  (let ((a_ (array-getter a))
+        (d  (array-domain a)))
+    (make-array
+     d
+     (lambda (i j)
+       (cond ((= i j) 1)        ;; diagonal
+             ((&gt; i j) (a_ i j)) ;; below diagonal
+             (else 0))))))      ;; above diagonal
+
+(define (U a)
+  (let ((a_ (array-getter a))
+        (d  (array-domain a)))
+    (make-array
+     d
+     (lambda (i j)
+       (cond ((&lt;= i j) (a_ i j)) ;; diagonal and above
+             (else 0))))))       ;; below diagonal
+
+(display &quot;\nLower triangular matrix of decomposition of Hilbert matrix:\n\n&quot;)
+(array-display (L A))
+
+;;; which displays:
+;;; 1       0       0       0
+;;; 1/2     1       0       0
+;;; 1/3     1       1       0
+;;; 1/4     9/10    3/2     1
+
+
+(display &quot;\nUpper triangular matrix of decomposition of Hilbert matrix:\n\n&quot;)
+(array-display (U A))
+
+;;; which displays:
+;;; 1       1/2     1/3     1/4
+;;; 0       1/12    1/12    3/40
+;;; 0       0       1/180   1/120
+;;; 0       0       0       1/2800
+
+;;; We'll define a brief, not-very-efficient matrix multiply routine.
+
+(define (dot-product a b)
+  (array-fold + 0 (array-map * a b)))
+
+(define (matrix-multiply a b)
+  (let ((a-rows
+         (array-curry a 1))
+        (b-columns
+         (array-curry (array-permute b '#(1 0)) 1)))
+    (array-outer-product dot-product a-rows b-columns)))
+
+;;; We'll check that the product of the result of LU
+;;; decomposition of A is again A.
+
+(define product (matrix-multiply (L A) (U A)))
+
+(display &quot;\nProduct of lower and upper triangular matrices \n&quot;)
+(display &quot;of LU decomposition of Hilbert matrix:\n\n&quot;)
+(array-display product)
+
+;;; which displays:
+;;; 1       1/2     1/3     1/4
+;;; 1/2     1/3     1/4     1/5
+;;; 1/3     1/4     1/5     1/6
+;;; 1/4     1/5     1/6     1/7
+</code></pre>
     <h2>Acknowledgments</h2>
     <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.</p>
     <h2>References</h2>
@@ -1374,12 +1798,11 @@ Reconstructed image:
       <li><a name="SRFI-58" href="http://srfi.schemers.org/srfi-58/">SRFI 58: Array Notation</a>, by Aubrey Jaffer.</li>
       <li><a name="SRFI-63" href="http://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li></ol>
     <h2>Copyright</h2>
-    <p>&copy; 2016 Bradley J Lucier. All Rights Reserved.</p>
+    <p>&copy; 2016, 2018 Bradley J Lucier. All Rights Reserved.</p>
     <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: </p>
     <p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
     <p> THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       </p>
-  <hr>
-  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+    <hr><address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
   </body>
 </html>
