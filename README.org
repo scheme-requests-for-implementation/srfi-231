@@ -1,0 +1,16 @@
+* SRFI 122: Nonempty Intervals and Generalized Arrays
+
+** by Bradley J. Lucier
+
+This repository hosts [[https://srfi.schemers.org/srfi-122/][SRFI 122]]: Nonempty Intervals and Generalized Arrays, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+
+This SRFI is in /final/ status.
+
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-122/srfi-122.html][SRFI Document]].
+
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-122/][join the SRFI-122 mailing list]] and send your message there.
+
+Thank you.
+
+
+[[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]
