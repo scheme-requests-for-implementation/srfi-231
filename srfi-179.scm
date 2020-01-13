@@ -45,10 +45,10 @@ MathJax.Hub.Config({
        (<body>
 	(<h1> "Title")
 	(<p> "Nonempty Intervals and Generalized Arrays")
-	
+
 	(<h2> "Author")
 	(<p> "Bradley J. Lucier")
-	
+
 	(<h2> "Status")
 	(<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
 	     (<a> href: "http://srfi.schemers.org/srfi-process.html" "an explanation")
@@ -62,7 +62,7 @@ MathJax.Hub.Config({
 	(<ul> (<li> "Received: 2020/1/11"))
 
 	(<h2> "Abstract")
-	(<p> 
+	(<p>
 	 "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a "
 	 "mapping, or function, from multi-indices of exact integers $i_0,\\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices "
 	 "$i_0,\\ldots,i_{d-1}$ that are valid for a given array form the "(<i>'domain)" of the array.  In this SRFI, each array's domain consists "
@@ -86,8 +86,8 @@ MathJax.Hub.Config({
          (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
          (<li> "The documentation has a few more examples of image processing algorithms.")
          (<li> "Some matrix examples have been added to this document and test-arrays.scm."))
-       
-                    
+
+
 	(<h2> "Overview")
 	(<h3> "Bawden-style arrays")
 	(<p>  "In a "(<a> href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "1993 post")
@@ -152,7 +152,7 @@ MathJax.Hub.Config({
 	       "Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.")
 	 (<li> (<b> "Traversing some indices in a multi-index in reverse order: ")
 	       "Consider an array $A$ with domain $D_A=[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for \"flip?\"). "
-               "Then define $T_{BA}:D_B\\to D_A$ by $i_j\\to i_j$ if $F_j$ is "(<code>'#f)" and $i_j\\to u_j+l_j-1-i_j$ if  $F_j$ is "(<code>'#t)"." 
+               "Then define $T_{BA}:D_B\\to D_A$ by $i_j\\to i_j$ if $F_j$ is "(<code>'#f)" and $i_j\\to u_j+l_j-1-i_j$ if  $F_j$ is "(<code>'#t)"."
 	       "In other words,  we reverse the ordering of the $j$th coordinate of $\\vec i$ if and only if $F_j$ is true. "
 	       "$T_{BA}$ is an affine mapping from $D_B\\to D_A$, which defines a new array $B$, and we can provide "(<code>'array-reverse)" for this operation. "
                "Applying "(<code>'array-reverse)" to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).")
@@ -169,10 +169,10 @@ MathJax.Hub.Config({
 	     "Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending "
 	     "one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
 	     "Examples are given below.")
-	
+
 	(<h3> "Generalized arrays")
 	(<p> "Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. "
-	     "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers 
+	     "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers
 in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ (the "(<i>'domain)" of the array) to Scheme objects.
 Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.")
 	(<p> "Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.")
@@ -182,7 +182,7 @@ by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)
 	(<p> "In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
 they may have hash tables or databases behind an implementation, one may read the values from a file, etc.")
 	(<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array is an example of a mutable array.")
-	
+
 	(<h3> "Sharing generalized arrays")
 	(<p> "Even if an array $A$ is not a specialized array, then it could be \"shared\" by specifying a new interval $D_B$ as the domain of "
 	     "a new array $B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ would then be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
@@ -222,7 +222,7 @@ they may have hash tables or databases behind an implementation, one may read th
          (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would a compatible extension of this SRFI.")
          (<li> (<b> "No low-level specialized-array constructor. ")
                "While the author of the SRFI uses mainly "(<code>"(make-array ...)")", "(<code>'array-map)", and "(<code>'array->specialized-array)" to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple "(<code>"(make-array ...)")" mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.")
-         
+
          )
         (<h2> "Specification")
         (let ((END ",\n"))
@@ -277,7 +277,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#f32-storage-class" "f32-storage-class") END
                  (<a> href: "#f64-storage-class" "f64-storage-class") END
                  (<a> href: "#c64-storage-class" "c64-storage-class") END
-                 (<a> href: "#c128-storage-class" "c128-storage-class") 
+                 (<a> href: "#c128-storage-class" "c128-storage-class")
                  ".")
            (<dt> "Arrays")
            (<dd> (<a> href: "#make-array" "make-array")END
@@ -345,9 +345,9 @@ $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
 are nonempty vectors (of the same length) of exact integers that satisfy")
         (<pre>
          (<code>" (< (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
-        (<p> " for 
-$0\\leq i<{}$"(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error if 
-"(<code>(<var>"lower-bounds"))" and "(<code>(<var>"upper-bounds"))" do not satisfy these conditions.")   
+        (<p> " for
+$0\\leq i<{}$"(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error if
+"(<code>(<var>"lower-bounds"))" and "(<code>(<var>"upper-bounds"))" do not satisfy these conditions.")
 
         (format-lambda-list '(interval? obj))
         (<p> "Returns "(<code> "#t")" if "(<code> (<var>"obj"))" is an interval, and "(<code>"#f")" otherwise.")
@@ -372,7 +372,7 @@ if "(<code>(<var>"interval"))" is not an interval.")
 "(<code>"(vector-ref "(<var>"upper-bounds")" "(<var>"i")")")".  It is an error to call "(<code> 'interval-lower-bound)" or "(<code> 'interval-upper-bound)"
 if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these conditions.")
 
- 
+
  (format-lambda-list '(interval-lower-bounds->list interval))
  (format-lambda-list '(interval-upper-bounds->list interval))
  (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
@@ -399,7 +399,7 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
         (<p> "then, assuming the existence of "(<code>'vector-map)", "(<code> 'interval-volume)" returns ")
         (<pre>
          (<code> "(apply * (vector->list (vector-map - "(<var>"upper-bounds")" "(<var>"lower-bounds")")))"))
-        
+
 
         (<p> "It is an error to call "(<code> 'interval-volume)" if "(<code>(<var> 'interval))" does not satisfy this condition.")
 
@@ -434,7 +434,7 @@ then "(<code> 'interval-contains-multi-index?)" returns "(<code> #t)" if ")
         (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
 
         (format-lambda-list '(interval-projections interval right-dimension))
-        (<p> "Conceptually, "(<code> 'interval-projections)" takes a $d$-dimensional interval 
+        (<p> "Conceptually, "(<code> 'interval-projections)" takes a $d$-dimensional interval
 $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
              "and splits it into two parts")
         (<blockquote> "$[l_0,u_0)\\times\\cdots\\times[l_{d-\\text{right-dimension}-1},u_{d-\\text{right-dimension}-1})$")
@@ -488,15 +488,15 @@ upper bounds u"(<sub>"0")"+U"(<sub>"0")", ..., u"(<sub>"d-1")"+U"(<sub>"d-1")", 
 nonempty interval.  It is an error if the arguments do not satisfy these conditions.")
 (<p> "Examples:")
 (<pre>(<code>"
-(interval= 
+(interval=
  (interval-dilate (make-interval '#(0 0) '#(100 100))
                   '#(1 1) '#(1 1))
  (make-interval '#(1 1) '#(101 101))) => #t
-(interval= 
+(interval=
  (interval-dilate (make-interval '#(0 0) '#(100 100))
                   '#(-1 -1) '#(1 1))
  (make-interval '#(-1 -1) '#(101 101))) => #t
-(interval= 
+(interval=
  (interval-dilate (make-interval '#(0 0) '#(100 100))
                   '#(0 0) '#(-50 -50))
  (make-interval '#(0 0) '#(50 50))) => #t
@@ -620,7 +620,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
                       vector-set!
                       (lambda (arg) #t)
                       make-vector
-                      vector-length 
+                      vector-length
                       #f))"))
 "Furthermore, "(<code> "s"(<var> 'X)"-storage-class")" is defined for "(<code>(<var> 'X))"=8, 16, 32, and 64 (which have default values 0 and
 manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
@@ -851,7 +851,7 @@ indexer:       (lambda multi-index
 (array-for-each (lambda (row)
                   (pretty-print (array->list row)))
                 (array-curry b 1))
-  
+
 ;; which prints
 ;; ((0 0) (0 1) (0 2) (0 3) (0 4))
 ;; ((1 1) (1 2) (1 3) (1 4) (1 5))
@@ -1041,7 +1041,7 @@ $$
  "(<var>'array)"
  (interval-translate (array-domain "(<var>'array)")
                      "(<var>'translation)")
- (lambda multi-index 
+ (lambda multi-index
    (apply values
           (map -
                multi-index
@@ -1051,7 +1051,7 @@ $$
 (<p> "If "(<code>(<var>'array))" is not a specialized array but is a mutable array, returns a new mutable array")
 (<pre>
  (<code>"
-(make-array 
+(make-array
  (interval-translate (array-domain "(<var>'array)")
                      "(<var>'translation)")
  (lambda multi-index
@@ -1324,7 +1324,7 @@ calls")
 (fold-right kons knil lis)
     = (kons (car lis) (fold-right kons knil (cdr lis)))
 (fold-right kons knil '())
-    = knil 
+    = knil
 "))
 (<p> "then "(<code>"(array-fold-right "(<var>'kons)" " (<var>'knil)" "(<var> 'array)")")" returns ")
 (<pre>
@@ -1420,7 +1420,7 @@ order in array->specialized-array guarantees the the correct order of execution 
 (define pgm-pixels cdr)
 
 (define (read-pgm file)
-  
+
   (define (read-pgm-object port)
     (skip-white-space port)
     (let ((o (read port)))
@@ -1429,17 +1429,17 @@ order in array->specialized-array guarantees the the correct order of execution 
       (if (eof-object? o)
           (error \"reached end of pgm file\")
           o)))
-  
+
   (define (skip-to-end-of-line port)
     (let loop ((ch (read-char port)))
       (if (not (eq? ch #\\newline))
           (loop (read-char port)))))
-  
+
   (define (white-space? ch)
-    (case ch 
+    (case ch
       ((#\\newline #\\space #\\tab) #t)
       (else #f)))
-  
+
   (define (skip-white-space port)
     (let ((ch (peek-char port)))
       (cond ((white-space? ch)
@@ -1449,7 +1449,7 @@ order in array->specialized-array guarantees the the correct order of execution 
              (skip-to-end-of-line port)
              (skip-white-space port))
             (else #f))))
-  
+
   ;; The image file formats defined in netpbm
   ;; are problematical, because they read the data
   ;; in the header as variable-length ISO-8859-1 text,
@@ -1458,30 +1458,30 @@ order in array->specialized-array guarantees the the correct order of execution 
   ;; as binary data.
   ;; So we give here a solution of how to deal
   ;; with these subtleties in Gambit Scheme.
-  
+
   (call-with-input-file
       (list path:          file
             char-encoding: 'ISO-8859-1
             eol-encoding:  'lf)
     (lambda (port)
-      
+
       ;; We're going to read text for a while,
       ;; then switch to binary.
       ;; So we need to turn off buffering until
       ;; we switch to binary.
-      
+
       (port-settings-set! port '(buffering: #f))
-      
+
       (let* ((header (read-pgm-object port))
              (columns (read-pgm-object port))
              (rows (read-pgm-object port))
              (greys (read-pgm-object port)))
-        
+
         ;; now we switch back to buffering
         ;; to speed things up
-        
+
         (port-settings-set! port '(buffering: #t))
-        
+
         (make-pgm
          greys
          (array->specialized-array
@@ -1896,15 +1896,15 @@ Second-differences in the direction $k\\times (1,-1)$:
 "))
 (<p> "This yields: ")
 (<pre>"
-Initial image: 
-(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)> 
+Initial image:
+(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Array of hyperbolic Haar wavelet coefficients: 
-(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)> 
+Array of hyperbolic Haar wavelet coefficients:
+(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (0. 0. 0. 0. 2.8284271247461894 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Reconstructed image: 
+Reconstructed image:
 (#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (.9999999999999996
   .9999999999999996
@@ -1949,15 +1949,15 @@ Reconstructed image:
 ")
 (<p> "This yields: ")
 (<pre>"
-Initial image: 
-(#<##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)> 
+Initial image:
+(#<##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Array of Haar wavelet coefficients: 
+Array of Haar wavelet coefficients:
 (#<##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (0. 0. 0. 0. 1.9999999999999998 0. 1.9999999999999998 0. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Reconstructed image: 
+Reconstructed image:
 (#<##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (.9999999999999997
   .9999999999999997
@@ -2149,7 +2149,7 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 ;;; 1/3     1/4     1/5     1/6
 ;;; 1/4     1/5     1/6     1/7
 "))
-        
+
 
 (<h2> "Acknowledgments")
 (<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")

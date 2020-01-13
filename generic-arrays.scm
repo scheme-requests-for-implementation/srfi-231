@@ -34,12 +34,12 @@
 ;;; the following is used in error checks.
 
 (define (##vector-every pred vec #!optional (vec2 (macro-absent-obj)) #!rest vecs)
-  
+
   (define (every1 vec i)
     (or (< i 0)
 	(and (pred (vector-ref vec i))
 	     (every1 vec (- i 1)))))
-  
+
   (define (every2 vec1 vec2 i)
     (or (< i 0)
 	(and (pred (vector-ref vec1 i) (vector-ref vec2 i))
@@ -525,7 +525,7 @@
      (let* ((lower-bounds (##interval-lower-bounds->list interval))
 	    (upper-bounds (##interval-upper-bounds->list interval))
 	    (arg          (map values lower-bounds)))                ; copy lower-bounds
-       
+
        ;; I'm not particularly happy with set! here because f might capture the continuation
        ;; and then funny things might pursue ...
        ;; But it seems that the only way to have this work efficiently without the set
@@ -625,13 +625,13 @@
      (let* ((lower-bounds (##interval-lower-bounds->list interval))
 	    (upper-bounds (##interval-upper-bounds->list interval))
 	    (arg          (map values lower-bounds)))                ; copy lower-bounds
-       
+
        ;; I'm not particularly happy with set! here because f or operator might capture
        ;; the continuation and then funny things might pursue ...
        ;; But it seems that the only way to have this work efficiently without the set~
        ;; is to have arrays with fortran-style numbering.
        ;; blah
-       
+
        (define (iterate lower-bounds-tail
 			upper-bounds-tail
 			arg-tail
@@ -797,14 +797,14 @@
 ;;; as well as generic objects.
 
 (define-macro (make-standard-storage-classes)
-  
+
   (define (symbol-concatenate . symbols)
     (string->symbol (apply string-append (map (lambda (s)
 						(if (string? s)
 						    s
 						    (symbol->string s)))
 					      symbols))))
-  
+
   `(begin
      ,@(map (lambda (name prefix default checker)
 	      `(define ,(symbol-concatenate name '-storage-class)
@@ -892,7 +892,7 @@
 	 (u16vector-ref bodyv index)
 	 shift)
 	1)))
-   ;; setter: 
+   ;; setter:
    (lambda (v i val)
      (let ((index (fxarithmetic-shift-right i 4))
 	   (shift (fxand i 15))
@@ -966,23 +966,23 @@
 
 (make-complex-storage-classes)
 
-;;; 
+;;;
 ;;; Conceptually, an indexer is itself a 1-1 array that maps one interval to another; thus, it is
 ;;; an example of an array that can return multiple values.
-;;; 
+;;;
 ;;; Rather than trying to formalize this idea, and trying to get it to work with array-map,
 ;;; array-fold, ..., we'll just manipulate the getter functions of these conceptual arrays.
-;;; 
+;;;
 ;;; Indexers are 1-1 affine maps from one interval to another.
-;;; 
+;;;
 ;;; The indexer field of a specialized-array obj is a 1-1 mapping from
-;;; 
+;;;
 ;;; (array-domain obj)
-;;; 
-;;; to [0, top), where top is 
-;;; 
+;;;
+;;; to [0, top), where top is
+;;;
 ;;; ((storage-class-length (array-storage-class obj)) (array-body obj))
-;;; 
+;;;
 
 ;; unfortunately, the next two functions were written by hand, so beware of bugs.
 
@@ -1225,33 +1225,33 @@
     result))
 
 
-;;; 
+;;;
 ;;; The default getter and the setter of a specialized-array a are given by
-;;; 
+;;;
 ;;; (lambda (i_0 ... i_n-1)
 ;;;   ((storage-class-getter (array-storage-class a))
 ;;;    (array-body a)
 ;;;    ((array-indexer a) i_0 ... i_n-1)))
-;;; 
+;;;
 ;;; (lambda (v i_0 ... i_n-1)
 ;;;   ((storage-class-setter (array-storage-class a))
 ;;;    (array-body a)
 ;;;    ((array-indexer a) i_0 ... i_n-1)
 ;;;    v))
-;;; 
-;;; The default initializer-value is 
-;;; 
+;;;
+;;; The default initializer-value is
+;;;
 ;;; (storage-class-default (array-storage-class a))
-;;; 
+;;;
 ;;; The default body is
-;;; 
+;;;
 ;;; ((storage-class-maker (array-storage-class a))
 ;;;  (interval-volume domain)
 ;;;  initializer-value)
-;;; 
+;;;
 ;;; The default indexer is the mapping of
 ;;; the domain to the natural numbers in lexicographical order.
-;;; 
+;;;
 
 (define (specialized-array? obj)
   (and (mutable-array? obj)
@@ -1292,10 +1292,10 @@
     ;;; non-safe case to reduce one more function call.
 
     (define-macro (expand-storage-class original-suffix replacement-suffix expr)
-      
+
       (define (symbol-append . args)
 	(string->symbol (apply string-append (map (lambda (x) (if (symbol? x) (symbol->string x) x)) args))))
-      
+
       (define (replace old-symbol new-symbol expr)
 	(let loop ((expr expr))
 	  (cond ((pair? expr)           ;; we don't use map because of dotted argument list in general setter
@@ -1305,7 +1305,7 @@
 		 new-symbol)
 		(else
 		 expr))))
-      
+
       `(cond ,@(map (lambda (name prefix)
 		      `((eq? storage-class ,(symbol-append name '-storage-class))
 			,(replace (symbol-append 'storage-class original-suffix)
@@ -1315,13 +1315,13 @@
 		    '(""      s8 u8 s16 u16 s32 u32 s64 u64 f32 f64))
 	     (else
 	      ,expr)))
-    
+
     (define-macro (expand-getters expr)
       `(expand-storage-class -getter -ref ,expr))
-    
+
     (define-macro (expand-setters expr)
       `(expand-storage-class -setter -set! ,expr))
-    
+
     (let ((getter (if safe?
 		      (case (##interval-dimension domain)
 			((1)  (lambda (i)
@@ -1516,9 +1516,9 @@
 				       indexer
 				       safe?)))))
 
-;;; 
+;;;
 ;;; The domain of the result is the same as the domain of the argument.
-;;; 
+;;;
 ;;; Builds a new specialized-array and populates the body of the result with
 ;;; (array-getter array) applied to the elements of (array-domain array)
 
@@ -1621,11 +1621,11 @@
                   domain)))
 	   result))))
 
-;;; 
+;;;
 ;;; In the next function, old-indexer is an affine 1-1 mapping from an interval to [0,N), for some N.
-;;; 
+;;;
 ;;; new-domain->old-domain is an affine 1-1 mapping from new-domain to the domain of old-indexer.
-;;; 
+;;;
 
 (define (##compose-indexers old-indexer new-domain new-domain->old-domain)
   (case (##interval-dimension new-domain)
@@ -1641,7 +1641,7 @@
 				    base)
 				 0)))
 	   (##indexer-1 base lower-0 increment-0)))
-    
+
     ((2) (let* ((lower-0 (##interval-lower-bound new-domain 0))
 		(lower-1 (##interval-lower-bound new-domain 1))
 		(upper-0 (##interval-upper-bound new-domain 0))
@@ -1757,11 +1757,11 @@
 					new-base)))))))
        (##indexer-generic base lower-bounds increments)))))
 
-;;; 
+;;;
 ;;; You want to share the backing store of array.
-;;; 
+;;;
 ;;; So you specify a new domain and an affine 1-1 mapping from the new-domain to the old-domain.
-;;; 
+;;;
 
 (define (specialized-array-share array
 				 new-domain
@@ -1854,9 +1854,9 @@
                              lower-bounds upper-bounds sides))
                 (result-domain
                  (make-##interval result-lower-bounds result-upper-bounds)))
-           
+
            (define-macro (generate-result)
-             
+
              (define (symbol-append . args)
                (string->symbol
                 (apply string-append (map (lambda (x)
@@ -1924,7 +1924,7 @@
                                (##array-extract array subdomain)))))))
 
            (make-array result-domain (generate-result))))))
-                       
+
 
 (define (##getter-translate getter translation)
   (case (vector-length translation)
@@ -2200,7 +2200,7 @@
 
 
 (define-macro (macro-generate-sample)
-  
+
   (define (make-symbol . args)
     (string->symbol
      (apply string-append
@@ -2209,13 +2209,13 @@
 			 ((symbol? x) (symbol->string x))
 			 ((number? x) (number->string x))))
 		 args))))
-  
+
   (define (first-half l)
     (take l (quotient (length l) 2)))
-  
+
   (define (second-half l)
     (drop l (quotient (length l) 2)))
-  
+
   (define (arg-lists ks)
     (if (null? ks)
         '(())
@@ -2263,7 +2263,7 @@
                        `(,(make-symbol 's_ k) (vector-ref scales ,k)))
                      zero-to-n-1))
           ,(build-code args zero-to-n-1)))))
-  
+
   (define (sampler name transformer)
     `(define (,(make-symbol name '-sample) ,name scales interval)
        (case (vector-length scales)
@@ -2281,7 +2281,7 @@
                   (apply ,name ,@(transformer '((map (lambda (i s)
                                                        (* s i))
                                                      indices scales)))))))))))
-                
+
 
 
   (let ((result
@@ -2482,7 +2482,7 @@
 		    ((3)  (case (##interval-dimension right-interval)
 			    ((1)  (lambda (i j k) (specialized-array-share array right-interval (lambda (    l)                    (values i j k l)))))
 			    (else (lambda (i j k) (specialized-array-share array right-interval (lambda multi-index (apply values i j k multi-index)))))))
-		    (else (lambda left-multi-index 
+		    (else (lambda left-multi-index
 			    (specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
 
 (define (array-curry array right-dimension)
@@ -2499,16 +2499,16 @@
 	(else ; immutable array
 	 (##immutable-array-curry array right-dimension))))
 
-;;; 
+;;;
 ;;; array-map returns an array whose domain is the same as the common domain of (cons array arrays)
 ;;; and whose getter is
-;;; 
+;;;
 ;;; (lambda multi-index
 ;;;   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
-;;; 
+;;;
 ;;; This function is also used in array-for-each, so we try to specialize the this
 ;;; function to speed things up a bit.
-;;; 
+;;;
 
 (define (##specialize-function-applied-to-array-getters f array arrays)
   (let ((domain (array-domain array))
@@ -2520,7 +2520,7 @@
 	     ((3)  (lambda (i j k)     (f (getter-0 i j k))))
 	     ((4)  (lambda (i j k l)   (f (getter-0 i j k l))))
 	     (else (lambda multi-index (f (apply getter-0 multi-index))))))
-      
+
       ((1) (let ((getter-1 (array-getter (car arrays))))
 	     (case (##interval-dimension domain)
 	       ((1)  (lambda (i)         (f (getter-0 i)
@@ -2609,10 +2609,10 @@
                               (array-domain array)))))
 
 (define-macro (macro-make-predicates)
-  
+
   (define (concat . args)
     (string->symbol (apply string-append (map (lambda (s) (if (string? s) s (symbol->string s ))) args))))
-  
+
   (define (make-predicate name connector)
     `(define (,(concat '##interval- name) f interval)
        (case (##interval-dimension interval)
@@ -2734,7 +2734,7 @@
                     ((fx< dimension (fx- dimensions 1))
                      (loop (fx+ dimension 1)
                            total-index))
-                    ;; Now we're at the final dimension 
+                    ;; Now we're at the final dimension
                     ((zero? total-index)
                      (apply f arg))
                     (else
@@ -2911,5 +2911,5 @@
                    (apply A! (apply B_ multi-index) multi-index)
                    (apply B! temp                   multi-index)))))
             (array-domain A))))))
-                              
+
 (declare (inline))

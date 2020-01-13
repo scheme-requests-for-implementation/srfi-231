@@ -17,7 +17,7 @@
 			       (unbound-global-exception-variable args))
 			      (else
 			       "piffle")))
-		      
+
 		      (lambda ()
 			,expr))))))
      (if (not (equal? result ,value))
@@ -431,7 +431,7 @@
                                  (vector-map random new-lowers uppers)))
          (subinterval (make-interval new-lowers new-uppers)))
     subinterval))
-                                 
+
 
 (define (random-nonnegative-interval #!optional (min 1) (max 11) )
   ;; a random interval with min <= dimension < max
@@ -877,7 +877,7 @@
           (interval-volume interval))
          (separator
           ;; I want to make sure that the last item is chosen at least
-          ;; once for each random 
+          ;; once for each random
           (random (max 0 (- n 10)) n))
          (indexer
           (##interval->basic-indexer interval))
@@ -927,8 +927,8 @@
         (error "arrghh arguments-2" arguments-2))
     ))
 
-                                   
-           
+
+
 
 (pp "array-fold error tests")
 
@@ -1233,7 +1233,7 @@
 		      mutable-curry-from-definition
 		      specialized-curry-from-definition
 		      ))
-      
+
       (and (or (myarray= Array copied-array) (error "Arggh"))
 	   (or (array-every array? immutable-curry) (error "Arggh"))
 	   (or (array-every (lambda (a) (not (mutable-array? a))) immutable-curry) (error "Arggh"))
@@ -1455,7 +1455,7 @@
        (immutable-array (make-array (array-domain mutable-array)
 				    (array-getter mutable-array)))
        (translation '#(10 -2)))
-  
+
   (define (my-array-translate Array translation)
     (let* ((array-copy (array->specialized-array Array))
 	   (getter (array-getter array-copy))
@@ -1469,7 +1469,7 @@
 		    (apply setter
 			   v
 			   (map - args (vector->list translation)))))))
-  
+
   (test (array-translate 'a 1)
 	"array-translate: The first argument is not an array: ")
   (test (array-translate immutable-array '#(1.))
@@ -1527,10 +1527,10 @@
 			    (array-getter specialized)
 			    (array-setter specialized)))
        (A (array-translate  mutable '#(0 0 0 0 0))))
-  
+
   (test ((array-getter A) 0 0)
 	"The number of indices does not equal the array dimension: ")
-  
+
   (test ((array-setter A) 'a 0 0)
 	"The number of indices does not equal the array dimension: "))
 
@@ -1570,7 +1570,7 @@
        (immutable-array (make-array (array-domain mutable-array)
 				    (array-getter mutable-array)))
        (permutation '#(1 0)))
-  
+
   (test (array-permute 'a 1)
 	"array-permute: The first argument is not an array: ")
   (test (array-permute immutable-array '#(1.))
@@ -1594,7 +1594,7 @@
 	       (array? immutable-result)
 	       (not (mutable-array? immutable-result)))
 	  #t))
-  
+
   (specialized-array-default-safe? #t)
 
   (do ((i 0 (+ i 1)))
@@ -1609,7 +1609,7 @@
 					 (array-getter temp)
 					 (array-setter temp)))))))
 	   (permutation (random-permutation (interval-dimension domain))))
-      
+
       (define (my-array-permute Array permutation)
 	(let* ((array-copy (array->specialized-array Array))
 	       (getter (array-getter array-copy))
@@ -1624,7 +1624,7 @@
 			(apply setter
 			       v
 			       (vector->list (vector-permute (list->vector args) permutation-inverse)))))))
-      
+
       ;; (pp (list domain permutation (interval-volume domain)))
       (let ((permuted-array       (array-permute Array permutation))
 	    (my-permuted-array (my-array-permute Array permutation)))
@@ -1666,7 +1666,7 @@
 					 (array-getter temp)
 					 (array-setter temp)))))))
 	   (permutation (random-permutation (interval-dimension domain))))
-      
+
       (define (my-array-permute Array permutation)
 	(let* ((array-copy (array->specialized-array Array))
 	       (getter (array-getter array-copy))
@@ -1681,7 +1681,7 @@
 			(apply setter
 			       v
 			       (vector->list (vector-permute (list->vector args) permutation-inverse)))))))
-      
+
       ;; (pp (list domain permutation (interval-volume domain)))
       (let ((permuted-array       (array-permute Array permutation))
 	    (my-permuted-array (my-array-permute Array permutation)))
@@ -1724,7 +1724,7 @@
 
 
 (define (my-interval-intersect . args)
-  
+
   (define (fold-left operator           ;; called with (operator result-so-far (car list))
 		     initial-value
 		     list)
@@ -1733,8 +1733,8 @@
 	(fold-left operator
 		   (operator initial-value (car list))
 		   (cdr list))))
-  
-  
+
+
   (let ((new-uppers (let ((uppers (map interval-upper-bounds->vector args)))
 		      (fold-left (lambda (arg result)
 				   (vector-map min arg result))
@@ -1841,8 +1841,8 @@
              (make-array (interval-scale (array-domain array) scales)
                          (lambda multi-index
                            (apply getter (map * multi-index scales-list)))))))))
-    
-                                                       
+
+
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
@@ -1858,7 +1858,7 @@
          (scales (random-positive-vector (interval-dimension domain)))
          (sampled-array (array-sample Array scales))
          (my-sampled-array (myarray-sample Array scales)))
-        
+
       (if (mutable-array? Array)
           (let ((scaled-domain (interval-scale domain scales)))
             (do ((j 0 (+ j 1)))
@@ -1950,7 +1950,7 @@
               (list spec-B mut-B)
               (list spec-A-extract mut-A-extract)
               (list spec-B-extract mut-B-extract))))
-    
+
 
 (test (array-tile 'a '#(10))
       "array-tile: The first argument is not an array: ")
@@ -2026,7 +2026,7 @@
           (array-tile array sidelengths))
          (test-result
           (my-array-tile array sidelengths)))
-    
+
     ;; extract-array is tested independently, so we just make a few tests.
 
     ;; test all the subdomain tiles are the same
@@ -2036,7 +2036,7 @@
           #t)
     ;; test that the subarrays are the same type
     (test (array-every (lambda (r t)
-                         (and 
+                         (and
                           (eq? (mutable-array? r) (mutable-array? t))
                           (eq? (mutable-array? r) (mutable-array? array))
                           (eq? (specialized-array? r) (specialized-array? t))
@@ -2047,7 +2047,7 @@
     (test (myarray= (apply (array-getter result) (make-list (vector-length lowers) 0))
                     (apply (array-getter test-result) (make-list (vector-length lowers) 0)))
           #t)))
-    
+
 (pp "array-reverse tests")
 
 (test (array-reverse 'a 'a)
@@ -2096,7 +2096,7 @@
              (make-array domain
                          (lambda multi-index
                            (apply getter (transform multi-index)))))))))
-                                                       
+
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
@@ -2112,7 +2112,7 @@
          (flips (vector-map (lambda (x) (random-boolean)) (make-vector (interval-dimension domain))))
          (reversed-array (array-reverse Array flips))
          (my-reversed-array (myarray-reverse Array flips)))
-    
+
     (if (mutable-array? Array)
         (do ((j 0 (+ j 1)))
             ((= j 50))
@@ -2177,7 +2177,7 @@
                                       (reverse multi-index)
                                       multi-index))))
           #t)))
-         
+
 (pp "array-swap! tests")
 
 (test (array-swap! 'a 'a)
@@ -2495,7 +2495,7 @@
 	  (loop (read-char port)))))
 
   (define (white-space? ch)
-    (case ch 
+    (case ch
       ((#\newline #\space #\tab) #t)
       (else #f)))
 
@@ -2910,7 +2910,7 @@ that computes the componentwise products when we need them, the times are
   (pretty-print (list (array-domain image)
 		      (array->list image))))
 
- 
+
 (define (array-display A)
   ;; Displays a two-dimensional array row by row.
   (array-for-each (lambda (row)
