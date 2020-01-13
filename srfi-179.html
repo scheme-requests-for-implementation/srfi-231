@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nonempty Intervals and Generalized Arrays</title>
-    <link type="test/css" rel="stylesheet" href="http://srfi.schemers.org/srfi.css">
+    <link type="test/css" rel="stylesheet" href="https://srfi.schemers.org/srfi.css">
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
         tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
@@ -82,10 +82,10 @@
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of functions that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
     <h2>Issues and Notes</h2>
     <ul>
-      <li><b>Relationship to <a href="http://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="http://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
+      <li><b>Relationship to <a href="https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
       <li><b>Indexers. </b>The argument new-domain-&gt;old-domain to <code>specialized-array-share</code> is, conceptually, a multi-valued array.</li>
       <li><b>Source of function names. </b>The function <code>array-curry</code> gets its name from the 
-        <a href="http://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains. 
+        <a href="https://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains. 
         <code>interval-projections</code> can be thought of as currying the 
         characteristic function of the interval,  encapsulated here as <code>interval-contains-multi-index?</code>.</li>
       <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
@@ -1791,12 +1791,12 @@ Reconstructed image:
     <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.</p>
     <h2>References</h2>
     <ol>
-      <li><a name="bawden" href="http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&amp;">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
-      <li><a name="SRFI-4" href="http://srfi.schemers.org/srfi-4/">SRFI 4:  Homogeneous Numeric Vector Datatypes</a>, by Marc Feeley.</li>
-      <li><a name="SRFI-25" href="http://srfi.schemers.org/srfi-25/">SRFI 25: Multi-dimensional Array Primitives</a>, by Jussi Piitulainen.</li>
-      <li><a name="SRFI-47" href="http://srfi.schemers.org/srfi-47/">SRFI 47: Array</a>, by Aubrey Jaffer.</li>
-      <li><a name="SRFI-58" href="http://srfi.schemers.org/srfi-58/">SRFI 58: Array Notation</a>, by Aubrey Jaffer.</li>
-      <li><a name="SRFI-63" href="http://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li></ol>
+      <li><a name="bawden" href="https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&amp;">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
+      <li><a name="SRFI-4" href="https://srfi.schemers.org/srfi-4/">SRFI 4:  Homogeneous Numeric Vector Datatypes</a>, by Marc Feeley.</li>
+      <li><a name="SRFI-25" href="https://srfi.schemers.org/srfi-25/">SRFI 25: Multi-dimensional Array Primitives</a>, by Jussi Piitulainen.</li>
+      <li><a name="SRFI-47" href="https://srfi.schemers.org/srfi-47/">SRFI 47: Array</a>, by Aubrey Jaffer.</li>
+      <li><a name="SRFI-58" href="https://srfi.schemers.org/srfi-58/">SRFI 58: Array Notation</a>, by Aubrey Jaffer.</li>
+      <li><a name="SRFI-63" href="https://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li></ol>
     <h2>Copyright</h2>
     <p>&copy; 2016, 2018 Bradley J Lucier. All Rights Reserved.</p>
     <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: </p>
