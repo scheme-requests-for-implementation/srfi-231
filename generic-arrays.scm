@@ -128,51 +128,51 @@
 
 (define (interval-dimension interval)
   (cond ((not (interval? interval))
-	 (error "interval-dimension: argument is not an interval: " interval))
+	 (error "interval-dimension: The argument is not an interval: " interval))
 	(else
 	 (##interval-dimension interval))))
 
 (define (interval-lower-bound interval i)
   (cond ((not (interval? interval))
-	 (error "interval-lower-bound: argument is not an interval: " interval i))
+	 (error "interval-lower-bound: The first argument is not an interval: " interval i))
 	((not (exact-integer? i))
-	 (error "interval-lower-bound: argument is not an exact integer: " interval i))
+	 (error "interval-lower-bound: The second argument is not an exact integer: " interval i))
 	((not (< -1 i (##interval-dimension interval)))
-	 (error "interval-lower-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
+	 (error "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
 	(else
 	 (##interval-lower-bound interval i))))
 
 (define (interval-upper-bound interval i)
   (cond ((not (interval? interval))
-	 (error "interval-upper-bound: argument is not an interval: " interval i))
+	 (error "interval-upper-bound: The first argument is not an interval: " interval i))
 	((not (exact-integer? i))
-	 (error "interval-upper-bound: argument is not an exact integer: " interval i))
+	 (error "interval-upper-bound: The second argument is not an exact integer: " interval i))
 	((not (< -1 i (##interval-dimension interval)))
-	 (error "interval-upper-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
+	 (error "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
 	(else
 	 (##interval-upper-bound interval i))))
 
 (define (interval-lower-bounds->vector interval)
   (cond ((not (interval? interval))
-	 (error "interval-lower-bounds->vector: argument is not an interval: " interval))
+	 (error "interval-lower-bounds->vector: The argument is not an interval: " interval))
 	(else
 	 (##interval-lower-bounds->vector interval))))
 
 (define (interval-upper-bounds->vector interval)
   (cond ((not (interval? interval))
-	 (error "interval-upper-bounds->vector: argument is not an interval: " interval))
+	 (error "interval-upper-bounds->vector: The argument is not an interval: " interval))
 	(else
 	 (##interval-upper-bounds->vector interval))))
 
 (define (interval-lower-bounds->list interval)
   (cond ((not (interval? interval))
-	 (error "interval-lower-bounds->list: argument is not an interval: " interval))
+	 (error "interval-lower-bounds->list: The argument is not an interval: " interval))
 	(else
 	 (##interval-lower-bounds->list interval))))
 
 (define (interval-upper-bounds->list interval)
   (cond ((not (interval? interval))
-	 (error "interval-upper-bounds->list: argument is not an interval: " interval))
+	 (error "interval-upper-bounds->list: The argument is not an interval: " interval))
 	(else
 	 (##interval-upper-bounds->list interval))))
 
@@ -347,7 +347,7 @@
 
 (define (interval-volume interval)
   (cond ((not (interval? interval))
-	 (error "interval-volume: argument is not an interval: " interval))
+	 (error "interval-volume: The argument is not an interval: " interval))
 	(else
 	 (##interval-volume interval))))
 
@@ -438,14 +438,14 @@
   ;; significantly simplifies testing the error checking
 
   (cond ((not (interval? interval))
-	 (error "interval-contains-multi-index?: argument is not an interval: " interval))
+	 (error "interval-contains-multi-index?: The first argument is not an interval: " interval))
 	(else
 	 (let ((multi-index (cons i multi-index-tail)))
 	   (cond ((not (= (##interval-dimension interval)
 			  (length multi-index)))
-		  (apply error "interval-contains-multi-index?: dimension of interval does not match number of arguments: " interval multi-index))
+		  (apply error "interval-contains-multi-index?: The dimension of the first argument (an interval) does not match number of indices: " interval multi-index))
 		 ((not (##every exact-integer? multi-index))
-		  (apply error "interval-contains-multi-index?: at least one multi-index component is not an exact integer: " interval multi-index))
+		  (apply error "interval-contains-multi-index?: At least one multi-index component is not an exact integer: " interval multi-index))
 		 (else
 		  (##interval-contains-multi-index?-general interval multi-index)))))))
 
@@ -454,9 +454,9 @@
 
 (define (interval-for-each f interval)
   (cond ((not (interval? interval))
-	 (error "interval-for-each: Argument is not a interval: " interval))
+	 (error "interval-for-each: The second argument is not a interval: " interval))
 	((not (procedure? f))
-	 (error "interval-for-each: Argument is not a procedure: " f))
+	 (error "interval-for-each: The first argument is not a procedure: " f))
 	(else
 	 (##interval-for-each f interval))))
 
@@ -723,19 +723,19 @@
 
 (define (array-domain obj)
   (cond ((not (array? obj))
-	 (error "array-domain: object is not an array: " obj))
+	 (error "array-domain: The argument is not an array: " obj))
 	(else
 	 (##array-base-domain obj))))
 
 (define (array-getter obj)
   (cond ((not (array? obj))
-	 (error "array-getter: object is not an array: " obj))
+	 (error "array-getter: The argument is not an array: " obj))
 	(else
 	 (##array-base-getter obj))))
 
 (define (array-dimension array)
   (cond ((not (array? array))
-	 (error "array-dimension: argument is not an array: " array))
+	 (error "array-dimension: The argument is not an array: " array))
 	(else
 	 (##interval-dimension (array-domain array)))))
 
@@ -768,7 +768,7 @@
 
 (define (array-setter obj)
   (cond ((not (mutable-array? obj))
-	 (error "array-setter: object is not an mutable array: " obj))
+	 (error "array-setter: The argument is not an mutable array: " obj))
 	(else
 	 (##array-base-setter obj))))
 
@@ -1259,25 +1259,25 @@
 
 (define (array-body obj)
   (cond ((not (specialized-array? obj))
-	 (error "array-body: argument is not a specialized array: " obj))
+	 (error "array-body: The argument is not a specialized array: " obj))
 	(else
 	 (##array-base-body obj))))
 
 (define (array-indexer obj)
   (cond ((not (specialized-array? obj))
-	 (error "array-indexer: argument is not a specialized array: " obj))
+	 (error "array-indexer: The argument is not a specialized array: " obj))
 	(else
 	 (##array-base-indexer obj))))
 
 (define (array-storage-class obj)
   (cond ((not (specialized-array? obj))
-	 (error "array-storage-class: argument is not a specialized array: " obj))
+	 (error "array-storage-class: The argument is not a specialized array: " obj))
 	(else
 	 (##array-base-storage-class obj))))
 
 (define (array-safe? obj)
   (cond ((not (specialized-array? obj))
-	 (error "array-safe?: argument is not a specialized array: " obj))
+	 (error "array-safe?: The argument is not a specialized array: " obj))
 	(else
 	 (##array-base-safe? obj))))
 
@@ -1528,11 +1528,11 @@
                                   (result-storage-class generic-storage-class)
                                   (safe? (specialized-array-default-safe?)))
   (cond ((not (array? array))
-	 (error "array->specialized-array: Argument is not an array: " array))
+	 (error "array->specialized-array: The first argument is not an array: " array))
 	((not (storage-class? result-storage-class))
-	 (error "array->specialized-array: result-storage-class is not a storage-class: " result-storage-class))
+	 (error "array->specialized-array: The second argument is not a storage-class: " result-storage-class))
 	((not (boolean? safe?))
-	 (error "array->specialized-array: safe? is not a boolean: " safe?))
+	 (error "array->specialized-array: The third argument is not a boolean: " safe?))
 	(else
 	 (let* ((domain               (array-domain array))
 		(result               (make-specialized-array domain
@@ -2061,6 +2061,19 @@
 
 (setup-permuted-getters-and-setters)
 
+(define (##array-permute array permutation)
+  (cond ((specialized-array? array)
+         (specialized-array-share array
+                                  (##interval-permute (array-domain array) permutation)
+                                  (##getter-permute values permutation)))
+        ((mutable-array? array)
+         (make-array (##interval-permute (array-domain array) permutation)
+                     (##getter-permute (array-getter array) permutation)
+                     (##setter-permute (array-setter array) permutation)))
+        (else
+         (make-array (##interval-permute (array-domain array) permutation)
+                     (##getter-permute (array-getter array) permutation)))))
+
 (define (##immutable-array-permute array permutation)
   (make-array (##interval-permute (array-domain array) permutation)
 	      (##getter-permute (array-getter array) permutation)))
@@ -2083,12 +2096,34 @@
 	((not (fx= (array-dimension array)
 		   (vector-length permutation)))
 	 (error "array-permute: The dimension of the first argument (an array) does not equal the dimension of the second argument (a permutation): " array permutation))
-	((specialized-array? array)
-	 (##specialized-array-permute array permutation))
-	((mutable-array? array)
-	 (##mutable-array-permute array permutation))
 	(else
-	 (##immutable-array-permute array permutation))))
+	 (##array-permute array permutation))))
+
+(define (array-rotate array dim)
+  (if (not (array? array))
+      (error "array-rotate: The first argument is not an array: " array dim)
+      (let ((d (array-dimension array)))
+        (if (not (and (fixnum? dim)
+                      (fx< -1 dim d)))
+            (error "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): " array dim)
+            (let ((permutation
+                   (let ((result (make-vector d)))
+                     (let left-loop ((i 0)
+                                     (j dim))
+                       (if (fx< j d)
+                           (begin
+                             (vector-set! result i j)
+                             (left-loop (fx+ i 1)
+                                        (fx+ j 1)))
+                           (let right-loop ((i i)
+                                            (j 0))
+                             (if (fx< i d)
+                                 (begin
+                                   (vector-set! result i j)
+                                   (right-loop (fx+ i 1)
+                                               (fx+ j 1)))
+                                 result)))))))
+              (##array-permute array permutation))))))
 
 (define-macro (setup-reversed-getters-and-setters)
 
@@ -2181,21 +2216,24 @@
 			   (array-domain array)
 			   (##getter-reverse values flip? (array-domain array))))
 
-(define (array-reverse array flip?)
-  (cond ((not (array? array))
-	 (error "array-reverse: The first argument is not an array: " array flip?))
-	((not (and (vector? flip?)
-		   (##vector-every boolean? flip?)))
-	 (error "array-reverse: The second argument is not a vector of booleans: " array flip?))
-	((not (fx= (array-dimension array)
-		   (vector-length flip?)))
-	 (error "array-reverse: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): " array flip?))
-	((specialized-array? array)
-	 (##specialized-array-reverse array flip?))
-	((mutable-array? array)
-	 (##mutable-array-reverse array flip?))
-	(else
-	 (##immutable-array-reverse array flip?))))
+(define (array-reverse array #!optional (flip? (macro-absent-obj)))
+  (if  (not (array? array))
+       (error "array-reverse: The first argument is not an array: " array flip?)
+       (let ((flip? (if (eq? flip? (macro-absent-obj))
+                        (make-vector (array-dimension array) #t)
+                        flip?)))
+         (cond ((not (and (vector? flip?)
+                          (##vector-every boolean? flip?)))
+                (error "array-reverse: The second argument is not a vector of booleans: " array flip?))
+               ((not (fx= (array-dimension array)
+                          (vector-length flip?)))
+                (error "array-reverse: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): " array flip?))
+               ((specialized-array? array)
+                (##specialized-array-reverse array flip?))
+               ((mutable-array? array)
+                (##mutable-array-reverse array flip?))
+               (else
+                (##immutable-array-reverse array flip?))))))
 
 
 
@@ -2795,6 +2833,64 @@
 	 (error "array-fold-right: The third argument is not an array: " op id a))
 	(else
 	 (##array-fold op id (array-reverse a (make-vector (array-dimension a) #t))))))
+
+(define (array-reduce sum A)
+  (cond ((not (array? A))
+         (error "array-reduce: The second argument is not an array: " sum A))
+        ((not (procedure? sum))
+         (error "array-reduce: The first argument is not a procedure: " sum A))
+        (else
+         (case (array-dimension A)
+           ((1) (let ((box '())
+                      (A_ (array-getter A)))
+                  (interval-for-each
+                   (lambda (i)
+                     (if (null? box)
+                         (set! box (list (A_ i)))
+                         (set-car! box (sum (car box)
+                                            (A_ i)))))
+                   (array-domain A))
+                  (car box)))
+           ((2) (let ((box '())
+                      (A_ (array-getter A)))
+                  (interval-for-each
+                   (lambda (i j)
+                     (if (null? box)
+                         (set! box (list (A_ i j)))
+                         (set-car! box (sum (car box)
+                                            (A_ i j)))))
+                   (array-domain A))
+                  (car box)))
+           ((3) (let ((box '())
+                      (A_ (array-getter A)))
+                  (interval-for-each
+                   (lambda (i j k)
+                     (if (null? box)
+                         (set! box (list (A_ i j k)))
+                         (set-car! box (sum (car box)
+                                            (A_ i j k)))))
+                   (array-domain A))
+                  (car box)))
+           ((4) (let ((box '())
+                      (A_ (array-getter A)))
+                  (interval-for-each
+                   (lambda (i j k l)
+                     (if (null? box)
+                         (set! box (list (A_ i j k l)))
+                         (set-car! box (sum (car box)
+                                            (A_ i j k l)))))
+                   (array-domain A))
+                  (car box)))
+           (else (let ((box '())
+                       (A_ (array-getter A)))
+                   (interval-for-each
+                    (lambda args
+                      (if (null? box)
+                          (set! box (list (apply A_ args)))
+                          (set-car! box (sum (car box)
+                                             (apply A_ args)))))
+                    (array-domain A))
+                   (car box)))))))
 
 (define (array->list array)
   (cond ((not (array? array))

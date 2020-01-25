@@ -29,10 +29,10 @@
 	(<meta> charset: "utf-8")
         (<meta> name: 'viewport
                 content: "width=device-width, initial-scale=1")
-	(<title> "Nonempty Intervals and Generalized Arrays")
-	(<link> href: "http://srfi.schemers.org/srfi.css"
+	(<title> "Nonempty Intervals and Generalized Arrays (Updated)")
+	(<link> href: "https://srfi.schemers.org/srfi.css"
 		rel: "stylesheet"
-                type: "test/css")
+                type: "text/css")
 	(<script> type: "text/x-mathjax-config" "
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\\\(','\\\\)']]}
@@ -44,22 +44,25 @@ MathJax.Hub.Config({
 	)
        (<body>
 	(<h1> "Title")
-	(<p> "Nonempty Intervals and Generalized Arrays")
+	(<p> "Nonempty Intervals and Generalized Arrays (Updated)")
 
 	(<h2> "Author")
 	(<p> "Bradley J. Lucier")
 
 	(<h2> "Status")
 	(<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
-	     (<a> href: "http://srfi.schemers.org/srfi-process.html" "an explanation")
+	     (<a> href: "https://srfi.schemers.org/srfi-process.html" "an explanation")
 	     " of each status that a SRFI can hold.  To provide input on this SRFI, please send email to "
-	     (<code> (<a> href: "mailto:srfi minus 179 at srfi dot schemers dot org"
+	     (<code> (<a> href: "mailto:srfi+minus+179+at+srfi+dotschemers+dot+org"
 			  "srfi-179@" (<span> class: "antispam" "nospam") "srfi.schemers.org"))
 	     ".  To subscribe to the list, follow "
-	     (<a> href: "http://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
+	     (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
 	     ".  You can access previous messages via the mailing list "
-	     (<a> href: "http://srfi-email.schemers.org/srfi-179" "archive")".  There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
-	(<ul> (<li> "Received: 2020/1/11"))
+	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".  There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
+	(<ul> (<li> "Received: 2020/1/11")
+              (<li> "60-day deadline: 2020/3/13")
+              (<li> "Draft #1 published: 2020/1/11")
+              (<li> "Draft #2 published: 2020/1/27"))
 
 	(<h2> "Abstract")
 	(<p>
@@ -82,10 +85,10 @@ MathJax.Hub.Config({
          )
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI-122")" in the following ways:")
         (<ul>
-         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added.")
+         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added together with some examples.")
          (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
          (<li> "The documentation has a few more examples of image processing algorithms.")
-         (<li> "Some matrix examples have been added to this document and test-arrays.scm."))
+         (<li> "Some matrix examples have been added to this document."))
 
 
 	(<h2> "Overview")
@@ -141,7 +144,8 @@ MathJax.Hub.Config({
 	 (<li> (<b> "Permuting the coordinates of an array: ")
 	       "If $\\pi$ "(<a> href: "https://en.wikipedia.org/wiki/Permutation" 'permutes)" the coordinates of a multi-index $\\vec i$, and $\\pi^{-1}$ is the inverse of $\\pi$, then "
 	       "$T_{BA}(\\vec i)=\\pi (\\vec i)$ is a one-to-one affine map from $D_B=\\{\\pi^{-1}(\\vec i)\\mid \\vec i\\in D_A\\}$ onto $D_A$.  We provide "(<code>'array-permute)" for this operation. "
-	       "The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.")
+	       "(The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.) "
+               "We also provide "(<code>'array-rotate)" for the special permutations that just rotate the axes.")
 	 (<li> (<b> "Currying an array: ")
 	       "Let's denote the cross product of two intervals $\\text{Int}_1$ and $\\text{Int}_2$ by $\\text{Int}_1\\times\\text{Int}_2$; "
 	       "if $\\vec j=(j_0,\\ldots,j_{r-1})\\in \\text{Int}_1$ and $\\vec i=(i_0,\\ldots,i_{s-1})\\in \\text{Int}_2$, then "
@@ -152,7 +156,7 @@ MathJax.Hub.Config({
 	       "Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.")
 	 (<li> (<b> "Traversing some indices in a multi-index in reverse order: ")
 	       "Consider an array $A$ with domain $D_A=[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for \"flip?\"). "
-               "Then define $T_{BA}:D_B\\to D_A$ by $i_j\\to i_j$ if $F_j$ is "(<code>'#f)" and $i_j\\to u_j+l_j-1-i_j$ if  $F_j$ is "(<code>'#t)"."
+               "Then define $T_{BA}:D_B\\to D_A$ by $i_j\\to i_j$ if $F_j$ is "(<code>'#f)" and $i_j\\to u_j+l_j-1-i_j$ if  $F_j$ is "(<code>'#t)". "
 	       "In other words,  we reverse the ordering of the $j$th coordinate of $\\vec i$ if and only if $F_j$ is true. "
 	       "$T_{BA}$ is an affine mapping from $D_B\\to D_A$, which defines a new array $B$, and we can provide "(<code>'array-reverse)" for this operation. "
                "Applying "(<code>'array-reverse)" to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).")
@@ -161,7 +165,7 @@ MathJax.Hub.Config({
                "We'll also assume the existence of vector $S$ of scale factors, which are positive exact integers. "
                "Let $D_B$ be a new interval with $j$th lower bound equal to zero and $j$th upper bound equal to $\\operatorname{ceiling}(u_j/S_j)$ and let "
                "$T_{BA}(\\vec i)_j=i_j\\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.) "
-               " Then $T_{BA}$ is an affine one-to-one mapping, and we provide "(<code>'interval-scale)" and "(<code>'array-sample)" for these operations.")
+               "Then $T_{BA}$ is an affine one-to-one mapping, and we provide "(<code>'interval-scale)" and "(<code>'array-sample)" for these operations.")
          )
 	(<p> "We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines are simply "
 	     "\"convenience\" procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a "
@@ -192,7 +196,7 @@ they may have hash tables or databases behind an implementation, one may read th
 	     (<code>"(array-getter B)")" is simply "(<code>'A-getter)".  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter B)")" is "
 	     (<code>"(lambda (i j) (A-getter j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>'A-getter)", at least for arrays of small dimension.")
 	(<p> "Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)",  "
-	     (<code>'array-curry)",  "(<code>'array-reverse)", and "(<code>'array-sample)",  and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.")
+	     (<code>'array-curry)",  "(<code>'array-reverse)", "(<code>'array-tile)", "(<code>'array-rotate)" and "(<code>'array-sample)",  and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.")
 	(<h3> "Array-map does not produce a specialized array")
 	(<p> "Daniel Friedman and David Wise wrote a famous paper "(<a> href: "http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR44" "CONS should not Evaluate its Arguments")". "
 	     "In the spirit of that paper, our procedure "(<code>'array-map)" does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of "(<code>'array-map)
@@ -209,13 +213,13 @@ they may have hash tables or databases behind an implementation, one may read th
 
         (<h2> "Issues and Notes")
         (<ul>
-         (<li> (<b> "Relationship to "(<a> href: "http://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
-               "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "http://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
+         (<li> (<b> "Relationship to "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
+               "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
          (<li> (<b> "Indexers. ")"The argument new-domain->old-domain to "(<code> 'specialized-array-share)" is, conceptually, a multi-valued array.")
-         (<li> (<b> "Source of function names. ")"The function "(<code> 'array-curry)" gets its name from the " #\newline
-               (<a> href: "http://en.wikipedia.org/wiki/Currying" "curry operator")
-               " in programming---we are currying the getter of the array and keeping careful track of the domains. " #\newline
-               (<code>'interval-projections)" can be thought of as currying the " #\newline
+         (<li> (<b> "Source of function names. ")"The function "(<code> 'array-curry)" gets its name from the" #\newline
+               (<a> href: "https://en.wikipedia.org/wiki/Currying" "curry operator")
+               " in programming---we are currying the getter of the array and keeping careful track of the domains." #\newline
+               (<code>'interval-projections)" can be thought of as currying the" #\newline
                "characteristic function of the interval,  encapsulated here as "(<code> 'interval-contains-multi-index?)".")
          (<li> (<b> "Choice of functions on intervals. ")"The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.")
          (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
@@ -301,6 +305,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-tile" "array-tile") END
                  (<a> href: "#array-translate" "array-translate")END
                  (<a> href: "#array-permute" "array-permute")END
+                 (<a> href: "#array-rotate" "array-rotate")END
                  (<a> href: "#array-reverse" "array-reverse")END
                  (<a> href: "#array-sample" "array-sample")END
                  (<a> href: "#array-outer-product" "array-outer-product") END
@@ -308,6 +313,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-for-each" "array-for-each")END
                  (<a> href: "#array-fold" "array-fold")END
                  (<a> href: "#array-fold-right" "array-fold-right")END
+                 (<a> href: "#array-reduce" "array-reduce") END
                  (<a> href: "#array-any" "array-any")END
                  (<a> href: "#array-every" "array-every")END
                  (<a> href: "#array->list" "array->list") END
@@ -1126,9 +1132,12 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
                      ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
 (<p>"It is an error to call "(<code>'array-permute)" if its arguments do not satisfy these conditions.")
 
+(format-lambda-list '(array-rotate array dim))
+(<p> "Informally, "(<code> "(array-rotate "(<var>'array)" "(<var>'dim)")")" rotates the axes of "(<code>(<var>'array))" "(<code>(<var>'dim))" places to the left.")
+(<p> "More precisely, "(<code> "(array-rotate "(<var>'array)" "(<var> 'dim)")")" assumes that "(<code>(<var>'array))" is an array and "(<code>(<var>'dim))" is an exact integer between 0 (inclusive) and "(<code> "(array-dimension "(<var>'array)")")" (exclusive).  It computes the permutation "(<code>"(vector "(<var>'dim)" ... (- (array-dimension "(<var>'array)") 1) 0 ... (- "(<var>'dim)" 1))")" (unless "(<code>(<var>'dim))" is zero, in which case it constructs the identity permutation) and returns "(<code>"(array-permute "(<var>'array)" "(<var>'permutation)")")". It is an error if the arguments do not satisfy these conditions.")
 
-(format-lambda-list '(array-reverse array flip?))
-(<p> "We assume that "(<code>(<var>'array))" is an array and "(<code>(<var>'flip?))" is a vector of booleans whose length is the same as the dimension of "(<code>(<var>'array))".")
+(format-lambda-list '(array-reverse array #!optional flip?))
+(<p> "We assume that "(<code>(<var>'array))" is an array and "(<code>(<var>'flip?))", if given, is a vector of booleans whose length is the same as the dimension of "(<code>(<var>'array))".  If "(<code>(<var>'flip?))" is not given, it is set to a vector with length the same as the dimension of "(<code>(<var>'array))", all of whose elements are "(<code> "#t")".")
 (<p> (<code>'array-reverse)" returns a new array  that is specialized,  mutable, or immutable according to whether "(<code>(<var>'array))" is specialized, mutable, or immutable, respectively.  Informally, if "(<code>"(vector-ref "(<var>'flip?)" k)")" is true, then the ordering of multi-indices in the k'th coordinate direction is reversed, and is left undisturbed otherwise.")
 (<p> "More formally, we introduce the function ")
 (<pre>
@@ -1176,6 +1185,42 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
    (apply (array-getter "(<code>(<var>'array))")
           (flip-multi-index multi-index))))) "))
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'flip?))" don't satisfy these requirements.")
+(<p> "The following example using "(<code>'array-reverse)" was motivated by "(<a> href: "https://funcall.blogspot.com/2020/01/palindromes-redux-and-sufficiently.html" "a blog post by Joe Marshall")".")
+(<pre>
+ (<code>"
+(define (palindrome? s)
+  (let ((n (string-length s)))
+    (or (< n 2)
+        (let* ((a
+                ;; an array accessing the characters of s
+                (make-array (make-interval '#(0)
+                                           (vector n))
+                            (lambda (i)
+                              (string-ref s i))))
+               (ra
+                ;; the array accessed in reverse order
+                (array-reverse a))
+               (half-domain
+                (make-interval '#(0)
+                               (vector (quotient n 2)))))
+          (array-every
+           char=?
+           ;; the first half of s
+           (array-extract a half-domain)
+           ;; the reversed second half of s
+           (array-extract ra half-domain))))))
+
+(palindrome? \"\") => #t
+(palindrome? \"a\") => #t
+(palindrome? \"aa\") => #t
+(palindrome? \"ab\") => #f
+(palindrome? \"aba\") => #t
+(palindrome? \"abc\") => #f
+(palindrome? \"abba\") => #t
+(palindrome? \"abca\") => #f
+(palindrome? \"abbc\") => #f
+"))
+
 
 (format-lambda-list '(array-sample array scales))
 (<p> "We assume that "(<code>(<var>'array))" is an array all of whose lower bounds are zero, "
@@ -1331,6 +1376,58 @@ calls")
  (<code>"
 (fold-right "(<var>'kons)" " (<var>'knil)" (array->list "(<var> 'array)"))"))
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'kons))" is not a procedure.")
+
+(format-lambda-list '(array-reduce op A))
+
+(<p> "We assume that "(<code>(<var>'A))" is an array and "(<code>(<var>'op))" is a procedure of two arguments that is associative, i.e., "(<code>"("(<var>'op)" ("(<var>'op)" "(<var>'x)" "(<var>'y)") "(<var>'z)")")" is the same as "(<code>"("(<var>'op)" "(<var>'x)" ("(<var>'op)"  "(<var>'y)" "(<var>'z)"))")".")
+(<p> "Then "(<code>"(array-reduce "(<var>'op)" "(<var>'A)")")" returns")
+(<pre>
+ (<code>"
+(let ((box '())
+      (A_ (array-getter A)))
+  (interval-for-each
+   (lambda args
+     (if (null? box)
+         (set! box (list (apply A_ args)))
+         (set-car! box (op (car box)
+                           (apply A_ args)))))
+   (array-domain A))
+  (car box))
+"))
+(<p> "The implementation is allowed to use the associativity of "(<code>(<var>'op))" to reorder the computations in "(<code>'array-reduce)". It is an error if the arguments do not satisfy these conditions.")
+(<p> "As an example, we consider the finite sum:
+$$
+S_m=\\sum_{k=1}^m \\frac 1{k^2}.
+$$
+One can show that
+$$
+\\frac 1 {m+1}<\\frac{\\pi^2}6-S_m<\\frac 1m.
+$$
+We attempt to compute this in floating-point arithmetic in two ways. In the first, we apply "
+     (<code>'array-reduce)" to an array containing the terms of the series, basically a serial computation.  In the second, we divide the series into blocks of no more than 1,000 consecutive terms, apply "
+     (<code>'array-reduce)" to get a new sequence of terms, and repeat the process. The second way is approximately what might happen with GPU computing.")
+(<p> " We find with $m=1{,}000{,}000{,}000$: ")
+(<pre>
+ (<code>"
+(define A (make-array (make-interval '#(1) '#(1000000001))
+                      (lambda (k)
+                        (fl/ (flsquare (inexact k))))))
+(define (block-sum A)
+  (let ((N (interval-volume (array-domain A))))
+    (cond ((<= N 1000)
+           (array-reduce fl+ A))
+          ((<= N (square 1000))
+           (block-sum (array-map block-sum
+                                 (array-tile A (vector (integer-sqrt N))))))
+          (else
+           (block-sum (array-map block-sum
+                                 (array-tile A (vector (quotient N 1000)))))))))
+(array-reduce fl+ A) => 1.644934057834575
+(block-sum A)        => 1.6449340658482325
+"))
+(<p> "Since $\\pi^2/6\\approx{}$"(<code>"1.6449340668482264")", we see  using the first method that the difference $\\pi^2/6-{}$"(<code>"1.644934057834575")"${}\\approx{}$"(<code>"9.013651380840315e-9")" and with the second we have "
+     "$\\pi^2/6-{}$"(<code>"1.6449340658482325")"${}\\approx{}$"(<code>"9.99993865491433e-10")".  The true difference should be between $\\frac 1{1{,}000{,}000{,}001}\\approx{}$"(<code>"9.99999999e-10")" and $\\frac 1{1{,}000{,}000{,}000}={}$"(<code>"1e-9")". The difference for the first method is about 10 times too big, and, in fact, will not change further because any futher terms, when added to the partial sum, are too small to increase the sum after rounding-to-nearest in double-precision IEEE-754 floating-point arithmetic.")
+
 
 (format-lambda-list '(array-any pred array1 array2 "..."))
 
@@ -1667,7 +1764,7 @@ order in array->specialized-array guarantees the the correct order of execution 
 
 (<p> (<b> "Calculating second differences of images. ")"For another example, if a real-valued function is defined
 on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
-and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on \"Moduli of smoothness\" in "(<a> href: "http://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory" "these notes on wavelets and approximation theory")" for more details.")
+and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on \"Moduli of smoothness\" in "(<a> href: "https://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory" "these notes on wavelets and approximation theory")" for more details.")
 (<p> "Using this definition, the following code computes all second-order forward differences of an image in the directions
 $d,2 d,3 d,\\ldots$, defined only on the domains where this makes sense: ")
 (<pre>
@@ -1882,7 +1979,7 @@ Second-differences in the direction $k\\times (1,-1)$:
                         ((0) 1.)
                         ((1) -1.)
                         (else 0.)))))))
-  (display \"\nInitial image: \n\")
+  (display \"\nInitial image:\n\")
   (pretty-print (list (array-domain image)
 		      (array->list image)))
   (hyperbolic-Haar-transform image)
@@ -1935,7 +2032,7 @@ Reconstructed image:
                         ((0) 1.)
                         ((1) -1.)
                         (else 0.)))))))
-  (display \"\\nInitial image: \\n\")
+  (display \"\\nInitial image:\\n\")
   (pretty-print (list (array-domain image)
 		      (array->list image)))
   (Haar-transform image)
@@ -2155,13 +2252,14 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 (<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
- (<li> (<a> name: 'bawden href: "http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
+ (<li> (<a> name: 'bawden href: "https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
        ", by Alan Bawden.")
- (<li> (<a> name: 'SRFI-4  href: "http://srfi.schemers.org/srfi-4/"  "SRFI 4:  Homogeneous Numeric Vector Datatypes")", by Marc Feeley.")
- (<li> (<a> name: 'SRFI-25 href: "http://srfi.schemers.org/srfi-25/" "SRFI 25: Multi-dimensional Array Primitives")", by Jussi Piitulainen.")
- (<li> (<a> name: 'SRFI-47 href: "http://srfi.schemers.org/srfi-47/" "SRFI 47: Array")", by Aubrey Jaffer.")
- (<li> (<a> name: 'SRFI-58 href: "http://srfi.schemers.org/srfi-58/" "SRFI 58: Array Notation")", by Aubrey Jaffer.")
- (<li> (<a> name: 'SRFI-63 href: "http://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer."))
+ (<li> (<a> name: 'SRFI-4  href: "https://srfi.schemers.org/srfi-4/"  "SRFI 4:  Homogeneous Numeric Vector Datatypes")", by Marc Feeley.")
+ (<li> (<a> name: 'SRFI-25 href: "https://srfi.schemers.org/srfi-25/" "SRFI 25: Multi-dimensional Array Primitives")", by Jussi Piitulainen.")
+ (<li> (<a> name: 'SRFI-47 href: "https://srfi.schemers.org/srfi-47/" "SRFI 47: Array")", by Aubrey Jaffer.")
+ (<li> (<a> name: 'SRFI-58 href: "https://srfi.schemers.org/srfi-58/" "SRFI 58: Array Notation")", by Aubrey Jaffer.")
+ (<li> (<a> name: 'SRFI-63 href: "https://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer.")
+ (<li> (<a> name: 'SRFI-164 href: "https://srfi.schemers.org/srfi-164/" "SRFI 164: Enhanced multi-dimensional Arrays")", by Per Bothner."))
 (<h2> "Copyright")
 (<p> (<unprotected> "&copy;")" 2016, 2018 Bradley J Lucier. All Rights Reserved.")
 (<p> "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: ")

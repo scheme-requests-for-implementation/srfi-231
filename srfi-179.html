@@ -17,12 +17,12 @@
     <h2>Author</h2>
     <p>Bradley J. Lucier</p>
     <h2>Status</h2>
-    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+179+at+srfi+dotschemers+dot+org">srfi-179@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-179">archive</a>.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+179+at+srfi+dotschemers+dot+org">srfi-179@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-179">archive</a>.  There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-179">git repository</a> of this document, a reference implementation, a test file, and other materials.</p>
     <ul>
       <li>Received: 2020/1/11</li>
       <li>60-day deadline: 2020/3/13</li>
-      <li>Draft #1 published: 2019/10/16</li>
-    </ul>
+      <li>Draft #1 published: 2020/1/11</li>
+      <li>Draft #2 published: 2020/1/27</li></ul>
     <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of nonempty intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
     <h2>Rationale</h2>
@@ -35,10 +35,10 @@
       <li>Encourage <b>bulk processing of arrays</b> rather than word-by-word operations.</li></ul>
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-122/">SRFI-122</a> in the following ways:</p>
     <ul>
-      <li>The procedures <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-assign!</code>, and <code>array-swap!</code> have been added.</li>
+      <li>The procedures <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-rotate</code>, <code>array-reduce</code>, <code>array-assign!</code>, and <code>array-swap!</code> have been added together with some examples.</li>
       <li>The discussion of Haar transforms as examples of separable transforms has been corrected.</li>
       <li>The documentation has a few more examples of image processing algorithms.</li>
-      <li>Some matrix examples have been added to this document and test-arrays.scm.</li></ul>
+      <li>Some matrix examples have been added to this document.</li></ul>
     <h2>Overview</h2>
     <h3>Bawden-style arrays</h3>
     <p>In a <a href="https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[0,u_0)\times\cdots\times [0,u_{d-1})$.  I'll note that his function <code>array-set!</code> put the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a routine <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a function from the interval $[0,u_0)\times\cdots\times [0,u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden called the mapping specified in <code>make-shared-array</code> <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
@@ -56,13 +56,13 @@
       <li><b>Restricting the domain of an array: </b>  If the domain of $B$, $D_B$, is a subset of the domain of $A$, then $T_{BA}(\vec i)=\vec i$ is a one-to-one affine mapping.  We define <code>array-extract</code> to define this common operation; it's like looking at a rectangular sub-part of a spreadsheet. We use it to extract the common part of overlapping domains of three arrays in an image processing example below. </li>
       <li><b>Tiling an array: </b>For various reasons (parallel processing, optimizing cache localization, GPU programming, etc.) one may wish to process a large array as a number of subarrays of the same dimensions, which we call <i>tiling</i> the array.  The routine <code>array-tile</code> returns a new array, each entry of which is a subarray extracted (in the sense of <code>array-extract</code>) from the input array.</li>
       <li><b>Translating the domain of an array: </b>If $\vec d$ is a vector of integers, then $T_{BA}(\vec i)=\vec i-\vec d$ is a one-to-one affine map of $D_B=\{\vec i+\vec d\mid \vec i\in D_A\}$ onto $D_A$. We call $D_B$ the <i>translate</i> of $D_A$, and we define <code>array-translate</code> to provide this operation.</li>
-      <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.</li>
+      <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. (The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.) We also provide <code>array-rotate</code> for the special permutations that just rotate the axes.</li>
       <li><b>Currying an array: </b>Let's denote the cross product of two intervals $\text{Int}_1$ and $\text{Int}_2$ by $\text{Int}_1\times\text{Int}_2$; if $\vec j=(j_0,\ldots,j_{r-1})\in \text{Int}_1$ and $\vec i=(i_0,\ldots,i_{s-1})\in \text{Int}_2$, then $\vec j\times\vec i$, which we define to be $(j_0,\ldots,j_{r-1},i_0,\ldots,i_{s-1})$, is in $\text{Int}_1\times\text{Int}_2$. If $D_A=\text{Int}_1\times\text{Int}_2$ and $\vec j\in\text{Int}_1$, then $T_{BA}(\vec i)=\vec j\times\vec i$ is a one-to-one affine mapping from $D_B=\text{Int}_2$ into $D_A$.  For each vector $\vec j$ we can compute a new array in this way; we provide <code>array-curry</code> for this operation, which returns an array whose domain is $\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\text{Int}_2$. Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.</li>
-      <li><b>Traversing some indices in a multi-index in reverse order: </b>Consider an array $A$ with domain $D_A=[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for &quot;flip?&quot;). Then define $T_{BA}:D_B\to D_A$ by $i_j\to i_j$ if $F_j$ is <code>#f</code> and $i_j\to u_j+l_j-1-i_j$ if  $F_j$ is <code>#t</code>.In other words,  we reverse the ordering of the $j$th coordinate of $\vec i$ if and only if $F_j$ is true. $T_{BA}$ is an affine mapping from $D_B\to D_A$, which defines a new array $B$, and we can provide <code>array-reverse</code> for this operation. Applying <code>array-reverse</code> to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).</li>
-      <li><b>Uniformly sampling an array: </b>Assume that $A$ is an array with domain $[0,u_1)\times\cdots\times[0,u_{d-1})$ (i.e., an interval all of whose lower bounds are zero). We'll also assume the existence of vector $S$ of scale factors, which are positive exact integers. Let $D_B$ be a new interval with $j$th lower bound equal to zero and $j$th upper bound equal to $\operatorname{ceiling}(u_j/S_j)$ and let $T_{BA}(\vec i)_j=i_j\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.)  Then $T_{BA}$ is an affine one-to-one mapping, and we provide <code>interval-scale</code> and <code>array-sample</code> for these operations.</li></ul>
+      <li><b>Traversing some indices in a multi-index in reverse order: </b>Consider an array $A$ with domain $D_A=[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for &quot;flip?&quot;). Then define $T_{BA}:D_B\to D_A$ by $i_j\to i_j$ if $F_j$ is <code>#f</code> and $i_j\to u_j+l_j-1-i_j$ if  $F_j$ is <code>#t</code>. In other words,  we reverse the ordering of the $j$th coordinate of $\vec i$ if and only if $F_j$ is true. $T_{BA}$ is an affine mapping from $D_B\to D_A$, which defines a new array $B$, and we can provide <code>array-reverse</code> for this operation. Applying <code>array-reverse</code> to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).</li>
+      <li><b>Uniformly sampling an array: </b>Assume that $A$ is an array with domain $[0,u_1)\times\cdots\times[0,u_{d-1})$ (i.e., an interval all of whose lower bounds are zero). We'll also assume the existence of vector $S$ of scale factors, which are positive exact integers. Let $D_B$ be a new interval with $j$th lower bound equal to zero and $j$th upper bound equal to $\operatorname{ceiling}(u_j/S_j)$ and let $T_{BA}(\vec i)_j=i_j\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.) Then $T_{BA}$ is an affine one-to-one mapping, and we provide <code>interval-scale</code> and <code>array-sample</code> for these operations.</li></ul>
     <p>We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines are simply &quot;convenience&quot; procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. Examples are given below.</p>
     <h3>Generalized arrays</h3>
-    <p>Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\ldots,i_{d-1})$ of exact integers 
+    <p>Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\ldots,i_{d-1})$ of exact integers
       in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ (the <i>domain</i> of the array) to Scheme objects.
       Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.</p>
     <p>Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.</p>
@@ -77,7 +77,7 @@
     <p>One could again &quot;share&quot; $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\to D_B$, and then each access $C(\vec i)=A(T_{BA}(T_{CB}(\vec i)))$.  The composition $T_{BA}\circ T_{CB}:D_C\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\to D_A$, and $C(\vec i)=A(T_{CA}(\vec i))$ can be computed with the overhead of computing a single affine transformation.</p>
     <p>So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine <code>specialized-array-share</code>, not a more general <code>array-share</code>.</p>
     <p>Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote <code>(array-getter A)</code> by <code>A-getter</code>, then if B is the result of <code>array-extract</code> applied to A, then <code>(array-getter B)</code> is simply <code>A-getter</code>.  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\pi((i,j))=(j,i)$, then <code>(array-getter B)</code> is <code>(lambda (i j) (A-getter j i))</code>.  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from <code>A-getter</code>, at least for arrays of small dimension.</p>
-    <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, and <code>array-sample</code>,  and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.</p>
+    <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, <code>array-tile</code>, <code>array-rotate</code> and <code>array-sample</code>,  and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.</p>
     <h3>Array-map does not produce a specialized array</h3>
     <p>Daniel Friedman and David Wise wrote a famous paper <a href="http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR44">CONS should not Evaluate its Arguments</a>. In the spirit of that paper, our procedure <code>array-map</code> does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of <code>array-map</code> each time they are accessed.   This immutable array can be passed on to further applications of <code>array-map</code> for further processing, without generating the storage bodies for intermediate arrays.</p>
     <p>We provide the procedure <code>array-&gt;specialized-array</code> to transform a generalized array (like that returned by <code>array-map</code>) to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ operations.</p>
@@ -87,9 +87,9 @@
     <ul>
       <li><b>Relationship to <a href="https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
       <li><b>Indexers. </b>The argument new-domain-&gt;old-domain to <code>specialized-array-share</code> is, conceptually, a multi-valued array.</li>
-      <li><b>Source of function names. </b>The function <code>array-curry</code> gets its name from the 
-        <a href="https://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains. 
-        <code>interval-projections</code> can be thought of as currying the 
+      <li><b>Source of function names. </b>The function <code>array-curry</code> gets its name from the
+        <a href="https://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains.
+        <code>interval-projections</code> can be thought of as currying the
         characteristic function of the interval,  encapsulated here as <code>interval-contains-multi-index?</code>.</li>
       <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
       <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li>
@@ -167,6 +167,7 @@
         <a href="#array-tile">array-tile</a>,
         <a href="#array-translate">array-translate</a>,
         <a href="#array-permute">array-permute</a>,
+        <a href="#array-rotate">array-rotate</a>,
         <a href="#array-reverse">array-reverse</a>,
         <a href="#array-sample">array-sample</a>,
         <a href="#array-outer-product">array-outer-product</a>,
@@ -174,6 +175,7 @@
         <a href="#array-for-each">array-for-each</a>,
         <a href="#array-fold">array-fold</a>,
         <a href="#array-fold-right">array-fold-right</a>,
+        <a href="#array-reduce">array-reduce</a>,
         <a href="#array-any">array-any</a>,
         <a href="#array-every">array-every</a>,
         <a href="#array-&gt;list">array-&gt;list</a>,
@@ -207,8 +209,8 @@
     <p>Create a new interval; <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code>
       are nonempty vectors (of the same length) of exact integers that satisfy</p>
     <pre><code> (&lt; (vector-ref <var>lower-bounds</var> i) (vector-ref <var>upper-bounds</var> i))</code></pre>
-    <p> for 
-      $0\leq i&lt;{}$<code>(vector-length <var>lower-bounds</var>)</code>.  It is an error if 
+    <p> for
+      $0\leq i&lt;{}$<code>(vector-length <var>lower-bounds</var>)</code>.  It is an error if
       <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code> do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="interval?">interval?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is an interval, and <code>#f</code> otherwise.</p>
@@ -269,7 +271,7 @@
     <p>for $0\leq j &lt; d$, and <code>#f</code> otherwise.</p>
     <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a name="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
-    <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval 
+    <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval
       $[l_0,u_0)\times [l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$
       and splits it into two parts</p>
     <blockquote>$[l_0,u_0)\times\cdots\times[l_{d-\text{right-dimension}-1},u_{d-\text{right-dimension}-1})$
@@ -315,15 +317,15 @@
       nonempty interval.  It is an error if the arguments do not satisfy these conditions.</p>
     <p>Examples:</p>
     <pre><code>
-(interval= 
+(interval=
  (interval-dilate (make-interval '#(0 0) '#(100 100))
                   '#(1 1) '#(1 1))
  (make-interval '#(1 1) '#(101 101))) =&gt; #t
-(interval= 
+(interval=
  (interval-dilate (make-interval '#(0 0) '#(100 100))
                   '#(-1 -1) '#(1 1))
  (make-interval '#(-1 -1) '#(101 101))) =&gt; #t
-(interval= 
+(interval=
  (interval-dilate (make-interval '#(0 0) '#(100 100))
                   '#(0 0) '#(-50 -50))
  (make-interval '#(0 0) '#(50 50))) =&gt; #t
@@ -412,7 +414,7 @@
                       vector-set!
                       (lambda (arg) #t)
                       make-vector
-                      vector-length 
+                      vector-length
                       #f))</code></pre>Furthermore, <code>s<var>X</var>-storage-class</code> is defined for <code><var>X</var></code>=8, 16, 32, and 64 (which have default values 0 and
     manipulate exact integer values between -2<sup><var>X</var>-1</sup> and
     2<sup><var>X</var>-1</sup>-1 inclusive),
@@ -606,7 +608,7 @@ indexer:       (lambda multi-index
 (array-for-each (lambda (row)
                   (pretty-print (array-&gt;list row)))
                 (array-curry b 1))
-  
+
 ;; which prints
 ;; ((0 0) (0 1) (0 2) (0 3) (0 4))
 ;; ((1 1) (1 2) (1 3) (1 4) (1 5))
@@ -762,7 +764,7 @@ indexer:       (lambda multi-index
  <var>array</var>
  (interval-translate (array-domain <var>array</var>)
                      <var>translation</var>)
- (lambda multi-index 
+ (lambda multi-index
    (apply values
           (map -
                multi-index
@@ -771,7 +773,7 @@ indexer:       (lambda multi-index
     <p>that shares the body of <code><var>array</var></code>.</p>
     <p>If <code><var>array</var></code> is not a specialized array but is a mutable array, returns a new mutable array</p>
     <pre><code>
-(make-array 
+(make-array
  (interval-translate (array-domain <var>array</var>)
                      <var>translation</var>)
  (lambda multi-index
@@ -836,8 +838,11 @@ indexer:       (lambda multi-index
               (apply (array-getter <var>array</var>)
                      (&pi;<sup>-1</sup> multi-index))))</code></pre>
     <p>It is an error to call <code>array-permute</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-reverse">array-reverse</a> <var>array</var> <var>flip?</var></code></p>
-    <p>We assume that <code><var>array</var></code> is an array and <code><var>flip?</var></code> is a vector of booleans whose length is the same as the dimension of <code><var>array</var></code>.</p>
+    <p><b>Procedure: </b><code><a name="array-rotate">array-rotate</a> <var>array</var> <var>dim</var></code></p>
+    <p>Informally, <code>(array-rotate <var>array</var> <var>dim</var>)</code> rotates the axes of <code><var>array</var></code> <code><var>dim</var></code> places to the left.</p>
+    <p>More precisely, <code>(array-rotate <var>array</var> <var>dim</var>)</code> assumes that <code><var>array</var></code> is an array and <code><var>dim</var></code> is an exact integer between 0 (inclusive) and <code>(array-dimension <var>array</var>)</code> (exclusive).  It computes the permutation <code>(vector <var>dim</var> ... (- (array-dimension <var>array</var>) 1) 0 ... (- <var>dim</var> 1))</code> (unless <code><var>dim</var></code> is zero, in which case it constructs the identity permutation) and returns <code>(array-permute <var>array</var> <var>permutation</var>)</code>. It is an error if the arguments do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="array-reverse">array-reverse</a> <var>array</var> #!optional <var>flip?</var></code></p>
+    <p>We assume that <code><var>array</var></code> is an array and <code><var>flip?</var></code>, if given, is a vector of booleans whose length is the same as the dimension of <code><var>array</var></code>.  If <code><var>flip?</var></code> is not given, it is set to a vector with length the same as the dimension of <code><var>array</var></code>, all of whose elements are <code>#t</code>.</p>
     <p><code>array-reverse</code> returns a new array  that is specialized,  mutable, or immutable according to whether <code><var>array</var></code> is specialized, mutable, or immutable, respectively.  Informally, if <code>(vector-ref <var>flip?</var> k)</code> is true, then the ordering of multi-indices in the k'th coordinate direction is reversed, and is left undisturbed otherwise.</p>
     <p>More formally, we introduce the function </p>
     <pre><code>
@@ -881,6 +886,40 @@ indexer:       (lambda multi-index
    (apply (array-getter <code><var>array</var></code>)
           (flip-multi-index multi-index))))) </code></pre>
     <p>It is an error if <code><var>array</var></code> and <code><var>flip?</var></code> don't satisfy these requirements.</p>
+    <p>The following example using <code>array-reverse</code> was motivated by <a href="https://funcall.blogspot.com/2020/01/palindromes-redux-and-sufficiently.html">a blog post by Joe Marshall</a>.</p>
+    <pre><code>
+(define (palindrome? s)
+  (let ((n (string-length s)))
+    (or (&lt; n 2)
+        (let* ((a
+                ;; an array accessing the characters of s
+                (make-array (make-interval '#(0)
+                                           (vector n))
+                            (lambda (i)
+                              (string-ref s i))))
+               (ra
+                ;; the array accessed in reverse order
+                (array-reverse a))
+               (half-domain
+                (make-interval '#(0)
+                               (vector (quotient n 2)))))
+          (array-every
+           char=?
+           ;; the first half of s
+           (array-extract a half-domain)
+           ;; the reversed second half of s
+           (array-extract ra half-domain))))))
+
+(palindrome? &quot;&quot;) =&gt; #t
+(palindrome? &quot;a&quot;) =&gt; #t
+(palindrome? &quot;aa&quot;) =&gt; #t
+(palindrome? &quot;ab&quot;) =&gt; #f
+(palindrome? &quot;aba&quot;) =&gt; #t
+(palindrome? &quot;abc&quot;) =&gt; #f
+(palindrome? &quot;abba&quot;) =&gt; #t
+(palindrome? &quot;abca&quot;) =&gt; #f
+(palindrome? &quot;abbc&quot;) =&gt; #f
+</code></pre>
     <p><b>Procedure: </b><code><a name="array-sample">array-sample</a> <var>array</var> <var>scales</var></code></p>
     <p>We assume that <code><var>array</var></code> is an array all of whose lower bounds are zero, and <code><var>scales</var></code> is a vector of positive exact integers whose length is the same as the dimension of <code><var>array</var></code>.</p>
     <p><code>array-sample</code> returns a new array  that is specialized,  mutable, or immutable according to whether <code><var>array</var></code> is specialized, mutable, or immutable, respectively.  Informally, if we construct a new matrix $S$ with the entries of <code><var>scales</var></code> on the main diagonal, then the $\vec i$th element of <code>(array-sample <var>array</var> <var>scales</var>)</code> is the $S\vec i$th element of <code><var>array</var></code>.</p>
@@ -999,12 +1038,56 @@ indexer:       (lambda multi-index
 (fold-right kons knil lis)
     = (kons (car lis) (fold-right kons knil (cdr lis)))
 (fold-right kons knil '())
-    = knil 
+    = knil
 </code></pre>
     <p>then <code>(array-fold-right <var>kons</var> <var>knil</var> <var>array</var>)</code> returns </p>
     <pre><code>
 (fold-right <var>kons</var> <var>knil</var> (array-&gt;list <var>array</var>))</code></pre>
     <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>kons</var></code> is not a procedure.</p>
+    <p><b>Procedure: </b><code><a name="array-reduce">array-reduce</a> <var>op</var> <var>A</var></code></p>
+    <p>We assume that <code><var>A</var></code> is an array and <code><var>op</var></code> is a procedure of two arguments that is associative, i.e., <code>(<var>op</var> (<var>op</var> <var>x</var> <var>y</var>) <var>z</var>)</code> is the same as <code>(<var>op</var> <var>x</var> (<var>op</var>  <var>y</var> <var>z</var>))</code>.</p>
+    <p>Then <code>(array-reduce <var>op</var> <var>A</var>)</code> returns</p>
+    <pre><code>
+(let ((box '())
+      (A_ (array-getter A)))
+  (interval-for-each
+   (lambda args
+     (if (null? box)
+         (set! box (list (apply A_ args)))
+         (set-car! box (op (car box)
+                           (apply A_ args)))))
+   (array-domain A))
+  (car box))
+</code></pre>
+    <p>The implementation is allowed to use the associativity of <code><var>op</var></code> to reorder the computations in <code>array-reduce</code>. It is an error if the arguments do not satisfy these conditions.</p>
+    <p>As an example, we consider the finite sum:
+      $$
+      S_m=\sum_{k=1}^m \frac 1{k^2}.
+      $$
+      One can show that
+      $$
+      \frac 1 {m+1}&lt;\frac{\pi^2}6-S_m&lt;\frac 1m.
+      $$
+      We attempt to compute this in floating-point arithmetic in two ways. In the first, we apply <code>array-reduce</code> to an array containing the terms of the series, basically a serial computation.  In the second, we divide the series into blocks of no more than 1,000 consecutive terms, apply <code>array-reduce</code> to get a new sequence of terms, and repeat the process. The second way is approximately what might happen with GPU computing.</p>
+    <p> We find with $m=1{,}000{,}000{,}000$: </p>
+    <pre><code>
+(define A (make-array (make-interval '#(1) '#(1000000001))
+                      (lambda (k)
+                        (fl/ (flsquare (inexact k))))))
+(define (block-sum A)
+  (let ((N (interval-volume (array-domain A))))
+    (cond ((&lt;= N 1000)
+           (array-reduce fl+ A))
+          ((&lt;= N (square 1000))
+           (block-sum (array-map block-sum
+                                 (array-tile A (vector (integer-sqrt N))))))
+          (else
+           (block-sum (array-map block-sum
+                                 (array-tile A (vector (quotient N 1000)))))))))
+(array-reduce fl+ A) =&gt; 1.644934057834575
+(block-sum A)        =&gt; 1.6449340658482325
+</code></pre>
+    <p>Since $\pi^2/6\approx{}$<code>1.6449340668482264</code>, we see  using the first method that the difference $\pi^2/6-{}$<code>1.644934057834575</code>${}\approx{}$<code>9.013651380840315e-9</code> and with the second we have $\pi^2/6-{}$<code>1.6449340658482325</code>${}\approx{}$<code>9.99993865491433e-10</code>.  The true difference should be between $\frac 1{1{,}000{,}000{,}001}\approx{}$<code>9.99999999e-10</code> and $\frac 1{1{,}000{,}000{,}000}={}$<code>1e-9</code>. The difference for the first method is about 10 times too big, and, in fact, will not change further because any futher terms, when added to the partial sum, are too small to increase the sum after rounding-to-nearest in double-precision IEEE-754 floating-point arithmetic.</p>
     <p><b>Procedure: </b><code><a name="array-any">array-any</a> <var>pred</var> <var>array1</var> <var>array2</var> ...</code></p>
     <p>Assumes that <code><var>array1</var></code>, <code><var>array2</var></code>, etc., are arrays, all with the same domain, which we'll call <code>interval</code>.  Also assumes that <code><var>pred</var></code> is a procedure that takes as many arguments as there are arrays and returns a single value.</p>
     <p><code>array-any</code> first applies <code>(array-getter <var>array1</var>)</code>, etc., to the first element of <code>interval</code> in lexicographical order, to which values it then applies <code><var>pred</var></code>.</p>
@@ -1077,7 +1160,7 @@ indexer:       (lambda multi-index
 (define pgm-pixels cdr)
 
 (define (read-pgm file)
-  
+
   (define (read-pgm-object port)
     (skip-white-space port)
     (let ((o (read port)))
@@ -1086,17 +1169,17 @@ indexer:       (lambda multi-index
       (if (eof-object? o)
           (error &quot;reached end of pgm file&quot;)
           o)))
-  
+
   (define (skip-to-end-of-line port)
     (let loop ((ch (read-char port)))
       (if (not (eq? ch #\newline))
           (loop (read-char port)))))
-  
+
   (define (white-space? ch)
-    (case ch 
+    (case ch
       ((#\newline #\space #\tab) #t)
       (else #f)))
-  
+
   (define (skip-white-space port)
     (let ((ch (peek-char port)))
       (cond ((white-space? ch)
@@ -1106,7 +1189,7 @@ indexer:       (lambda multi-index
              (skip-to-end-of-line port)
              (skip-white-space port))
             (else #f))))
-  
+
   ;; The image file formats defined in netpbm
   ;; are problematical, because they read the data
   ;; in the header as variable-length ISO-8859-1 text,
@@ -1115,30 +1198,30 @@ indexer:       (lambda multi-index
   ;; as binary data.
   ;; So we give here a solution of how to deal
   ;; with these subtleties in Gambit Scheme.
-  
+
   (call-with-input-file
       (list path:          file
             char-encoding: 'ISO-8859-1
             eol-encoding:  'lf)
     (lambda (port)
-      
+
       ;; We're going to read text for a while,
       ;; then switch to binary.
       ;; So we need to turn off buffering until
       ;; we switch to binary.
-      
+
       (port-settings-set! port '(buffering: #f))
-      
+
       (let* ((header (read-pgm-object port))
              (columns (read-pgm-object port))
              (rows (read-pgm-object port))
              (greys (read-pgm-object port)))
-        
+
         ;; now we switch back to buffering
         ;; to speed things up
-        
+
         (port-settings-set! port '(buffering: #t))
-        
+
         (make-pgm
          greys
          (array-&gt;specialized-array
@@ -1316,7 +1399,7 @@ indexer:       (lambda multi-index
     <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
-      and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on &quot;Moduli of smoothness&quot; in <a href="http://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory">these notes on wavelets and approximation theory</a> for more details.</p>
+      and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on &quot;Moduli of smoothness&quot; in <a href="https://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory">these notes on wavelets and approximation theory</a> for more details.</p>
     <p>Using this definition, the following code computes all second-order forward differences of an image in the directions
       $d,2 d,3 d,\ldots$, defined only on the domains where this makes sense: </p>
     <pre><code>
@@ -1527,7 +1610,7 @@ Second-differences in the direction $k\times (1,-1)$:
                         ((1) -1.)
                         (else 0.)))))))
   (display &quot;
-Initial image: 
+Initial image:
 &quot;)
   (pretty-print (list (array-domain image)
 		      (array-&gt;list image)))
@@ -1542,15 +1625,15 @@ Initial image:
 </code></pre>
     <p>This yields: </p>
     <pre>
-Initial image: 
-(#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt; 
+Initial image:
+(#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Array of hyperbolic Haar wavelet coefficients: 
-(#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt; 
+Array of hyperbolic Haar wavelet coefficients:
+(#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (0. 0. 0. 0. 2.8284271247461894 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Reconstructed image: 
+Reconstructed image:
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (.9999999999999996
   .9999999999999996
@@ -1580,7 +1663,7 @@ Reconstructed image:
                         ((0) 1.)
                         ((1) -1.)
                         (else 0.)))))))
-  (display &quot;\nInitial image: \n&quot;)
+  (display &quot;\nInitial image:\n&quot;)
   (pretty-print (list (array-domain image)
 		      (array-&gt;list image)))
   (Haar-transform image)
@@ -1594,15 +1677,15 @@ Reconstructed image:
 </pre>
     <p>This yields: </p>
     <pre>
-Initial image: 
-(#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt; 
+Initial image:
+(#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Array of Haar wavelet coefficients: 
+Array of Haar wavelet coefficients:
 (#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (0. 0. 0. 0. 1.9999999999999998 0. 1.9999999999999998 0. 0. 0. 0. 0. 0. 0. 0. 0.))
 
-Reconstructed image: 
+Reconstructed image:
 (#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (.9999999999999997
   .9999999999999997
@@ -1799,7 +1882,8 @@ Reconstructed image:
       <li><a name="SRFI-25" href="https://srfi.schemers.org/srfi-25/">SRFI 25: Multi-dimensional Array Primitives</a>, by Jussi Piitulainen.</li>
       <li><a name="SRFI-47" href="https://srfi.schemers.org/srfi-47/">SRFI 47: Array</a>, by Aubrey Jaffer.</li>
       <li><a name="SRFI-58" href="https://srfi.schemers.org/srfi-58/">SRFI 58: Array Notation</a>, by Aubrey Jaffer.</li>
-      <li><a name="SRFI-63" href="https://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li></ol>
+      <li><a name="SRFI-63" href="https://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li>
+      <li><a name="SRFI-164" href="https://srfi.schemers.org/srfi-164/">SRFI 164: Enhanced multi-dimensional Arrays</a>, by Per Bothner.</li></ol>
     <h2>Copyright</h2>
     <p>&copy; 2016, 2018 Bradley J Lucier. All Rights Reserved.</p>
     <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: </p>

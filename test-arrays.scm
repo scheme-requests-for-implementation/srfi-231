@@ -97,7 +97,7 @@
 (pp "interval-dimension error tests")
 
 (test (interval-dimension 1)
-      "interval-dimension: argument is not an interval: ")
+      "interval-dimension: The argument is not an interval: ")
 
 (pp "interval-dimension result tests")
 
@@ -107,52 +107,52 @@
 (pp "interval-lower-bound error tests")
 
 (test (interval-lower-bound 1 0)
-      "interval-lower-bound: argument is not an interval: ")
+      "interval-lower-bound: The first argument is not an interval: ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) #f)
-      "interval-lower-bound: argument is not an exact integer: ")
+      "interval-lower-bound: The second argument is not an exact integer: ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 1.)
-      "interval-lower-bound: argument is not an exact integer: ")
+      "interval-lower-bound: The second argument is not an exact integer: ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) -1)
-      "interval-lower-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 3)
-      "interval-lower-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 4)
-      "interval-lower-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (pp "interval-upper-bound error tests")
 
 (test (interval-upper-bound 1 0)
-      "interval-upper-bound: argument is not an interval: ")
+      "interval-upper-bound: The first argument is not an interval: ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) #f)
-      "interval-upper-bound: argument is not an exact integer: ")
+      "interval-upper-bound: The second argument is not an exact integer: ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 1.)
-      "interval-upper-bound: argument is not an exact integer: ")
+      "interval-upper-bound: The second argument is not an exact integer: ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) -1)
-      "interval-upper-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 3)
-      "interval-upper-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 4)
-      "interval-upper-bound: index is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (pp "interval-lower-bounds->list error tests")
 
 (test (interval-lower-bounds->list 1)
-      "interval-lower-bounds->list: argument is not an interval: ")
+      "interval-lower-bounds->list: The argument is not an interval: ")
 
 (pp "interval-upper-bounds->list error tests")
 
 (test (interval-upper-bounds->list #f)
-      "interval-upper-bounds->list: argument is not an interval: ")
+      "interval-upper-bounds->list: The argument is not an interval: ")
 
 (pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->list, and interval-upper-bounds->list result tests")
 
@@ -177,12 +177,12 @@
 (pp "interval-lower-bounds->vector error tests")
 
 (test (interval-lower-bounds->vector 1)
-      "interval-lower-bounds->vector: argument is not an interval: ")
+      "interval-lower-bounds->vector: The argument is not an interval: ")
 
 (pp "interval-upper-bounds-> error tests")
 
 (test (interval-upper-bounds->vector #f)
-      "interval-upper-bounds->vector: argument is not an interval: ")
+      "interval-upper-bounds->vector: The argument is not an interval: ")
 
 (pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->vector, and interval-upper-bounds->vector result tests")
 
@@ -248,7 +248,7 @@
 (pp "interval-volume error tests")
 
 (test (interval-volume #f)
-      "interval-volume: argument is not an interval: ")
+      "interval-volume: The argument is not an interval: ")
 
 (pp "interval-volume result tests")
 
@@ -313,13 +313,13 @@
 (pp "interval-contains-multi-index?  error tests")
 
 (test (interval-contains-multi-index? 1 1)
-      "interval-contains-multi-index?: argument is not an interval: ")
+      "interval-contains-multi-index?: The first argument is not an interval: ")
 
 (test (interval-contains-multi-index? (make-interval '#(1 2 3) '#(4 5 6)) 1)
-      "interval-contains-multi-index?: dimension of interval does not match number of arguments: ")
+      "interval-contains-multi-index?: The dimension of the first argument (an interval) does not match number of indices: ")
 
 (test (interval-contains-multi-index? (make-interval '#(1 2 3) '#(4 5 6)) 1 1/2 0.1)
-      "interval-contains-multi-index?: at least one multi-index component is not an exact integer: ")
+      "interval-contains-multi-index?: At least one multi-index component is not an exact integer: ")
 
 (pp "interval-contains-multi-index?  result tests")
 
@@ -339,10 +339,10 @@
 (pp "interval-for-each error tests")
 
 (test (interval-for-each (lambda (x) x) 1)
-      "interval-for-each: Argument is not a interval: ")
+      "interval-for-each: The second argument is not a interval: ")
 
 (test (interval-for-each 1 (make-interval '#(3) '#(4)))
-      "interval-for-each: Argument is not a procedure: ")
+      "interval-for-each: The first argument is not a procedure: ")
 
 (define (local-iota a b)
   (if (= a b)
@@ -478,10 +478,10 @@
 (pp "array-domain and array-getter error tests")
 
 (test (array-domain #f)
-      "array-domain: object is not an array: ")
+      "array-domain: The argument is not an array: ")
 
 (test (array-getter #f)
-      "array-getter: object is not an array: ")
+      "array-getter: The argument is not an array: ")
 
 (pp "array?, array-domain, and array-getter result tests")
 
@@ -517,7 +517,7 @@
 (pp "array-setter error tests")
 
 (test (array-setter #f)
-      "array-setter: object is not an mutable array: ")
+      "array-setter: The argument is not an mutable array: ")
 
 (pp "mutable-array? and array-setter result tests")
 
@@ -623,13 +623,13 @@
 		     values
 		     values)))
   (test (array-body a)
-	"array-body: argument is not a specialized array: ")
+	"array-body: The argument is not a specialized array: ")
   (test (array-indexer a)
-	"array-indexer: argument is not a specialized array: ")
+	"array-indexer: The argument is not a specialized array: ")
   (test (array-storage-class a)
-	"array-storage-class: argument is not a specialized array: ")
+	"array-storage-class: The argument is not a specialized array: ")
   (test (array-safe? a)
-	"array-safe?: argument is not a specialized array: "))
+	"array-safe?: The argument is not a specialized array: "))
 
 (pp "specialized-array error tests")
 
@@ -650,18 +650,18 @@
 (pp "array->specialized-array error tests")
 
 (test (array->specialized-array #f generic-storage-class)
-      "array->specialized-array: Argument is not an array: ")
+      "array->specialized-array: The first argument is not an array: ")
 
 (test (array->specialized-array (make-array (make-interval '#(1) '#(2))
 					    list)
 				#f)
-      "array->specialized-array: result-storage-class is not a storage-class: ")
+      "array->specialized-array: The second argument is not a storage-class: ")
 
 (test (array->specialized-array (make-array (make-interval '#(1) '#(2))
 					    list)
 				generic-storage-class
 				'a)
-      "array->specialized-array: safe? is not a boolean: ")
+      "array->specialized-array: The third argument is not a boolean: ")
 
 ;; We gotta make sure than the error checks work in all dimensions ...
 
@@ -1104,6 +1104,128 @@
 						       result-array-2)
 				       result)))))
 	  (pp "Arghh")))))
+
+(pp "array-reduce tests")
+
+(test (array-reduce 'a 'a)
+      "array-reduce: The second argument is not an array: ")
+
+(test (array-reduce 'a (make-array (make-interval '#(1) '#(3)) list))
+      "array-reduce: The first argument is not a procedure: ")
+
+;;; OK, how to test array-reduce?
+
+;;; Well, we take an associative, non-commutative operation,
+;;; multiplying 2x2 matrices, with data such that doing operations
+;;; in the opposite order gives the wrong answer, doing it for the
+;;; wrong interval (e.g., swapping axes) gives the wrong answer.
+
+;;; This is not in the same style as the other tests, which use random
+;;; data to a great extent, but I couldn't see how to choose random
+;;; data that would satisfy the constraints.
+
+
+(define matrix vector)
+
+(define (2x2-multiply A B)
+  (let ((a_11 (vector-ref A 0)) (a_12 (vector-ref A 1))
+        (a_21 (vector-ref A 2)) (a_22 (vector-ref A 3))
+        (b_11 (vector-ref B 0)) (b_12 (vector-ref B 1))
+        (b_21 (vector-ref B 2)) (b_22 (vector-ref B 3)))
+    (vector (+ (* a_11 b_11) (* a_12 b_21)) (+ (* a_11 b_12) (* a_12 b_22))
+            (+ (* a_21 b_11) (* a_22 b_21)) (+ (* a_21 b_12) (* a_22 b_22)))))
+
+(define A (make-array (make-interval '#(1) '#(11))
+                      (lambda (i)
+                        (if (even? i)
+                            (matrix 1 i
+                                    0 1)
+                            (matrix 1 0
+                                    i 1)))))
+
+(test (array-reduce 2x2-multiply A)
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A))
+
+(test (not (equal? (array-reduce 2x2-multiply A)
+                   (array-fold 2x2-multiply (matrix 1 0 0 1) A)))
+      #t)
+
+
+(define A_2 (make-array (make-interval '#(1 1) '#(3 7))
+                        (lambda (i j)
+                          (if (and (even? i) (even? j))
+                              (matrix 1 i
+                                      j 1)
+                              (matrix 1 j
+                                      i -1)))))
+
+(test (array-reduce 2x2-multiply A_2)
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_2))
+
+(test (equal? (array-reduce 2x2-multiply A_2)
+              (array-fold 2x2-multiply (matrix 1 0 0 1) A_2))
+      #f)
+
+(test (equal? (array-reduce 2x2-multiply A_2)
+              (array-reduce 2x2-multiply (array-rotate A_2 1)))
+      #f)
+
+(define A_3 (make-array (make-interval '#(1 1 1) '#(3 5 4))
+                        (lambda (i j k)
+                          (if (and (even? i) (even? j))
+                              (matrix 1 i
+                                      j k)
+                              (matrix k j
+                                      i -1)))))
+
+(test (array-reduce 2x2-multiply A_3)
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_3))
+
+(test (equal? (array-reduce 2x2-multiply A_3)
+              (array-fold 2x2-multiply (matrix 1 0 0 1) A_3))
+      #f)
+
+(test (equal? (array-reduce 2x2-multiply A_3)
+              (array-reduce 2x2-multiply (array-rotate A_3 1)))
+      #f)
+
+(define A_4 (make-array (make-interval '#(1 1 1 1) '#(3 2 4 3))
+                        (lambda (i j k l)
+                          (if (and (even? i) (even? j))
+                              (matrix l i
+                                      j k)
+                              (matrix l k
+                                      i j)))))
+
+(test (array-reduce 2x2-multiply A_4)
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_4))
+
+(test (equal? (array-reduce 2x2-multiply A_4)
+              (array-fold 2x2-multiply (matrix 1 0 0 1) A_4))
+      #f)
+
+(test (equal? (array-reduce 2x2-multiply A_4)
+              (array-reduce 2x2-multiply (array-rotate A_4 1)))
+      #f)
+
+(define A_5 (make-array (make-interval '#(1 1 1 1 1) '#(3 2 4 3 3))
+                        (lambda (i j k l m)
+                          (if (even? m)
+                              (matrix (+ m l) i
+                                      j k)
+                              (matrix (- l m) k
+                                      i j)))))
+
+(test (array-reduce 2x2-multiply A_5)
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_5))
+
+(test (equal? (array-reduce 2x2-multiply A_5)
+              (array-fold 2x2-multiply (matrix 1 0 0 1) A_5))
+      #f)
+
+(test (equal? (array-reduce 2x2-multiply A_5)
+              (array-reduce 2x2-multiply (array-rotate A_5 1)))
+      #f)
 
 (pp "Some array-curry tests.")
 
@@ -1710,6 +1832,82 @@
 	      #t))))
   )
 
+(pp "array-rotate tests")
+
+;;; because array-rotate is built using the array-permute infrastructure, we
+;;; won't test as much
+
+(test (array-rotate 1 1)
+      "array-rotate: The first argument is not an array: ")
+
+(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 'a)
+      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
+
+(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 1.)
+      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
+
+(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 1/2)
+      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
+
+(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) -1)
+      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
+
+(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 4)
+      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
+
+(for-each (lambda (n)
+            (let* ((upper-bounds (make-vector n 2))
+                   (lower-bounds (make-vector n 0))
+                   (domain (make-interval lower-bounds upper-bounds))
+                   (A (array->specialized-array (make-array domain list)))
+                   (immutable-A
+                    (let ((A (array->specialized-array A))) ;; copy A
+                      (make-array domain
+                                  (array-getter A))))
+                   (mutable-A
+                    (let ((A (array->specialized-array A))) ;; copy A
+                      (make-array domain
+                                  (array-getter A)
+                                  (array-setter A)))))
+              (for-each (lambda (dim)
+                          (let ((permutation
+                                 (list->vector
+                                  (append
+                                   (local-iota dim n)
+                                   (local-iota 0 dim)))))
+                          (let ((rA
+                                 (array-rotate A dim))
+                                (pA
+                                 (array-permute A permutation)))
+                            (if (not (and (specialized-array? rA)
+                                          (specialized-array? pA)
+                                          (myarray= rA pA)))
+                                (begin
+                                  (error "blah rotate specialized")
+                                  (pp 'crap))))
+                          (let ((rA
+                                 (array-rotate immutable-A dim))
+                                (pA
+                                 (array-permute immutable-A permutation)))
+                            (if (not (and (array? rA)
+                                          (array? pA)
+                                          (myarray= rA pA)))
+                                (begin
+                                  (error "blah rotate immutable")
+                                  (pp 'crap))))
+                          (let ((rA
+                                 (array-rotate mutable-A dim))
+                                (pA
+                                 (array-permute mutable-A permutation)))
+                            (if (not (and (mutable-array? rA)
+                                          (mutable-array? pA)
+                                          (myarray= rA pA)))
+                                (begin
+                                  (error "blah rotate mutable")
+                                  (pp 'crap))))))
+                        (iota n))))
+          (iota 5 1))
+
 (pp "interval-intersect tests")
 
 (let ((a (make-interval '#(0 0) '#(10 10)))
@@ -2127,6 +2325,49 @@
                     my-reversed-array)
           #t)))
 
+;; next test that the optional flip? argument is computed correctly.
+
+(for-each (lambda (n)
+            (let* ((upper-bounds (make-vector n 2))
+                   (lower-bounds (make-vector n 0))
+                   (domain (make-interval lower-bounds upper-bounds))
+                   (A (array->specialized-array (make-array domain list)))
+                   (immutable-A
+                    (let ((A (array->specialized-array A))) ;; copy A
+                      (make-array domain
+                                  (array-getter A))))
+                   (mutable-A
+                    (let ((A (array->specialized-array A))) ;; copy A
+                      (make-array domain
+                                  (array-getter A)
+                                  (array-setter A))))
+                   (flip? (make-vector n #t)))
+              (let ((r1 (array-reverse A))
+                    (r2 (array-reverse A flip?)))
+                (if (not (and (specialized-array? r1)
+                              (specialized-array? r2)
+                              (myarray= r1 r2)))
+                    (begin
+                      (error "blah reverse specialized")
+                      (pp 'crap))))
+              (let ((r1 (array-reverse mutable-A))
+                    (r2 (array-reverse mutable-A flip?)))
+                (if (not (and (mutable-array? r1)
+                              (mutable-array? r2)
+                              (myarray= r1 r2)))
+                    (begin
+                      (error "blah reverse mutable")
+                      (pp 'crap))))
+              (let ((r1 (array-reverse immutable-A))
+                    (r2 (array-reverse immutable-A flip?)))
+                (if (not (and (array? r1)
+                              (array? r2)
+                              (myarray= r1 r2)))
+                    (begin
+                      (error "blah reverse immutable")
+                      (pp 'crap))))))
+          (iota 5 1))
+
 (pp "array-assign! tests")
 
 (test (array-assign! 'a 'a)
@@ -2246,7 +2487,7 @@
       "make-array: The third argument is not a procedure: ")
 
 (test (array-dimension 'a)
-      "array-dimension: argument is not an array: ")
+      "array-dimension: The argument is not an array: ")
 
 (test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #t))
       #t)
@@ -2309,7 +2550,7 @@
 (pp "array->list and list->specialized-array")
 
 (test (array->list 'a)
-      "array->list: object is not an array: ")
+      "array->list: The argument is not an array: ")
 
 (test (list->specialized-array 'a 'b)
       "list->specialized-array: First argument is not a list: ")
@@ -2474,6 +2715,38 @@
 
 (test ((array-getter sparse-array) 0 0)
       1.)
+
+(define (palindrome? s)
+  (let ((n (string-length s)))
+    (or (< n 2)
+        (let* ((a
+                ;; an array accessing the characters of s
+                (make-array (make-interval '#(0)
+                                           (vector n))
+                            (lambda (i)
+                              (string-ref s i))))
+               (ra
+                ;; the array in reverse order
+                (array-reverse a))
+               (half-domain
+                (make-interval '#(0)
+                               (vector (quotient n 2)))))
+          (array-every
+           char=?
+           ;; the first half of s
+           (array-extract a half-domain)
+           ;; the second half of s
+           (array-extract ra half-domain))))))
+
+(for-each (lambda (s)
+            (for-each display
+                      (list "(palindrome? \""
+                            s
+                            "\") => "
+                            (palindrome? s)
+                            #\newline)))
+          '("" "a" "aa" "ab" "aba" "abc" "abba" "abca" "abbc"))
+
 
 (define make-pgm   cons)
 (define pgm-greys  car)
