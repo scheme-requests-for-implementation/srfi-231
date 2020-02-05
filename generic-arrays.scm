@@ -2074,20 +2074,6 @@
          (make-array (##interval-permute (array-domain array) permutation)
                      (##getter-permute (array-getter array) permutation)))))
 
-(define (##immutable-array-permute array permutation)
-  (make-array (##interval-permute (array-domain array) permutation)
-	      (##getter-permute (array-getter array) permutation)))
-
-(define (##mutable-array-permute array permutation)
-  (make-array (##interval-permute (array-domain array) permutation)
-	      (##getter-permute (array-getter array) permutation)
-	      (##setter-permute (array-setter array) permutation)))
-
-(define (##specialized-array-permute array permutation)
-  (specialized-array-share array
-			   (##interval-permute (array-domain array) permutation)
-			   (##getter-permute values permutation)))
-
 (define (array-permute array permutation)
   (cond ((not (array? array))
 	 (error "array-permute: The first argument is not an array: " array permutation))
@@ -2099,6 +2085,38 @@
 	(else
 	 (##array-permute array permutation))))
 
+(define (##rotation->permutation k size)
+  
+  ;; Generates a permutation that rotates
+  ;; 0 1 ... size-1
+  ;; left by k units.
+  
+  (let ((result (make-vector size)))
+    (let left-loop ((i 0)
+                    (j k))
+      (if (fx< j size)
+          (begin
+            (vector-set! result i j)
+            (left-loop (fx+ i 1)
+                       (fx+ j 1)))
+          (let right-loop ((i i)
+                           (j 0))
+            (if (fx< i size)
+                (begin
+                  (vector-set! result i j)
+                  (right-loop (fx+ i 1)
+                              (fx+ j 1)))
+                result))))))
+
+(define (interval-rotate interval dim)
+  (if (not (interval? interval))
+      (error "interval-rotate: The first argument is not an interval: " interval dim)
+      (let ((d (interval-dimension interval)))
+        (if (not (and (fixnum? dim)
+                      (fx< -1 dim d)))
+            (error "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): " interval dim)
+            (##interval-permute interval (##rotation->permutation dim d))))))
+        
 (define (array-rotate array dim)
   (if (not (array? array))
       (error "array-rotate: The first argument is not an array: " array dim)
@@ -2106,24 +2124,7 @@
         (if (not (and (fixnum? dim)
                       (fx< -1 dim d)))
             (error "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): " array dim)
-            (let ((permutation
-                   (let ((result (make-vector d)))
-                     (let left-loop ((i 0)
-                                     (j dim))
-                       (if (fx< j d)
-                           (begin
-                             (vector-set! result i j)
-                             (left-loop (fx+ i 1)
-                                        (fx+ j 1)))
-                           (let right-loop ((i i)
-                                            (j 0))
-                             (if (fx< i d)
-                                 (begin
-                                   (vector-set! result i j)
-                                   (right-loop (fx+ i 1)
-                                               (fx+ j 1)))
-                                 result)))))))
-              (##array-permute array permutation))))))
+            (##array-permute array (##rotation->permutation dim d))))))
 
 (define-macro (setup-reversed-getters-and-setters)
 
