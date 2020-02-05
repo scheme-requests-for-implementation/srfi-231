@@ -34,7 +34,7 @@
       <li>Provide <b>useful array transformations</b> by exploiting the algebraic structure of affine one-to-one mappings on multi-indices.</li>
       <li>Separate <b>the routines that specify the work to be done</b> (<code>array-map</code>, <code>array-outer-product</code>, etc.) from <b>the routines that actually do the work</b> (<code>array-&gt;specialized-array</code>, <code>array-assign!</code>, <code>array-fold</code>, etc.). This approach <b>avoids temporary intermediate arrays</b> in computations.</li>
       <li>Encourage <b>bulk processing of arrays</b> rather than word-by-word operations.</li></ul>
-    <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-122/">SRFI-122</a> in the following ways:</p>
+    <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-122/">SRFI 122</a> in the following ways:</p>
     <ul>
       <li>The procedures <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>interval-rotate</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-rotate</code>, <code>array-reduce</code>, <code>array-assign!</code>, and <code>array-swap!</code> have been added together with some examples.</li>
       <li>The discussion of Haar transforms as examples of separable transforms has been corrected.</li>
@@ -1026,7 +1026,7 @@ indexer:       (lambda multi-index
                          <var>arrays</var>)))))</code></pre>
     <p>It is an error to call <code>array-for-each</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="array-fold">array-fold</a> <var>kons</var> <var>knil</var> <var>array</var></code></p>
-    <p>If we use the defining relations for fold over lists from SRFI-1:</p>
+    <p>If we use the defining relations for fold over lists from SRFI 1:</p>
     <pre><code>
 (fold kons knil lis)
     = (fold kons (kons (car lis) knil) (cdr lis))
@@ -1038,7 +1038,7 @@ indexer:       (lambda multi-index
 (fold <var>kons</var> <var>knil</var> (array-&gt;list <var>array</var>))</code></pre>
     <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>kons</var></code> is not a procedure.</p>
     <p><b>Procedure: </b><code><a name="array-fold-right">array-fold-right</a> <var>kons</var> <var>knil</var> <var>array</var></code></p>
-    <p>If we use the defining relations for fold-right over lists from SRFI-1:</p>
+    <p>If we use the defining relations for fold-right over lists from SRFI 1:</p>
     <pre><code>
 (fold-right kons knil lis)
     = (kons (car lis) (fold-right kons knil (cdr lis)))
