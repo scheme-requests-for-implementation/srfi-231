@@ -61,8 +61,9 @@ MathJax.Hub.Config({
 	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".  There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
 	(<ul> (<li> "Received: 2020/1/11")
               (<li> "60-day deadline: 2020/3/13")
-              (<li> "Draft #1 published: 2020/1/11")
-              (<li> "Draft #2 published: 2020/1/27"))
+              (<li> "Draft #1 published: 2020/01/11")
+              (<li> "Draft #2 published: 2020/01/27")
+              (<li> "Draft #3 published: 2020/02/04"))
 
 	(<h2> "Abstract")
 	(<p>
@@ -85,7 +86,7 @@ MathJax.Hub.Config({
          )
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI-122")" in the following ways:")
         (<ul>
-         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added together with some examples.")
+         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'interval-rotate)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added together with some examples.")
          (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
          (<li> "The documentation has a few more examples of image processing algorithms.")
          (<li> "Some matrix examples have been added to this document."))
@@ -145,7 +146,7 @@ MathJax.Hub.Config({
 	       "If $\\pi$ "(<a> href: "https://en.wikipedia.org/wiki/Permutation" 'permutes)" the coordinates of a multi-index $\\vec i$, and $\\pi^{-1}$ is the inverse of $\\pi$, then "
 	       "$T_{BA}(\\vec i)=\\pi (\\vec i)$ is a one-to-one affine map from $D_B=\\{\\pi^{-1}(\\vec i)\\mid \\vec i\\in D_A\\}$ onto $D_A$.  We provide "(<code>'array-permute)" for this operation. "
 	       "(The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.) "
-               "We also provide "(<code>'array-rotate)" for the special permutations that just rotate the axes.")
+               "We also provide "(<code>'array-rotate)" for the special permutations that rotate the axes. For example, in three dimensions we have the following three rotations: $i\\ j\\ k\\to j\\ k\\ i$; $i\\ j\\ k\\to k\\ i\\ j$; and the trivial (identity) rotation $i\\ j\\ k\\to i\\ j\\ k$.")
 	 (<li> (<b> "Currying an array: ")
 	       "Let's denote the cross product of two intervals $\\text{Int}_1$ and $\\text{Int}_2$ by $\\text{Int}_1\\times\\text{Int}_2$; "
 	       "if $\\vec j=(j_0,\\ldots,j_{r-1})\\in \\text{Int}_1$ and $\\vec i=(i_0,\\ldots,i_{s-1})\\in \\text{Int}_2$, then "
@@ -256,6 +257,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#interval-intersect" "interval-intersect")END
                  (<a> href: "#interval-translate" "interval-translate")END
                  (<a> href: "#interval-permute" "interval-permute") END
+                 (<a> href: "#interval-rotate" "interval-rotate") END
                  (<a> href: "#interval-scale" "interval-scale") END
                  (<a> href: "#interval-cartesian-product" "interval-cartesian-product")
                  ".")
@@ -540,6 +542,11 @@ $[l_{\\pi_0},u_{\\pi_0})\\times[l_{\\pi_1},u_{\\pi_1})\\times\\cdots\\times[l_{\
 (<p> "For example, if the argument interval represents $[0,4)\\times[0,8)\\times[0,21)\\times [0,16)$ and the
 permutation is "(<code>'#(3 0 1 2))", then the result of "(<code> "(interval-permute "(<var>'interval)" "(<var>' permutation)")")" will be
 the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
+
+(format-lambda-list '(interval-rotate interval dim))
+(<p> "Informally, "(<code> "(interval-rotate "(<var>'interval)" "(<var>'dim)")")" rotates the axes of "(<code>(<var>'interval))" "(<code>(<var>'dim))" places to the left.")
+(<p> "More precisely, "(<code> "(interval-rotate "(<var>'interval)" "(<var> 'dim)")")" assumes that "(<code>(<var>'interval))" is an interval and "(<code>(<var>'dim))" is an exact integer between 0 (inclusive) and "(<code> "(interval-dimension "(<var>'interval)")")" (exclusive).  It computes the permutation "(<code>"(vector "(<var>'dim)" ... (- (interval-dimension "(<var>'interval)") 1) 0 ... (- "(<var>'dim)" 1))")" (unless "(<code>(<var>'dim))" is zero, in which case it constructs the identity permutation) and returns "(<code>"(interval-permute "(<var>'interval)" "(<var>'permutation)")")". It is an error if the arguments do not satisfy these conditions.")
+
 
 (format-lambda-list '(interval-scale interval scales))
 (<p> "If "(<code>(<var>'interval))" is a $d$-dimensional interval $[0,u_1)\\times\\cdots\\times[0,u_{d-1})$ with all lower bounds zero, "
@@ -1881,36 +1888,18 @@ Second-differences in the direction $k\\times (1,-1)$:
 
 
 
-(<p> (<b> "Separable operators. ")"Many multi-dimensional transforms in signal processing are "(<i> 'separable)", in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the "(<a> href: "https://arxiv.org/abs/1210.1944" "Fast Hyperbolic Wavelet Transform")".  Each one-dimensional subdomain of the complete domain is called a "(<i> 'pencil)", and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can compute the multidimensional transform as follows:")
+(<p> (<b> "Separable operators. ")"Many multi-dimensional transforms in signal processing are "(<i> 'separable)", in that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the "(<a> href: "https://arxiv.org/abs/1210.1944" "Fast Hyperbolic Wavelet Transform")".  Each one-dimensional subdomain of the complete domain is called a "(<i> 'pencil)", and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can define the multidimensional transform as follows:")
 (<pre> (<code>"
 (define (make-separable-transform 1D-transform)
   (lambda (a)
-    (let* ((n
-	    (array-dimension a))
-	   (permutation
-	    ;; we start with the identity permutation
-	    (let ((result (make-vector n)))
-	      (do ((i 0 (fx+ i 1)))
-		  ((fx= i n) result)
-		(vector-set! result i i)))))
-      ;; We apply the one-dimensional transform to all pencils
-      ;; in each coordinate direction.
+    (let ((n (array-dimension a)))
       (do ((d 0 (fx+ d 1)))
-	  ((fx= d n))
-	;; Swap the d'th and n-1'st coordinates
-	(vector-set! permutation (fx- n 1) d)
-	(vector-set! permutation d (fx- n 1))
-	;; array-permute re-orders the coordinates to put the
-	;; d'th coordinate at the end, array-curry returns
-	;; an $n-1$-dimensional array of one-dimensional subarrays,
-	;; and 1D-transform is applied to each of those
-	;; one-dimensional sub-arrays.
-	(array-for-each 1D-transform
-			(array-curry (array-permute a permutation) 1))
-	;; return the permutation to the identity
-	(vector-set! permutation d d)
-	(vector-set! permutation (fx- n 1) (fx- n 1))))))
+          ((fx= d n))
+        (array-for-each
+         1D-transform
+         (array-curry (array-rotate a d) 1))))))
 "))
+(<p> "Here we have cycled through all rotations, putting each axis in turn at the end, and then applied "(<code>'1D-transform)" to each of the pencils along that axis.")
 (<p> "Wavelet transforms in particular are calculated by recursively applying a transform to an array and then downsampling the array; the inverse transform recursively downsamples and then applies a transform.  So we define the following primitives: ")
 (<pre>(<code>"
 (define (recursively-apply-transform-and-downsample transform)
@@ -2134,7 +2123,10 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
          (array-map -
                     subarray
                     (array-outer-product * column row)))))))
-
+"))
+(<p> "We then define a $4\\times 4$ "(<a> href: "https://en.wikipedia.org/wiki/Hilbert_matrix" "Hilbert matrix")":")
+(<pre>
+ (<code>"
 (define A
   (array->specialized-array
    (make-array (make-interval '#(0 0)
@@ -2228,7 +2220,7 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
   (let ((a-rows
          (array-curry a 1))
         (b-columns
-         (array-curry (array-permute b '#(1 0)) 1)))
+         (array-curry (array-rotate b 1) 1)))
     (array-outer-product dot-product a-rows b-columns)))
 
 ;;; We'll check that the product of the result of LU
@@ -2261,7 +2253,7 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
  (<li> (<a> name: 'SRFI-63 href: "https://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer.")
  (<li> (<a> name: 'SRFI-164 href: "https://srfi.schemers.org/srfi-164/" "SRFI 164: Enhanced multi-dimensional Arrays")", by Per Bothner."))
 (<h2> "Copyright")
-(<p> (<unprotected> "&copy;")" 2016, 2018 Bradley J Lucier. All Rights Reserved.")
+(<p> (<unprotected> "&copy;")" 2016, 2018, 2020 Bradley J Lucier. All Rights Reserved.")
 (<p> "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: ")
 (<p> "The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.")
 (<p> " THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

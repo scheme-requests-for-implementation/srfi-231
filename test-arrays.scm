@@ -1832,7 +1832,7 @@
 	      #t))))
   )
 
-(pp "array-rotate tests")
+(pp "array-rotate  and interval-rotate tests")
 
 ;;; because array-rotate is built using the array-permute infrastructure, we
 ;;; won't test as much
@@ -1854,6 +1854,18 @@
 
 (test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 4)
       "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
+
+(test (interval-rotate 1 1)
+      "interval-rotate: The first argument is not an interval: ")
+
+(test (interval-rotate (make-interval '#(0 0) '#(2 3)) 'a)
+      "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): ")
+
+(test (interval-rotate (make-interval '#(0 0) '#(2 3)) 1.)
+      "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): ")
+
+(test (interval-rotate (make-interval '#(0 0) '#(2 3)) 37)
+      "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): ")
 
 (for-each (lambda (n)
             (let* ((upper-bounds (make-vector n 2))
@@ -1904,7 +1916,9 @@
                                           (myarray= rA pA)))
                                 (begin
                                   (error "blah rotate mutable")
-                                  (pp 'crap))))))
+                                  (pp 'crap))))
+                          (test (interval-rotate (array-domain A) dim)
+                                (array-domain (array-rotate mutable-A dim)))))
                         (iota n))))
           (iota 5 1))
 
@@ -3063,31 +3077,12 @@ that computes the componentwise products when we need them, the times are
 
 (define (make-separable-transform 1D-transform)
   (lambda (a)
-    (let* ((n
-	    (array-dimension a))
-	   (permutation
-	    ;; we start with the identity permutation
-	    (let ((result (make-vector n)))
-	      (do ((i 0 (fx+ i 1)))
-		  ((fx= i n) result)
-		(vector-set! result i i)))))
-      ;; We apply the one-dimensional transform to all pencils
-      ;; in each coordinate direction.
+    (let ((n (array-dimension a)))
       (do ((d 0 (fx+ d 1)))
-	  ((fx= d n))
-	;; Swap the d'th and n-1'st coordinates
-	(vector-set! permutation (fx- n 1) d)
-	(vector-set! permutation d (fx- n 1))
-	;; array-permute re-orders the coordinates to put the
-	;; d'th coordinate at the end, array-curry returns
-	;; an $n-1$-dimensional array of one-dimensional subarrays,
-	;; and 1D-transform is applied to each of those
-	;; one-dimensional sub-arrays.
-	(array-for-each 1D-transform
-			(array-curry (array-permute a permutation) 1))
-	;; return the permutation to the identity
-	(vector-set! permutation d d)
-	(vector-set! permutation (fx- n 1) (fx- n 1))))))
+          ((fx= d n))
+        (array-for-each
+         1D-transform
+         (array-curry (array-rotate a d) 1))))))
 
 (define (recursively-apply-transform-and-downsample transform)
   (lambda (a)
@@ -3296,7 +3291,7 @@ that computes the componentwise products when we need them, the times are
   (let ((a-rows
          (array-curry a 1))
         (b-columns
-         (array-curry (array-permute b '#(1 0)) 1)))
+         (array-curry (array-rotate b 1) 1)))
     (array-outer-product array-dot-product a-rows b-columns)))
 
 ;;; We'll check that the product of the result of LU
