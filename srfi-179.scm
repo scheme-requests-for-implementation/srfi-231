@@ -58,12 +58,14 @@ MathJax.Hub.Config({
 	     ".  To subscribe to the list, follow "
 	     (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
 	     ".  You can access previous messages via the mailing list "
-	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".  There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
-	(<ul> (<li> "Received: 2020/1/11")
-              (<li> "60-day deadline: 2020/3/13")
-              (<li> "Draft #1 published: 2020/01/11")
-              (<li> "Draft #2 published: 2020/01/27")
-              (<li> "Draft #3 published: 2020/02/04"))
+	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")". There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
+        
+	(<ul> (<li> "Received: 2020-01-11")
+              (<li> "60-day deadline: 2020-03-13")
+              (<li> "Draft #1 published: 2020-01-11")
+              (<li> "Draft #2 published: 2020-01-25")
+              (<li> "Draft #3 published: 2020-02-04")
+              (<li> "Draft #4 published: 2020-03-25"))
 
 	(<h2> "Abstract")
 	(<p>
@@ -84,9 +86,10 @@ MathJax.Hub.Config({
          (<li> "Separate "(<b>"the routines that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the routines that actually do the work")" ("(<code>'array->specialized-array)", "(<code>'array-assign!)", "(<code>'array-fold)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
-         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI-122")" in the following ways:")
+         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI 122")" in the following ways:")
         (<ul>
          (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'interval-rotate)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added together with some examples.")
+         (<li> "The procedure "(<code>'make-interval)" now takes one or two arguments.")
          (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
          (<li> "The documentation has a few more examples of image processing algorithms.")
          (<li> "Some matrix examples have been added to this document."))
@@ -97,24 +100,24 @@ MathJax.Hub.Config({
 	(<p>  "In a "(<a> href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "1993 post")
 	      " to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. "
 	      "The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives "
-	      (<code>'array-ref)", "(<code>'array-set!)", and "(<code>'array?)".  His arrays were defined on rectangular intervals in "
-	      "$\\mathbb Z^d$ of the form $[0,u_0)\\times\\cdots\\times [0,u_{d-1})$.  I'll note that his function "(<code>'array-set!)
+	      (<code>'array-ref)", "(<code>'array-set!)", and "(<code>'array?)", as well as "(<code>'make-array)" and "(<code>'make-shared-array)
+              ".  His arrays were defined on rectangular intervals in "
+	      "$\\mathbb Z^d$ of the form $[l_0,u_0)\\times\\cdots\\times [l_{d-1},u_{d-1})$.  I'll note that his function "(<code>'array-set!)
 	      " put the value to be entered into the array at the front of the variable-length list of indices that indicate where to "
 	      "place the new value.  He offered an intriguing way to \"share\" arrays "
 	      "in the form of a routine "(<code>'make-shared-array)" that took a mapping from a new interval of indices into the domain "
 	      "of the array to be shared.  His implementation incorporated what he called an "(<i>'indexer)", which was a function from "
-	      "the interval $[0,u_0)\\times\\cdots\\times [0,u_{d-1})$ to an interval $[0,N)$, where the "(<i>'body)" of the array consisted of "
+	      "the interval $[l_0,u_0)\\times\\cdots\\times [l_{d-1},u_{d-1})$ to an interval $[0,N)$, where the "(<i>'body)" of the array consisted of "
 	      "a single Scheme vector of length $N$.  Bawden called the mapping specified in "(<code>'make-shared-array)" "
 	      (<i>'linear)", but I prefer the term "(<i>'affine)", as I explain later.")
 	(<p> "Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\\vec i$ for a multi-index "
 	     "$i_0,\\ldots,i_{d-1}$. (Multi-indices correspond to Scheme "(<code>'values)".)  Arrays will be denoted by capital letters "
-	     "$A,B,\\ldots$, the domain of the array $A$ (in Bawden's case $[0,u_0)\\times \\cdots\\times [0,u_{d-1})$) will be denoted by $D_A$, "
+	     "$A,B,\\ldots$, the domain of the array $A$ will be denoted by $D_A$, "
 	     "and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$ will be denoted by $I_A$.  Initially, Bawden constructs "
 	     "$I_A$ such that $I_A(\\vec i)$ steps consecutively through the values $0,1,\\ldots,N-1$ as $\\vec i$ steps through the "
-	     "multi-indices $(0,\\ldots,0,0)$, $(0,\\ldots,0,1)$, $\\ldots$, $(0,\\ldots,1,0)$, etc., in lexicographical order, which means "
+	     "multi-indices $(l_0,\\ldots,l_{d-2},l_{d-1})$, $(l_0,\\ldots,l_{d-2},l_{d-1}+1)$, $\\ldots$, $(l_0,\\ldots,l_{d-2}+1,l_{d-1})$, etc., in lexicographical order, which means "
 	     "that if $\\vec i$ and $\\vec j$ are two multi-indices, then $\\vec i<\\vec j$ iff the first coordinate $k$ where $\\vec i$ and $\\vec j$ "
-	     "differ satisfies $\\vec i_k<\\vec j_k$. In fact, $I_A(\\vec i)=\\vec v\\cdot\\vec i$ for some specially-constructed vector $\\vec v$ "
-	     "that depends only on $D_A$, the domain of $A$, where $\\vec v\\cdot\\vec i$ is the dot product of $\\vec v$ and $\\vec i$.")
+	     "differ satisfies $\\vec i_k<\\vec j_k$.")
 	(<p> "In "(<code>'make-shared-array)", Bawden allows you to specify a new $r$-dimensional interval $D_B$ as the domain of a new array $B$, and a "
 	     "mapping $T_{BA}:D_B\\to D_A$ of the form $T_{BA}(\\vec i)=M\\vec i+\\vec b$; here $M$ is a $d\\times r$ matrix of integer values and "
 	     "$\\vec b$ is a $d$-vector.  So this mapping $T_{BA}$ is "(<i>'affine)", in that $T_{BA}(\\vec i)-T_{BA}(\\vec j)=M(\\vec i-\\vec j)$ is "
@@ -122,10 +125,8 @@ MathJax.Hub.Config({
 	(<p> "A fact Bawden exploits in the code, but doesn't point out in the short post, is that $I_B$ is again an affine map, and indeed, the composition "
 	     "of "(<i>'any)" two affine maps is again affine.")
 	(<h3> "Our extensions of Bawden-style arrays")
-	(<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in two relatively minor ways that we find quite useful.")
-	(<p> "First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as "
-	     "well as upper bounds, so domains are rectangular, $d$-dimensional intervals $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
-	(<p> "Second, we introduce the notion of a "(<i>"storage class")", an object that contains functions that manipulate, store, check, etc., different types of values. "
+	(<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in one minor way that we find useful.")
+	(<p> "We introduce the notion of a "(<i>"storage class")", an object that contains functions that manipulate, store, check, etc., different types of values. "
 	     "A "(<code>'generic-storage-class)" can manipulate any Scheme value, "
 	     "whereas, e.g., a "(<code>'u1-storage-class)" can store only the values 0 and 1 in each element of a body.")
 	(<p> "We also require that our affine maps be one-to-one, so that if $\\vec i\\neq\\vec j$ then $T(\\vec i)\\neq T(\\vec j)$.  Without this property, modifying "
@@ -348,9 +349,10 @@ $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
         (<p> "Intervals are a data type distinct from other Scheme data types.")
 
         (<h3> "Procedures")
-        (format-lambda-list '(make-interval lower-bounds upper-bounds))
-        (<p> "Create a new interval; "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"upper-bounds"))"
-are nonempty vectors (of the same length) of exact integers that satisfy")
+        (format-lambda-list '(make-interval arg1 #!optional arg2))
+        (<p> "Create a new interval. "(<code> (<var>"arg1"))" and "(<code> (<var>"arg2"))" (if given) are nonempty vectors (of the same length) of exact integers.")
+        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))" must be positive, and they are taken as the "(<var>"upper-bounds")" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
+        (<p> "If "(<code> (<var>"arg2"))" is given, then "(<code> (<var>"arg1"))" is taken to be "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"arg2"))" is taken to be "(<code> (<var>"upper-bounds"))", which must satisfy")
         (<pre>
          (<code>" (< (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
         (<p> " for
@@ -497,19 +499,19 @@ nonempty interval.  It is an error if the arguments do not satisfy these conditi
 (<p> "Examples:")
 (<pre>(<code>"
 (interval=
- (interval-dilate (make-interval '#(0 0) '#(100 100))
+ (interval-dilate (make-interval '#(100 100))
                   '#(1 1) '#(1 1))
  (make-interval '#(1 1) '#(101 101))) => #t
 (interval=
- (interval-dilate (make-interval '#(0 0) '#(100 100))
+ (interval-dilate (make-interval '#(100 100))
                   '#(-1 -1) '#(1 1))
  (make-interval '#(-1 -1) '#(101 101))) => #t
 (interval=
- (interval-dilate (make-interval '#(0 0) '#(100 100))
+ (interval-dilate (make-interval '#(100 100))
                   '#(0 0) '#(-50 -50))
- (make-interval '#(0 0) '#(50 50))) => #t
+ (make-interval '#(50 50))) => #t
 (interval-dilate
- (make-interval '#(0 0) '#(100 100))
+ (make-interval '#(100 100))
  '#(0 0) '#(-500 -50)) => error
 "))
 
@@ -691,8 +693,7 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
  (<code>"
 (define a   ;; a sparse array
   (let ((domain
-         (make-interval '#(0 0)
-                        '#(1000000 1000000)))
+         (make-interval '#(1000000 1000000)))
         (sparse-rows
          (make-vector 1000000 '())))
     (make-array
@@ -799,13 +800,13 @@ otherwise it is an error.")
   "
      ))
 (<p> "It is an error if the arguments of "(<code>'make-specialized-array)" do not satisfy these conditions.")
-(<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(make-specialized-array (make-interval '#(0 0) '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
+(<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(make-specialized-array (make-interval '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
 (<pre>
  (<code>"
   (define (make-u16-array interval)
     (make-specialized-array interval u16-storage-class #f))
 "))
-(<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(0 0) '#(3 3)))")".")
+(<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(3 3)))")".")
 
 (format-lambda-list '(specialized-array? obj))
 (<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a specialized-array, and "(<code>"#f")" otherwise. A specialized-array is an array.")
@@ -815,7 +816,9 @@ otherwise it is an error.")
 (format-lambda-list '(array-safe? array))
 (<p> (<code>'array-storage-class)" returns the storage-class of "(<code>(<var> 'array))". "
      (<code>'array-safe?)" is true if and only if the arguments of "(<code> "(array-getter "(<var> 'array)")")" and "(<code> "(array-setter "(<var> 'array)")")" (including the value to be stored in the array) are checked for correctness.")
-(<p> (<code>"(array-indexer "(<var> 'array)")")" is assumed to be a one-to-one, but not necessarily onto,  affine mapping from "(<code> "(array-domain "(<var> 'array)")")" into "(<code>"(array-body "(<var> 'array)")")".")
+(<p> (<code>"(array-body "(<var>'array)")")" is a linearly-indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.")
+(<p> (<code>"(array-indexer "(<var> 'array)")")" is assumed to be a one-to-one, but not necessarily onto,  affine mapping from "(<code> "(array-domain "(<var> 'array)")")" into  the indexing domain of "(<code>"(array-body "(<var> 'array)")")".")
+(<p> "Please see "(<a> href: "#make-specialized-array" (<code>'make-specialized-array))" for how "(<code>"(array-body "(<var>'array)")")", etc., are used.")
 (<p> "It is an error to call any of these routines if "(<code>(<var> 'array))" is not a specialized-array.")
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
@@ -835,7 +838,7 @@ indexer:       (lambda multi-index
 (<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>(<var> 'new-domain))" to
 "(<code>"(array-domain "(<var> 'array)")")".")
 
-(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(array-indexer "(<var> 'array))" will be used to simplify:")
+(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(array-indexer "(<var> 'array)")")" will be used to simplify:")
 (<pre>
  (<code>"
   (lambda multi-index
@@ -852,12 +855,12 @@ indexer:       (lambda multi-index
  (<code>"
 (define a
   (array->specialized-array
-   (make-array (make-interval '#(0 0) '#(5 10))
+   (make-array (make-interval '#(5 10))
                list)))
 (define b
   (specialized-array-share
    a
-   (make-interval '#(0 0) '#(5 5))
+   (make-interval '#(5 5))
    (lambda (i j)
      (values i (+ i j)))))
 ;; Print the \"rows\" of b
@@ -903,8 +906,7 @@ indexer:       (lambda multi-index
 (<p> "For example, if "(<code>'A)" and "(<code> 'B)" are defined by ")
 (<pre>
  (<code>"
-(define interval (make-interval '#(0 0 0 0)
-                                '#(10 10 10 10)))
+(define interval (make-interval '#(10 10 10 10)))
 (define A (make-array interval list))
 (define B (array-curry A 1))
 
@@ -915,7 +917,7 @@ indexer:       (lambda multi-index
 (<pre>
  (<code>"
 (A_ i j k l) => (list i j k l)"))
-(<p> "then "(<code>'B)" is an immutable array with domain "(<code>"(make-interval '#(0 0 0) '#(10 10 10))")", each
+(<p> "then "(<code>'B)" is an immutable array with domain "(<code>"(make-interval '#(10 10 10))")", each
 of whose elements is itself an (immutable) array and ")
 (<pre>
  (<code>"
@@ -990,8 +992,7 @@ of whose elements is itself an (immutable) array and ")
 (<p>"Example:")
 (<pre>
  (<code>"
-(define a (make-array (make-interval '#(0 0)
-                                     '#(10 10))
+(define a (make-array (make-interval '#(10 10))
                       list))
 (define a_ (array-getter a))
 (a_ 3 4)  => (3 4)
@@ -1042,7 +1043,7 @@ $$
 (The \"minimum\" operators are necessary if $u_j-l_j$ is not divisible by $s_j$.) Thus, each entry of $T$ will be a specialized, mutable, or immutable array, depending on the type of the input array "(<code>(<var>'A))".")
 (<p> "It is an error if the arguments of "(<code>'array-tile)" do not satisfy these conditions.")
 
-(<p> (<b> "Note: ")"The routines "(<code>'array-tile)" and "(<code>'array-curry)" both decompose an array into subarrays, but in different ways.  For example, if "(<code>(<var>'A))" is defined as "(<code>"(make-array (make-interval '#(0 0) '#(10 10)) list)")", then "(<code>"(array-tile "(<var>'A)" '#(1 10))")" returns an array with domain "(<code>"(make-interval '#(0 0) '#(10 1))")", each element of which is an array with domain "(<code>"(make-interval '#(0 0) '#(1 10))")" (i.e., a two-dimensional array whose elements are two-dimensional arrays), while "(<code>"(array-curry "(<var>'A)" 1)")" returns an array with domain "(<code>"(make-interval '#(0) '#(10))")", each element of which has domain "(<code>"(make-interval '#(0) '#(10))")" (i.e., a one-dimensional array whose elements are one-dimensional arrays).")
+(<p> (<b> "Note: ")"The routines "(<code>'array-tile)" and "(<code>'array-curry)" both decompose an array into subarrays, but in different ways.  For example, if "(<code>(<var>'A))" is defined as "(<code>"(make-array (make-interval '#(10 10)) list)")", then "(<code>"(array-tile "(<var>'A)" '#(1 10))")" returns an array with domain "(<code>"(make-interval '#(10 1))")", each element of which is an array with domain "(<code>"(make-interval '#(1 10))")" (i.e., a two-dimensional array whose elements are two-dimensional arrays), while "(<code>"(array-curry "(<var>'A)" 1)")" returns an array with domain "(<code>"(make-interval '#(10))")", each element of which has domain "(<code>"(make-interval '#(10))")" (i.e., a one-dimensional array whose elements are one-dimensional arrays).")
 
 
 (format-lambda-list '(array-translate array translation))
@@ -1200,16 +1201,14 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
     (or (< n 2)
         (let* ((a
                 ;; an array accessing the characters of s
-                (make-array (make-interval '#(0)
-                                           (vector n))
+                (make-array (make-interval (vector n))
                             (lambda (i)
                               (string-ref s i))))
                (ra
                 ;; the array accessed in reverse order
                 (array-reverse a))
                (half-domain
-                (make-interval '#(0)
-                               (vector (quotient n 2)))))
+                (make-interval (vector (quotient n 2)))))
           (array-every
            char=?
            ;; the first half of s
@@ -1355,7 +1354,7 @@ calls")
 (<p> "It is an error to call "(<code> 'array-for-each)" if its arguments do not satisfy these conditions.")
 
 (format-lambda-list '(array-fold kons knil array))
-(<p> "If we use the defining relations for fold over lists from SRFI-1:")
+(<p> "If we use the defining relations for fold over lists from SRFI 1:")
 (<pre>
  (<code>"
 (fold kons knil lis)
@@ -1370,7 +1369,7 @@ calls")
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'kons))" is not a procedure.")
 
 (format-lambda-list '(array-fold-right kons knil array))
-(<p> "If we use the defining relations for fold-right over lists from SRFI-1:")
+(<p> "If we use the defining relations for fold-right over lists from SRFI 1:")
 (<pre>
  (<code>"
 (fold-right kons knil lis)
@@ -1480,7 +1479,6 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 in the implementation are: DSSSL-style optional and keyword arguments; a
 unique object to indicate absent arguments; "(<code>"define-structure")";
 and "(<code>"define-macro")".")
-
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI
@@ -1590,8 +1588,7 @@ order in array->specialized-array guarantees the the correct order of execution 
          greys
          (array->specialized-array
           (make-array
-           (make-interval '#(0 0)
-                          (vector rows columns))
+           (make-interval (vector rows columns))
            (cond ((or (eq? header 'p5)
                       (eq? header 'P5))
                   ;; pgm binary
@@ -1828,7 +1825,7 @@ $d,2 d,3 d,\\ldots$, defined only on the domains where this makes sense: ")
 (<pre>(<code> "
 (define image
  (array->specialized-array
-  (make-array (make-interval '#(0 0) '#(8 8))
+  (make-array (make-interval '#(8 8))
               (lambda (i j)
                 (exact->inexact (+ (* i i) (* j j)))))))
 
@@ -1962,7 +1959,7 @@ Second-differences in the direction $k\\times (1,-1)$:
  (<code>"
 (let ((image
        (array->specialized-array
-        (make-array (make-interval '#(0 0) '#(4 4))
+        (make-array (make-interval '#(4 4))
                     (lambda (i j)
                       (case i
                         ((0) 1.)
@@ -2015,7 +2012,7 @@ Reconstructed image:
 (<pre>"
  (let ((image
        (array->specialized-array
-        (make-array (make-interval '#(0 0) '#(4 4))
+        (make-array (make-interval '#(4 4))
                     (lambda (i j)
                       (case i
                         ((0) 1.)
@@ -2129,8 +2126,7 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
  (<code>"
 (define A
   (array->specialized-array
-   (make-array (make-interval '#(0 0)
-                              '#(4 4))
+   (make-array (make-interval '#(4 4))
                (lambda (i j)
                  (/ (+ 1 i j))))))
 
