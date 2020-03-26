@@ -77,6 +77,19 @@
 (test (make-interval '#(1 2 3)  '#(4 2 6))
       "make-interval: Each lower-bound must be less than the associated upper-bound: ")
 
+(test (make-interval 1)
+      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+
+(test (make-interval '#())
+      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+
+(test (make-interval '#(1.))
+      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+
+(test (make-interval '#(-1))
+      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+
+
 (pp "interval result tests")
 
 (test (make-interval '#(11111)  '#(11112))
@@ -2660,19 +2673,19 @@
 
 (pp "Test code from the SRFI document")
 
-(test (interval= (interval-dilate (make-interval '#(0 0) '#(100 100)) '#(1 1) '#(1 1))
+(test (interval= (interval-dilate (make-interval '#(100 100)) '#(1 1) '#(1 1))
 		 (make-interval '#(1 1) '#(101 101)))
       #t)
 
-(test (interval= (interval-dilate (make-interval '#(0 0) '#(100 100)) '#(-1 -1) '#(1 1))
+(test (interval= (interval-dilate (make-interval '#(100 100)) '#(-1 -1) '#(1 1))
 		 (make-interval '#(-1 -1) '#(101 101)))
       #t)
 
-(test (interval= (interval-dilate (make-interval '#(0 0) '#(100 100))  '#(0 0) '#(-50 -50))
-		 (make-interval '#(0 0) '#(50 50)))
+(test (interval= (interval-dilate (make-interval '#(100 100))  '#(0 0) '#(-50 -50))
+		 (make-interval '#(50 50)))
       #t)
 
-(test (interval-dilate (make-interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50))
+(test (interval-dilate (make-interval '#(100 100)) '#(0 0) '#(-500 -50))
       "interval-dilate: The resulting interval is empty: ")
 
 (define a (make-array (make-interval '#(1 1) '#(11 11))
@@ -2701,7 +2714,7 @@
       '(3 4))
 
 (define sparse-array
-  (let ((domain (make-interval '#(0 0) '#(1000000 1000000)))
+  (let ((domain (make-interval '#(1000000 1000000)))
 	(sparse-rows (make-vector 1000000 '())))
     (make-array domain
 		(lambda (i j)
@@ -2730,21 +2743,42 @@
 (test ((array-getter sparse-array) 0 0)
       1.)
 
+(let ()
+  (define a
+    (array->specialized-array
+     (make-array (make-interval '#(5 10))
+                 list)))
+  (define b
+    (specialized-array-share
+     a
+     (make-interval '#(5 5))
+     (lambda (i j)
+       (values i (+ i j)))))
+  ;; Print the \"rows\" of b
+  (array-for-each (lambda (row)
+                    (pretty-print (array->list row)))
+                  (array-curry b 1))
+  
+  ;; which prints
+  ;; ((0 0) (0 1) (0 2) (0 3) (0 4))
+  ;; ((1 1) (1 2) (1 3) (1 4) (1 5))
+  ;; ((2 2) (2 3) (2 4) (2 5) (2 6))
+  ;; ((3 3) (3 4) (3 5) (3 6) (3 7))
+  ;; ((4 4) (4 5) (4 6) (4 7) (4 8))
+  )
 (define (palindrome? s)
   (let ((n (string-length s)))
     (or (< n 2)
         (let* ((a
                 ;; an array accessing the characters of s
-                (make-array (make-interval '#(0)
-                                           (vector n))
+                (make-array (make-interval (vector n))
                             (lambda (i)
                               (string-ref s i))))
                (ra
                 ;; the array in reverse order
                 (array-reverse a))
                (half-domain
-                (make-interval '#(0)
-                               (vector (quotient n 2)))))
+                (make-interval (vector (quotient n 2)))))
           (array-every
            char=?
            ;; the first half of s
@@ -2802,8 +2836,7 @@
 	(make-pgm greys
 		  (array->specialized-array
 		   (make-array
-		    (make-interval '#(0 0)
-				   (vector rows columns))
+		    (make-interval (vector rows columns))
 		    (cond ((or (eq? header 'p5)                                     ;; pgm binary
 			       (eq? header 'P5))
 			   (if (< greys 256)
@@ -3058,7 +3091,7 @@ that computes the componentwise products when we need them, the times are
               (else
                (reverse result)))))))
 
-(define image (array->specialized-array (make-array (make-interval '#(0 0) '#(8 8))
+(define image (array->specialized-array (make-array (make-interval '#(8 8))
 						    (lambda (i j)
 						      (exact->inexact (+ (* i i) (* j j)))))))
 
@@ -3139,7 +3172,7 @@ that computes the componentwise products when we need them, the times are
 
 (let ((image
        (array->specialized-array
-        (make-array (make-interval '#(0 0) '#(4 4))
+        (make-array (make-interval '#(4 4))
                     (lambda (i j)
                       (case i
                         ((0) 1.)
@@ -3160,7 +3193,7 @@ that computes the componentwise products when we need them, the times are
 
 (let ((image
        (array->specialized-array
-        (make-array (make-interval '#(0 0) '#(4 4))
+        (make-array (make-interval '#(4 4))
                     (lambda (i j)
                       (case i
                         ((0) 1.)
@@ -3243,8 +3276,7 @@ that computes the componentwise products when we need them, the times are
 (define A
   ;; A Hilbert matrix
   (array->specialized-array
-   (make-array (make-interval '#(0 0)
-                              '#(4 4))
+   (make-array (make-interval '#(4 4))
                (lambda (i j)
                  (/ (+ 1 i j))))))
 
