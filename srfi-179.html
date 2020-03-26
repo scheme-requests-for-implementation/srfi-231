@@ -17,7 +17,7 @@
     <h2>Author</h2>
     <p>Bradley J. Lucier</p>
     <h2>Status</h2>
-    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+179+at+srfi+dotschemers+dot+org">srfi-179@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-179">archive</a>. There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-179">git repository</a> of this document, a reference implementation, a test file, and other materials.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+179+at+srfi+dotschemers+dot+org">srfi-179@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-179">archive</a>.</p>
     <ul>
       <li>Received: 2020-01-11</li>
       <li>60-day deadline: 2020-03-13</li>
@@ -1125,7 +1125,11 @@ indexer:       (lambda multi-index
       in the implementation are: DSSSL-style optional and keyword arguments; a
       unique object to indicate absent arguments; <code>define-structure</code>;
       and <code>define-macro</code>.</p>
-    <h2>Relationship to other SRFIs</h2>
+    <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-179">git
+      repository</a> of this document, a sample implementation, a test
+      file, and other materials.</p>
+
+   <h2>Relationship to other SRFIs</h2>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
       specialized-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
