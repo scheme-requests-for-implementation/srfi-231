@@ -573,7 +573,7 @@
     <p><b>Procedure: </b><code><a name="array-body">array-body</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-safe?">array-safe?</a> <var>array</var></code></p>
     <p><code>array-storage-class</code> returns the storage-class of <code><var>array</var></code>. <code>array-safe?</code> is true if and only if the arguments of <code>(array-getter <var>array</var>)</code> and <code>(array-setter <var>array</var>)</code> (including the value to be stored in the array) are checked for correctness.</p>
-    <p><code>(array-body <var>array</var>)</code> is a linearly-indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.</p>
+    <p><code>(array-body <var>array</var>)</code> is a linearly indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.</p>
     <p><code>(array-indexer <var>array</var>)</code> is assumed to be a one-to-one, but not necessarily onto,  affine mapping from <code>(array-domain <var>array</var>)</code> into  the indexing domain of <code>(array-body <var>array</var>)</code>.</p>
     <p>Please see <a href="#make-specialized-array"><code>make-specialized-array</code></a> for how <code>(array-body <var>array</var>)</code>, etc., are used.</p>
     <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized-array.</p>
