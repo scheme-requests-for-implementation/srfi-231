@@ -320,8 +320,8 @@
 					   (list->vector upper1))
 			    (make-interval (list->vector lower2)
 					   (list->vector upper2)))
-	  (and (##every >= lower1 lower2)
-	       (##every <= upper1 upper2)))))
+	  (and (%%every >= lower1 lower2)
+	       (%%every <= upper1 upper2)))))
 
 (pp "interval-contains-multi-index?  error tests")
 
@@ -480,7 +480,7 @@
 
 (let ((getter (lambda args 1.)))
   (test (make-array (make-interval '#(3) '#(4)) getter)
-	(make-##array-base (make-interval '#(3) '#(4))
+	(make-%%array (make-interval '#(3) '#(4))
 			   getter
 			   #f
 			   #f
@@ -519,7 +519,7 @@
     (test (make-array domain
 		      getter
 		      setter)
-	  (make-##array-base domain
+	  (make-%%array domain
 			     getter
 			     setter
 			     #f
@@ -612,7 +612,7 @@
 				(call-with-values
 				    (lambda () (apply new-domain->old-domain args))
 				  old-indexer))
-			      (##compose-indexers old-indexer new-domain  new-domain->old-domain)
+			      (%%compose-indexers old-indexer new-domain  new-domain->old-domain)
 			      new-domain)))
 	(pp (list new-domain
 		  old-domain-dimension
@@ -893,7 +893,7 @@
           ;; once for each random
           (random (max 0 (- n 10)) n))
          (indexer
-          (##interval->basic-indexer interval))
+          (%%interval->basic-indexer interval))
          (arguments-1
           '())
          (array-1
@@ -1446,8 +1446,8 @@
 	 (permutation (random-permutation n))
 	 (input-vec (list->vector (f64vector->list (random-f64vector n)))))
     (test (vector-permute input-vec permutation)
-	  (##vector-permute input-vec permutation))
-    (test (list->vector (##vector-permute->list input-vec permutation))
+	  (%%vector-permute input-vec permutation))
+    (test (list->vector (%%vector-permute->list input-vec permutation))
 	  (vector-permute input-vec permutation))))
 
 
@@ -1638,7 +1638,7 @@
 			     (make-array (array-domain temp)
 					 (array-getter temp)
 					 (array-setter temp)))))))
-	   (translation (list->vector (map (lambda (x) (random -10 10)) (vector->list (##interval-lower-bounds domain))))))
+	   (translation (list->vector (map (lambda (x) (random -10 10)) (vector->list (%%interval-lower-bounds domain))))))
       ;;(pp (list domain translation (interval-volume domain)))
       (let ((translated-array       (array-translate Array translation))
 	    (my-translated-array (my-array-translate Array translation)))
@@ -1749,7 +1749,7 @@
 	(let* ((array-copy (array->specialized-array Array))
 	       (getter (array-getter array-copy))
 	       (setter (array-setter array-copy))
-	       (permutation-inverse (##permutation-invert permutation)))
+	       (permutation-inverse (%%permutation-invert permutation)))
 	  (make-array (interval-permute (array-domain Array)
 					permutation)
 		      (lambda args
@@ -1806,7 +1806,7 @@
 	(let* ((array-copy (array->specialized-array Array))
 	       (getter (array-getter array-copy))
 	       (setter (array-setter array-copy))
-	       (permutation-inverse (##permutation-invert permutation)))
+	       (permutation-inverse (%%permutation-invert permutation)))
 	  (make-array (interval-permute (array-domain Array)
 					permutation)
 		      (lambda args
@@ -1971,7 +1971,7 @@
 				 (car lowers)
 				 lowers))))
     ;; (pp (list args new-lowers new-uppers (vector-every < new-lowers new-uppers)))
-    (and (##vector-every < new-lowers new-uppers)
+    (and (%%vector-every < new-lowers new-uppers)
 	 (make-interval new-lowers new-uppers))))
 
 
@@ -2197,9 +2197,9 @@
   (let* ((domain
           (array-domain array))
          (lowers
-          (##interval-lower-bounds domain))
+          (%%interval-lower-bounds domain))
          (uppers
-          (##interval-upper-bounds domain))
+          (%%interval-upper-bounds domain))
          (result-lowers
           (vector-map (lambda (x)
                         0)
@@ -2239,9 +2239,9 @@
                (let ((res (array->specialized-array res)))
                  (make-array domain (array-getter res) (array-setter res)))))))
          (lowers
-          (##interval-lower-bounds domain))
+          (%%interval-lower-bounds domain))
          (uppers
-          (##interval-upper-bounds domain))
+          (%%interval-upper-bounds domain))
          (sidelengths
           (vector-map (lambda (l u)
                         (let ((dim (- u l)))
@@ -2294,8 +2294,8 @@
 (define (myarray-reverse array flip?)
   (let* ((flips (vector->list flip?))
          (domain (array-domain array))
-         (lowers (##interval-lower-bounds->list domain))
-         (uppers (##interval-upper-bounds->list domain))
+         (lowers (%%interval-lower-bounds->list domain))
+         (uppers (%%interval-upper-bounds->list domain))
          (transform
           (lambda (multi-index)
             (map (lambda (i_k l_k u_k f_k?)
