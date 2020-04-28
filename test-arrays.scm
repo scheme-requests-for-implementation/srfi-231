@@ -43,6 +43,45 @@
       (+ a (random-integer (- b a)))
       (random-integer a)))
 
+(define (random-sample n #!optional (l 4))
+  (list->vector (map (lambda (i)
+                       (random-integer 1 l))
+                     (iota n))))
+
+(define (random-permutation n)
+  (let ((result (make-vector n)))
+    ;; fill it
+    (do ((i 0 (fx+ i 1)))
+	((fx= i n))
+      (vector-set! result i i))
+    ;; permute it
+    (do ((i 0 (fx+ i 1)))
+	((fx= i n) result)
+      (let* ((index (random i n))
+	     (temp (vector-ref result index)))
+	(vector-set! result index (vector-ref result i))
+	(vector-set! result i temp)))))
+
+(define (vector-permute v permutation)
+  (let* ((n (vector-length v))
+	 (result (make-vector n)))
+    (do ((i 0 (+ i 1)))
+	((= i n) result)
+      (vector-set! result i (vector-ref v (vector-ref permutation i))))))
+
+(define (filter p l)
+  (cond ((null? l) l)
+        ((p (car l))
+         (cons (car l) (filter p (cdr l))))
+        (else
+         (filter p (cdr l)))))
+
+(define (in-order < l)
+  (or (null? l)
+      (null? (cdr l))
+      (and (< (car l) (cadr l))
+           (in-order < (cdr l)))))
+
 ;; (include "generic-arrays.scm")
 
 (pp "Interval error tests")
@@ -655,10 +694,189 @@
 (test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a)
       "make-specialized-array: The third argument is not a boolean: ")
 
+(pp "array-elements-in-order? tests")
 
+;; We'll use specialized arrays with u1-storage-class---we never
+;; use the array contents, just the indexers, and it saves storage.
 
+(test (array-elements-in-order? 1)
+      "array-elements-in-order?: The argument is not a specialized array: ")
 
+(test (array-elements-in-order? (make-array (make-interval '#(1 2)) list))
+      "array-elements-in-order?: The argument is not a specialized array: ")
 
+(test (array-elements-in-order? (make-array (make-interval '#(1 2)) list list)) ;; not valid setter
+      "array-elements-in-order?: The argument is not a specialized array: ")
+
+;; all these are true, we'll have to see how to screw it up later.
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let ((array
+         (make-specialized-array (random-interval 1 6)
+                                 u1-storage-class)))
+    (test (array-elements-in-order? array)
+          #t)))
+
+;; the elements of curried arrays are in order
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 2 5)
+                                  u1-storage-class))
+         (curried
+          (array-curry base (random 1 (array-dimension base)))))
+    (test (array-every array-elements-in-order? curried)
+          #t)))
+
+;; Elements of extracted arrays of newly created specialized
+;; arrays are not in order unless 
+;; (1) the differences in the upper and lower bounds of the
+;;     first dimensions all equal 1 *and*
+;; (2) the next dimension doesn't matter *and*
+;; (3) the upper and lower bounds of the latter dimensions
+;;     of the original and extracted arrays are the same
+;; Whew!
+
+(define (extracted-array-elements-in-order? base extracted)
+  (let ((base-domain (array-domain base))
+        (extracted-domain (array-domain extracted))
+        (dim (array-dimension base)))
+    (let loop-1 ((i 0))
+      (or (= i (- dim 1))
+          (or (and (= 1 (- (interval-upper-bound extracted-domain i)
+                           (interval-lower-bound extracted-domain i)))
+                   (loop-1 (+ i 1)))
+              (let loop-2 ((i (+ i 1)))
+                (or (= i dim)
+                    (and (= (interval-upper-bound extracted-domain i)
+                            (interval-upper-bound base-domain i))
+                         (= (interval-lower-bound extracted-domain i)
+                            (interval-lower-bound base-domain i))
+                         (loop-2 (+ i 1))))))))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 2 6)
+                                  u1-storage-class))
+         (extracted
+          (array-extract base (random-subinterval (array-domain base)))))
+    (test (array-elements-in-order? extracted)
+          (extracted-array-elements-in-order? base extracted))))
+
+;; Should we do reversed now?
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 1 6)
+                                  u1-storage-class))
+         (domain
+          (array-domain base))
+         (reversed-dimensions
+          (vector-map (lambda args (random-boolean))
+                      (make-vector (array-dimension base))))
+         (reversed
+          (array-reverse base reversed-dimensions)))
+    (test (array-elements-in-order? reversed)
+          (%%vector-every
+           (lambda (lower upper reversed)
+             (or (= (+ 1 lower) upper) ;; side-length 1
+                 (not reversed)))      ;; dimension not reversed
+           (interval-lower-bounds->vector domain)
+           (interval-upper-bounds->vector domain)
+           reversed-dimensions))))
+
+;; permutations
+
+;; A permuted array has elements in order iff all the dimensions with
+;; sidelength > 1 are in the same order.
+
+(define (permuted-array-elements-in-order? array permutation)
+  (let* ((domain
+          (array-domain array))
+         (axes-and-limits
+          (vector-map list
+                      (list->vector (iota (vector-length permutation)))
+                      (interval-lower-bounds->vector domain)
+                      (interval-upper-bounds->vector domain)))
+         (permuted-axes-and-limits
+          (vector->list (vector-permute axes-and-limits permutation))))
+    (in-order (lambda (x y)
+                (< (car x) (car y)))
+              (filter (lambda (l)
+                        (let ((i (car l))
+                              (l (cadr l))
+                              (u (caddr l)))
+                          (< 1 (- u l))))
+                      permuted-axes-and-limits))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (array->specialized-array
+           (make-specialized-array (random-interval 1 6)
+                                   u1-storage-class)))
+         (domain
+          (array-domain base))
+         (permutation
+          (random-permutation (array-dimension base)))
+         (permuted
+          (array-permute base permutation)))
+    (test (array-elements-in-order? permuted)
+          (permuted-array-elements-in-order? base permutation))))
+
+;; a sampled array has elements in order iff after a string of
+;; dimensions with side-length 1 at the beginning, all the rest
+;; of the dimensions have sidelengths the same as the original
+
+(define (sampled-array-elements-in-order? base scales)
+  (let* ((domain
+          (array-domain base))
+         (sampled-base
+          (array-sample base scales))
+         (scaled-domain
+          (array-domain sampled-base))
+         (base-sidelengths
+          (vector->list
+           (vector-map -
+                       (interval-upper-bounds->vector domain)
+                       (interval-lower-bounds->vector domain))))
+         (scaled-sidelengths
+          (vector->list
+           (vector-map -
+                       (interval-upper-bounds->vector scaled-domain)
+                       (interval-lower-bounds->vector scaled-domain)))))
+    (let loop-1 ((base-lengths   base-sidelengths)
+                 (scaled-lengths scaled-sidelengths))
+      (or (null? base-lengths)
+          (if (= (car scaled-lengths) 1)
+              (loop-1 (cdr base-lengths)
+                      (cdr scaled-lengths))
+              (let loop-2 ((base-lengths   base-lengths)
+                           (scaled-lengths scaled-lengths))
+                (or (null? base-lengths)
+                    (and (= (car base-lengths) (car scaled-lengths))
+                         (loop-2 (cdr base-lengths)
+                                 (cdr scaled-lengths))))))))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (array->specialized-array
+           (make-specialized-array (random-nonnegative-interval 1 6)
+                                   u1-storage-class)))
+         (scales
+          ;; should we define random-scales ?
+          (vector-map (lambda (x)
+                        (random 1 4))
+                      (interval-lower-bounds->vector (array-domain base))))
+         (sampled
+          (array-sample base scales)))
+    (test (array-elements-in-order? sampled)
+          (sampled-array-elements-in-order? base scales))))
 
 (pp "array->specialized-array error tests")
 
@@ -1419,27 +1637,6 @@
 
 (pp "specialized-array-share result tests")
 
-(define (random-permutation n)
-  (let ((result (make-vector n)))
-    ;; fill it
-    (do ((i 0 (fx+ i 1)))
-	((fx= i n))
-      (vector-set! result i i))
-    ;; permute it
-    (do ((i 0 (fx+ i 1)))
-	((fx= i n) result)
-      (let* ((index (random i n))
-	     (temp (vector-ref result index)))
-	(vector-set! result index (vector-ref result i))
-	(vector-set! result i temp)))))
-
-(define (vector-permute v permutation)
-  (let* ((n (vector-length v))
-	 (result (make-vector n)))
-    (do ((i 0 (+ i 1)))
-	((= i n) result)
-      (vector-set! result i (vector-ref v (vector-ref permutation i))))))
-
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((n (random 1 11))
@@ -1986,7 +2183,7 @@
     (test (apply my-interval-intersect intervals)
 	  (apply interval-intersect intervals))))
 
-(pp "test interval-scale and array-scale")
+(pp "test interval-scale and array-sample")
 
 (test (interval-scale 1 'a)
       "interval-scale: The first argument is not an interval with all lower bounds zero: ")

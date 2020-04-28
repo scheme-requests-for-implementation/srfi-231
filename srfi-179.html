@@ -37,7 +37,7 @@
       <li>Encourage <b>bulk processing of arrays</b> rather than word-by-word operations.</li></ul>
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-122/">SRFI 122</a> in the following ways:</p>
     <ul>
-      <li>The procedures <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>interval-rotate</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-rotate</code>, <code>array-reduce</code>, <code>array-assign!</code>, and <code>array-swap!</code> have been added together with some examples.</li>
+      <li>The procedures <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>interval-rotate</code> and <code>array-elements-in-order?</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-rotate</code>, <code>array-reduce</code>, <code>array-assign!</code>, <code>array-swap!</code> have been added together with some examples.</li>
       <li>The procedure <code>make-interval</code> now takes one or two arguments.</li>
       <li>The discussion of Haar transforms as examples of separable transforms has been corrected.</li>
       <li>The documentation has a few more examples of image processing algorithms.</li>
@@ -163,6 +163,7 @@
         <a href="#array-indexer">array-indexer</a>,
         <a href="#array-body">array-body</a>,
         <a href="#array-safe?">array-safe?</a>,
+        <a href="#array-elements-in-order?">array-elements-in-order?</a>,
         <a href="#specialized-array-share">specialized-array-share</a>,
         <a href="#array-&gt;specialized-array">array-&gt;specialized-array</a>,
         <a href="#array-curry">array-curry</a>,
@@ -577,6 +578,9 @@
     <p><code>(array-indexer <var>array</var>)</code> is assumed to be a one-to-one, but not necessarily onto,  affine mapping from <code>(array-domain <var>array</var>)</code> into  the indexing domain of <code>(array-body <var>array</var>)</code>.</p>
     <p>Please see <a href="#make-specialized-array"><code>make-specialized-array</code></a> for how <code>(array-body <var>array</var>)</code>, etc., are used.</p>
     <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized-array.</p>
+    <p><b>Procedure: </b><code><a name="array-elements-in-order?">array-elements-in-order?</a> <var>A</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is a specialized array, in which case it returns <code>#t</code> if the elements of <code><var>A</var></code> are in order and stored adjacently in <code>(array-body <var>A</var>)</code> and <code>#f</code> otherwise.</p>
+    <p>It is an error if <code><var>A</var></code> is not a specialized array.</p>
     <p><b>Procedure: </b><code><a name="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
     <p>Constructs a new specialized-array that shares the body of the specialized-array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to a specialized array with the following fields:</p>
@@ -1125,11 +1129,8 @@ indexer:       (lambda multi-index
       in the implementation are: DSSSL-style optional and keyword arguments; a
       unique object to indicate absent arguments; <code>define-structure</code>;
       and <code>define-macro</code>.</p>
-    <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-179">git
-      repository</a> of this document, a sample implementation, a test
-      file, and other materials.</p>
-
-   <h2>Relationship to other SRFIs</h2>
+    <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-179">git repository</a> of this document, a sample implementation, a test file, and other materials.</p>
+    <h2>Relationship to other SRFIs</h2>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
       specialized-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can

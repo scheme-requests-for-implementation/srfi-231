@@ -1295,6 +1295,121 @@
 	(else
 	 (%%array-safe? obj))))
 
+(define (%%array-elements-in-order? array)
+  (let ((domain  (%%array-domain array))
+        (indexer (%%array-indexer array)))
+  (case (%%interval-dimension domain)
+    ((1) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (upper-0 (%%interval-upper-bound domain 0)))
+           (let ((increment 1))
+             (or (= 1 (- upper-0 lower-0))
+                 (= increment
+                    (- (indexer (+ lower-0 1))
+                       (indexer lower-0)))))))
+    ((2) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (lower-1 (%%interval-lower-bound domain 1))
+               (upper-0 (%%interval-upper-bound domain 0))
+               (upper-1 (%%interval-upper-bound domain 1)))
+           (let ((increment 1))
+             (and (or (= 1 (- upper-1 lower-1))
+                      (= increment
+                         (- (indexer lower-0 (+ lower-1 1))
+                            (indexer lower-0    lower-1))))
+                  (let ((increment (* increment (- upper-1 lower-1))))
+                    (or (= 1 (- upper-0 lower-0))
+                        (= increment
+                           (- (indexer (+ lower-0 1) lower-1)
+                              (indexer    lower-0    lower-1)))))))))
+    ((3) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (lower-1 (%%interval-lower-bound domain 1))
+               (lower-2 (%%interval-lower-bound domain 2))
+               (upper-0 (%%interval-upper-bound domain 0))
+               (upper-1 (%%interval-upper-bound domain 1))
+               (upper-2 (%%interval-upper-bound domain 2)))
+           (let ((increment 1))
+             (and (or (= 1 (- upper-2 lower-2))
+                      (= increment
+                         (- (indexer lower-0 lower-1 (+ lower-2 1))
+                            (indexer lower-0 lower-1    lower-2))))
+                  (let ((increment (* increment (- upper-2 lower-2))))
+                    (and (or (= 1 (- upper-1 lower-1))
+                             (= increment
+                                (- (indexer lower-0 (+ lower-1 1) lower-2)
+                                   (indexer lower-0    lower-1    lower-2))))
+                         (let ((increment (* increment (- upper-1 lower-1))))
+                           (or (= 1 (- upper-0 lower-0))
+                               (= increment
+                                  (- (indexer (+ lower-0 1) lower-1 lower-2)
+                                     (indexer    lower-0    lower-1 lower-2)))))))))))
+    ((4) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (lower-1 (%%interval-lower-bound domain 1))
+               (lower-2 (%%interval-lower-bound domain 2))
+               (lower-3 (%%interval-lower-bound domain 3))
+               (upper-0 (%%interval-upper-bound domain 0))
+               (upper-1 (%%interval-upper-bound domain 1))
+               (upper-2 (%%interval-upper-bound domain 2))
+               (upper-3 (%%interval-upper-bound domain 3)))
+           (let ((increment 1))
+             (and (or (= 1 (- upper-3 lower-3))
+                      (= increment
+                         (- (indexer lower-0 lower-1 lower-2 (+ lower-3 1))
+                            (indexer lower-0 lower-1 lower-2    lower-3))))
+                  (let ((increment (* increment (- upper-3 lower-3))))
+                    (and (or (= 1 (- upper-2 lower-2))
+                             (= increment
+                                (- (indexer lower-0 lower-1 (+ lower-2 1) lower-3)
+                                   (indexer lower-0 lower-1    lower-2    lower-3))))
+                         (let ((increment (* increment (- upper-2 lower-2))))
+                           (and (or (= 1 (- upper-1 lower-1))
+                                    (= increment
+                                       (- (indexer lower-0 (+ lower-1 1) lower-2 lower-3)
+                                          (indexer lower-0    lower-1    lower-2 lower-3))))
+                                (let ((increment (* increment (- upper-1 lower-1))))
+                                  (or (= 1 (- upper-0 lower-0))
+                                      (= increment
+                                         (- (indexer (+ lower-0 1) lower-1 lower-2 lower-3)
+                                            (indexer    lower-0    lower-1 lower-2 lower-3)))))))))))))
+    (else (let ((global-lowers
+                 ;; will use as an argument list
+                 (%%interval-lower-bounds->list domain))
+                (global-lowers+1
+                 ;; will modify and use as an argument list
+                 (%%interval-lower-bounds->list domain)))
+            (and
+             (let loop ((lowers global-lowers+1)
+                        (uppers (%%interval-upper-bounds->list domain)))
+               ;; returns either #f or the increment
+               ;; that the difference of indexers must equal.
+               (if (null? lowers)
+                   1 ;; increment
+                   (let ((increment (loop (cdr lowers) (cdr uppers))))
+                     (and increment
+                          (or (and (= 1 (- (car uppers) (car lowers)))
+                                   ;; increment doesn't change
+                                   increment)
+                              (begin
+                                ;; increment the correct index by 1
+                                (set-car! lowers (+ (car lowers) 1))
+                                (and (= (- (apply indexer global-lowers+1)
+                                           (apply indexer global-lowers))
+                                        increment)
+                                     (begin
+                                       ;; set it back
+                                       (set-car! lowers (- (car lowers) 1))
+                                       ;; multiply the increment by the difference in
+                                       ;; the current upper and lower bounds and
+                                       ;; return it.
+                                       (* increment (- (car uppers) (car lowers)))))))))))
+             ;; return a proper boolean instead of the volume of the domain
+             #t))))))
+
+(define (array-elements-in-order? array)
+  (cond ((not (specialized-array? array))
+         (error "array-elements-in-order?: The argument is not a specialized array: " array))
+        (else
+         (%%array-elements-in-order? array))))
+
+
 (define (%%finish-specialized-array domain storage-class body indexer safe?)
   (let ((storage-class-getter (storage-class-getter storage-class))
 	(storage-class-setter (storage-class-setter storage-class))

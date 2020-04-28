@@ -58,7 +58,8 @@ MathJax.Hub.Config({
 	     ".  To subscribe to the list, follow "
 	     (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
 	     ".  You can access previous messages via the mailing list "
-	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")". There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
+	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".")
+        
         
 	(<ul> (<li> "Received: 2020-01-11")
               (<li> "60-day deadline: 2020-03-13")
@@ -88,7 +89,7 @@ MathJax.Hub.Config({
          )
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI 122")" in the following ways:")
         (<ul>
-         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'interval-rotate)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added together with some examples.")
+         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'interval-rotate)" and "(<code>'array-elements-in-order?)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", "(<code>'array-swap!)" have been added together with some examples.")
          (<li> "The procedure "(<code>'make-interval)" now takes one or two arguments.")
          (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
          (<li> "The documentation has a few more examples of image processing algorithms.")
@@ -301,6 +302,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-indexer" "array-indexer")END
                  (<a> href: "#array-body" "array-body")END
                  (<a> href: "#array-safe?" "array-safe?") END
+                 (<a> href: "#array-elements-in-order?" "array-elements-in-order?") END
                  (<a> href: "#specialized-array-share" "specialized-array-share")END
                  (<a> href: "#array->specialized-array" "array->specialized-array")END
                  (<a> href: "#array-curry" "array-curry")END
@@ -816,10 +818,14 @@ otherwise it is an error.")
 (format-lambda-list '(array-safe? array))
 (<p> (<code>'array-storage-class)" returns the storage-class of "(<code>(<var> 'array))". "
      (<code>'array-safe?)" is true if and only if the arguments of "(<code> "(array-getter "(<var> 'array)")")" and "(<code> "(array-setter "(<var> 'array)")")" (including the value to be stored in the array) are checked for correctness.")
-(<p> (<code>"(array-body "(<var>'array)")")" is a linearly-indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.")
+(<p> (<code>"(array-body "(<var>'array)")")" is a linearly indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.")
 (<p> (<code>"(array-indexer "(<var> 'array)")")" is assumed to be a one-to-one, but not necessarily onto,  affine mapping from "(<code> "(array-domain "(<var> 'array)")")" into  the indexing domain of "(<code>"(array-body "(<var> 'array)")")".")
 (<p> "Please see "(<a> href: "#make-specialized-array" (<code>'make-specialized-array))" for how "(<code>"(array-body "(<var>'array)")")", etc., are used.")
 (<p> "It is an error to call any of these routines if "(<code>(<var> 'array))" is not a specialized-array.")
+
+(format-lambda-list '(array-elements-in-order? A))
+(<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))" are in order and stored adjacently in "(<code>"(array-body "(<var>'A)")")" and "(<code>'#f)" otherwise.")
+(<p> "It is an error if "(<code>(<var>'A))" is not a specialized array.")
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
 (<p> "Constructs a new specialized-array that shares the body of the specialized-array "(<code>(<var> 'array))".
@@ -1479,6 +1485,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 in the implementation are: DSSSL-style optional and keyword arguments; a
 unique object to indicate absent arguments; "(<code>"define-structure")";
 and "(<code>"define-macro")".")
+(<p> "There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a sample implementation, a test file, and other materials.")
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI
