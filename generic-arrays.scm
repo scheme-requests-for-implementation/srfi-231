@@ -8,16 +8,21 @@
 
 ;;; Our naming convention prefixes %% to the names of internal procedures,
 
-;;; The following macro is used to determine whether certain keyword arguments
-;;; were omitted.  It is specific to Gambit-C's compiler.
-;;; Redefine it for other schemes.
-
-
-(##define-macro (macro-absent-obj)  `',(##type-cast -6 2))
+(cond-expand
+ (gambit
+  ;; What's used when optional arguments are omitted
+  (##define-macro (macro-absent-obj)  `',(##type-cast -6 2)))
+ (else
+  (begin
+    ;; a unique object
+    (define %%absent-obj (list 'absent-obj))
+    ;; return it
+    (define (macro-absent-obj) %%absent-obj))))
 
 (cond-expand
  (gambit
   ;; define some R7RS small procedures for Gambit.
+  ;; sub@vector-move! uses memmove in C back end
   (begin
     (define (vector-copy! to at from start end)
       (subvector-move! from start end to at))
@@ -46,13 +51,27 @@
       (subf32vector-move! from (* 2 start) (* 2 end) to (* 2 at)))
     (define (c128vector-copy! to at from start end)
       (subf64vector-move! from (* 2 start) (* 2 end) to (* 2 at)))))
- (else
-  ;; Assume R7RS small
+ (r7rs
+  ;; The other procedures are in R7RS small
   (begin
     (define (c64vector-copy! to at from start end)
       (f32vector-copy! to (* 2 at) from (* 2 start) (* 2 end)))
     (define (c128vector-copy! to at from start end)
-      (f64vector-copy! to (* 2 at) from (* 2 start) (* 2 end))))))
+      (f64vector-copy! to (* 2 at) from (* 2 start) (* 2 end)))))
+  (else
+   ;; Punt
+   (begin
+     (define vector-copy! #f)
+     (define s8vector-copy! #f)
+     (define s16vector-copy! #f)
+     (define s32vector-copy! #f)
+     (define s64vector-copy! #f)
+     (define u8vector-copy! #f)
+     (define u16vector-copy! #f)
+     (define u32vector-copy! #f)
+     (define u64vector-copy! #f)
+     (define c64vector-copy! #f)
+     (define c128vector-copy! #f))))
 
 
 ;;; We need a multi-argument every, but not as fancy as in Olin Shiver's
@@ -3119,15 +3138,15 @@
         ;; an element-by-element copy; that's why we changed the documentation to say
         ;; that results are undefined if modifying destination can affect source.
         
-        ;; The next check about whether a block copy can be done is bit heavyweight.
+        ;; The next check about whether a block copy can be done is a bit heavyweight.
         ((and (specialized-array? destination)
               (specialized-array? source)
               (equal? (%%array-storage-class destination)
                       (%%array-storage-class source))
-              (array-elements-in-order? destination)
-              (array-elements-in-order? source)
               ;; does a copier for this storage-class exist?
-              (storage-class-copier (%%array-storage-class destination)))
+              (storage-class-copier (%%array-storage-class destination))
+              (array-elements-in-order? destination)
+              (array-elements-in-order? source))
          ;; do a block copy
          (let* ((source-indexer
                  (array-indexer source))
