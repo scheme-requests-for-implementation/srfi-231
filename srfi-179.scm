@@ -270,6 +270,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#storage-class-setter" "storage-class-setter") END
                  (<a> href: "#storage-class-checker" "storage-class-checker") END
                  (<a> href: "#storage-class-maker" "storage-class-maker") END
+                 (<a> href: "#storage-class-copier" "storage-class-copier") END
                  (<a> href: "#storage-class-length" "storage-class-length") END
                  (<a> href: "#storage-class-default" "storage-class-default") END
                  (<a> href: "#generic-storage-class" "generic-storage-class") END
@@ -576,11 +577,12 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
-(format-lambda-list '(make-storage-class getter setter checker maker length default))
+(format-lambda-list '(make-storage-class getter setter checker maker copier length default))
 (<p> "Here we assume the following relationships between the arguments of "(<code> 'make-storage-class)".  Assume that the \"elements\" of
 the backing store are of some \"type\", either heterogeneous (all Scheme types) or homogeneous (of some restricted type).")
 (<ul>
- (<li> (<code> "("(<var>"maker n")" "(<var> 'value)")")" returns an object containing "(<code>(<var> 'n))" elements of value "(<code>(<var> 'value))".")
+ (<li> (<code> "("(<var>"maker n")" "(<var> 'value)")")" returns a linearly addressed object containing "(<code>(<var> 'n))" elements of value "(<code>(<var> 'value))".")
+ (<li> (<var>'copier)" may be #f or a procedure; if a procedure then if "(<var>'to)" and "(<var>'from)" were created by "(<var>'maker)", then "(<code>"("(<var> "copier to at from start end")")")" copies elements from "(<var>'from)" beginning at "(<var>'start)" (inclusive) and ending at "(<var>'end)" (exclusive) to "(<var>'to)" beginning at "(<var>'at)".  It is assumed that all the indices involved are within the domain of "(<var>'from)" and "(<var>'to)", as needed.  The order in which the elements are copied is unspecified.")
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
        " and  0 <= "(<code>(<var> 'i))" < "(<code>(<var> 'n))", then "(<code> "("(<var>"getter v i")")")" returns the current value of the "(<code>(<var> 'i))"'th element of "(<code>(<var> 'v))", and "(<code> "("(<var> 'checker)" ("(<var>"getter v i")")) => #t")".")
@@ -600,16 +602,18 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-lambda-list '(storage-class-setter m))
 (format-lambda-list '(storage-class-checker m))
 (format-lambda-list '(storage-class-maker m))
+(format-lambda-list '(storage-class-copier m))
 (format-lambda-list '(storage-class-length m))
 (format-lambda-list '(storage-class-default m))
 (<p> "If "(<code>(<var> 'm))" is an object created by")
 (<blockquote>
- (<code>"(make-storage-class "(<var> "getter setter checker maker length default")")"))
+ (<code>"(make-storage-class "(<var> "getter setter checker maker copier length default")")"))
 (<p> " then "
      (<code> 'storage-class-getter)" returns "(<code>(<var> 'getter))", "
      (<code> 'storage-class-setter)" returns "(<code>(<var> 'setter))", "
      (<code> 'storage-class-checker)" returns "(<code>(<var> 'checker))", "
-     (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", and "
+     (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", "
+     (<code> 'storage-class-copier)" returns "(<code>(<var> 'copier))", "
      (<code> 'storage-class-length)" returns "(<code>(<var> 'length))", and "
      (<code> 'storage-class-default)" returns "(<code>(<var> 'default))".  Otherwise, it is an error to call any of these routines.")
 

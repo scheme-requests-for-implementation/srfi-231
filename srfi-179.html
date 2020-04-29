@@ -132,6 +132,7 @@
         <a href="#storage-class-setter">storage-class-setter</a>,
         <a href="#storage-class-checker">storage-class-checker</a>,
         <a href="#storage-class-maker">storage-class-maker</a>,
+        <a href="#storage-class-copier">storage-class-copier</a>,
         <a href="#storage-class-length">storage-class-length</a>,
         <a href="#storage-class-default">storage-class-default</a>,
         <a href="#generic-storage-class">generic-storage-class</a>,
@@ -378,11 +379,12 @@
     <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>length</var> <var>default</var></code></p>
+    <p><b>Procedure: </b><code><a name="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var></code></p>
     <p>Here we assume the following relationships between the arguments of <code>make-storage-class</code>.  Assume that the &quot;elements&quot; of
       the backing store are of some &quot;type&quot;, either heterogeneous (all Scheme types) or homogeneous (of some restricted type).</p>
     <ul>
-      <li><code>(<var>maker n</var> <var>value</var>)</code> returns an object containing <code><var>n</var></code> elements of value <code><var>value</var></code>.</li>
+      <li><code>(<var>maker n</var> <var>value</var>)</code> returns a linearly addressed object containing <code><var>n</var></code> elements of value <code><var>value</var></code>.</li>
+      <li><var>copier</var> may be #f or a procedure; if a procedure then if <var>to</var> and <var>from</var> were created by <var>maker</var>, then <code>(<var>copier to at from start end</var>)</code> copies elements from <var>from</var> beginning at <var>start</var> (inclusive) and ending at <var>end</var> (exclusive) to <var>to</var> beginning at <var>at</var>.  It is assumed that all the indices involved are within the domain of <var>from</var> and <var>to</var>, as needed.  The order in which the elements are copied is unspecified.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> and  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, then <code>(<var>getter v i</var>)</code> returns the current value of the <code><var>i</var></code>'th element of <code><var>v</var></code>, and <code>(<var>checker</var> (<var>getter v i</var>)) =&gt; #t</code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code>,  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, and <code>(<var>checker</var> <var>val</var>) =&gt; #t</code>, then <code>(<var>setter v i val</var>)</code> sets the value of the <code><var>i</var></code>'th element of  <code><var>v</var></code> to <code><var>val</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li></ul>
@@ -394,12 +396,13 @@
     <p><b>Procedure: </b><code><a name="storage-class-setter">storage-class-setter</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a name="storage-class-checker">storage-class-checker</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a name="storage-class-maker">storage-class-maker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-copier">storage-class-copier</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a name="storage-class-length">storage-class-length</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a name="storage-class-default">storage-class-default</a> <var>m</var></code></p>
     <p>If <code><var>m</var></code> is an object created by</p>
-    <blockquote><code>(make-storage-class <var>getter setter checker maker length default</var>)</code>
+    <blockquote><code>(make-storage-class <var>getter setter checker maker copier length default</var>)</code>
     </blockquote>
-    <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, and <code>storage-class-length</code> returns <code><var>length</var></code>, and <code>storage-class-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
+    <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, <code>storage-class-copier</code> returns <code><var>copier</var></code>, <code>storage-class-length</code> returns <code><var>length</var></code>, and <code>storage-class-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
     <h3>Global Variables</h3>
     <p><b>Variable: </b><code><a name="generic-storage-class">generic-storage-class</a></code></p>
     <p><b>Variable: </b><code><a name="s8-storage-class">s8-storage-class</a></code></p>
@@ -1120,12 +1123,12 @@ indexer:       (lambda multi-index
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array, both with the same domains, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in an unspecified order, and associates each value to the same multi-index in <code><var>destination</var></code>.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
-    <p>If assigning any element of <code><var>destination</var></code> affect the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
+    <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
     <p><b>Procedure: </b><code><a name="array-swap!">array-swap!</a> <var>A</var> <var>B</var></code></p>
     <p>Assumes that <code><var>A</var></code> and <code><var>B</var></code> are mutable arrays with the same domain, and that the elements of each of them can ge stored in the other.</p>
     <p>Evaluates <code>(array-getter <var>A</var>)</code> on the multi-indices in <code>(array-domain <var>A</var>)</code> in an unspecified order, and associates each value to the same multi-index in <code><var>B</var></code>; similarly it assigns the values of <code>(array-getter <var>B</var>)</code> applied to the  multi-indices of <code>(array-domain <var>B</var>)</code> to the associated indices in <code><var>A</var></code>.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
-    <p>If assigning any element of <code><var>A</var></code> affect the value of any element of <code><var>B</var></code>, or vice versa, then the result is undefined.</p>
+    <p>If assigning any element of <code><var>A</var></code> affects the value of any element of <code><var>B</var></code>, or vice versa, then the result is undefined.</p>
     <h2>Implementation</h2>
     <p>We provide an implementation in Gambit-C; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
