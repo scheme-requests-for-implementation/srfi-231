@@ -694,6 +694,47 @@
 (test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a)
       "make-specialized-array: The third argument is not a boolean: ")
 
+(define random-storage-class-and-initializer
+  (let* ((storage-classes
+          (vector
+           ;; generic
+           (list generic-storage-class
+                 (lambda args (random-permutation (length args))))
+           ;; signed integer
+           (list s8-storage-class
+                 (lambda args (random (- (expt 2 7)) (- (expt 2 7) 1))))
+           (list s16-storage-class
+                 (lambda args (random (- (expt 2 15)) (- (expt 2 15) 1))))
+           (list s32-storage-class
+                 (lambda args (random (- (expt 2 31)) (- (expt 2 31) 1))))
+           (list s64-storage-class
+                 (lambda args (random (- (expt 2 63)) (- (expt 2 63) 1))))
+           ;; unsigned integer
+           (list u1-storage-class
+                 (lambda args (random (expt 2 1))))
+           (list u8-storage-class
+                 (lambda args (random (expt 2 8))))
+           (list u16-storage-class
+                 (lambda args (random (expt 2 16))))
+           (list u32-storage-class
+                 (lambda args (random (expt 2 32))))
+           (list u64-storage-class
+                 (lambda args (random (expt 2 64))))
+           ;; float
+           (list f32-storage-class
+                 (lambda args (random-real)))
+           (list f64-storage-class
+                 (lambda args (random-real)))
+           ;; complex-float
+           (list c64-storage-class
+                 (lambda args (make-rectangular (random-real) (random-real))))
+           (list c128-storage-class
+                 (lambda args (make-rectangular (random-real) (random-real))))))
+         (n
+          (vector-length storage-classes)))
+    (lambda ()
+      (vector-ref storage-classes (random n)))))
+
 (pp "array-elements-in-order? tests")
 
 ;; We'll use specialized arrays with u1-storage-class---we never
@@ -816,9 +857,8 @@
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((base
-          (array->specialized-array
-           (make-specialized-array (random-interval 1 6)
-                                   u1-storage-class)))
+          (make-specialized-array (random-interval 1 6)
+                                  u1-storage-class))
          (domain
           (array-domain base))
          (permutation
@@ -865,14 +905,10 @@
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((base
-          (array->specialized-array
-           (make-specialized-array (random-nonnegative-interval 1 6)
-                                   u1-storage-class)))
+          (make-specialized-array (random-nonnegative-interval 1 6)
+                                   u1-storage-class))
          (scales
-          ;; should we define random-scales ?
-          (vector-map (lambda (x)
-                        (random 1 4))
-                      (interval-lower-bounds->vector (array-domain base))))
+          (random-positive-vector (array-dimension base) 4))
          (sampled
           (array-sample base scales)))
     (test (array-elements-in-order? sampled)
@@ -2613,10 +2649,21 @@
           (random-interval 1 6))
          (subinterval
           (random-subinterval interval))
+         (storage-class-and-initializer
+          (random-storage-class-and-initializer))
+         (storage-class
+          (car storage-class-and-initializer))
+         (initializer
+          (cadr storage-class-and-initializer))
          (specialized-array
-          (array->specialized-array (make-array interval list)))
+          (array->specialized-array
+           (make-array interval initializer)
+           storage-class))
          (mutable-array
-          (let ((specialized-array (array->specialized-array (make-array interval list))))
+          (let ((specialized-array
+                 (array->specialized-array
+                  (make-array interval initializer)
+                  storage-class)))
             (make-array interval
                         (array-getter specialized-array)
                         (array-setter specialized-array))))
@@ -2625,22 +2672,25 @@
          (mutable-subarray
           (array-extract mutable-array subinterval))
          (new-subarray
-          (array->specialized-array (make-array subinterval (lambda args (reverse args))))))
+          (array->specialized-array
+           (make-array subinterval initializer)
+           storage-class)))
+    ;; (pp specialized-array)
     (array-assign! specialized-subarray new-subarray)
     (array-assign! mutable-subarray new-subarray)
     (if (not (myarray= specialized-array
                        (make-array interval
                                    (lambda multi-index
                                      (if (apply interval-contains-multi-index? subinterval multi-index)
-                                         (reverse multi-index)
-                                         multi-index)))))
+                                         (apply (array-getter new-subarray) multi-index)
+                                         (apply (array-getter specialized-array) multi-index))))))
         (error "arggh"))
     (test (myarray= mutable-array
                     (make-array interval
                                 (lambda multi-index
                                   (if (apply interval-contains-multi-index? subinterval multi-index)
-                                      (reverse multi-index)
-                                      multi-index))))
+                                      (apply (array-getter new-subarray) multi-index)
+                                      (apply (array-getter mutable-array) multi-index)))))
           #t)))
 
 (pp "array-swap! tests")

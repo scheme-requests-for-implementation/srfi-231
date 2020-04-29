@@ -15,8 +15,47 @@
 
 (##define-macro (macro-absent-obj)  `',(##type-cast -6 2))
 
+(cond-expand
+ (gambit
+  ;; define some R7RS small procedures for Gambit.
+  (begin
+    (define (vector-copy! to at from start end)
+      (subvector-move! from start end to at))
+    (define (s8vector-copy! to at from start end)
+      (subs8vector-move! from start end to at))
+    (define (s16vector-copy! to at from start end)
+      (subs16vector-move! from start end to at))
+    (define (s32vector-copy! to at from start end)
+      (subs32vector-move! from start end to at))
+    (define (s64vector-copy! to at from start end)
+      (subs64vector-move! from start end to at))
+    (define (u8vector-copy! to at from start end)
+      (subu8vector-move! from start end to at))
+    (define (u16vector-copy! to at from start end)
+      (subu16vector-move! from start end to at))
+    (define (u32vector-copy! to at from start end)
+      (subu32vector-move! from start end to at))
+    (define (u64vector-copy! to at from start end)
+      (subu64vector-move! from start end to at))
+    (define (f32vector-copy! to at from start end)
+      (subf32vector-move! from start end to at))
+    (define (f64vector-copy! to at from start end)
+      (subf64vector-move! from start end to at))
+    ;; next two are not R7RS small
+    (define (c64vector-copy! to at from start end)
+      (subf32vector-move! from (* 2 start) (* 2 end) to (* 2 at)))
+    (define (c128vector-copy! to at from start end)
+      (subf64vector-move! from (* 2 start) (* 2 end) to (* 2 at)))))
+ (else
+  ;; Assume R7RS small
+  (begin
+    (define (c64vector-copy! to at from start end)
+      (f32vector-copy! to (* 2 at) from (* 2 start) (* 2 end)))
+    (define (c128vector-copy! to at from start end)
+      (f64vector-copy! to (* 2 at) from (* 2 start) (* 2 end))))))
 
-;;; We need a multi-argument every, but not something as fancy as in Olin Shiver's
+
+;;; We need a multi-argument every, but not as fancy as in Olin Shiver's
 ;;; list library.  (Shiver's version works fine, though, for our purposes.)
 
 (define (%%every pred list . lists)
@@ -798,7 +837,7 @@
 ;;; default:  object                  is the default value with which to fill body
 ;;;
 
-(define-structure storage-class getter setter checker maker length default)
+(define-structure storage-class getter setter checker maker copier length default)
 
 ;;; We define specialized storage-classes for:
 ;;;
@@ -833,6 +872,8 @@
 		  ,checker
 		  ;; maker:
 		  ,(symbol-concatenate 'make- prefix 'vector)
+                  ;; copier
+                  ,(symbol-concatenate prefix 'vector-copy!)
 		  ;; length:
 		  ,(symbol-concatenate prefix 'vector-length)
 		  ;; default:
@@ -922,6 +963,8 @@
    (lambda (size initializer)
      (let ((u16-size (fxarithmetic-shift-right (+ size 15) 4)))
        (vector size (make-u16vector u16-size (if (zero? initializer) 0 65535)))))
+   ;; no copier (for now)
+   #f
    ;; length:
    (lambda (v)
      (vector-ref v 0))
@@ -967,6 +1010,8 @@
 		      ((= i l) result)
 		    (,(symbol-concatenate floating-point-prefix 'vector-set!) result i re)
 		    (,(symbol-concatenate floating-point-prefix 'vector-set!) result (fx+ i 1) im)))))
+            ;; copier
+            ,(symbol-concatenate prefix 'vector-copy!)
 	    ;; length
 	    (lambda (body)
 	      (fxquotient (,(symbol-concatenate floating-point-prefix 'vector-length) body) 2))
@@ -2015,9 +2060,7 @@
                              (lambda ,args
                                (if (not (and ,@(map (lambda (arg) `(exact-integer? ,arg)) args)
                                              (,(symbol-append '%%interval-contains-multi-index?- k) result-domain ,@args)))
-                                   (begin
-                                     (pp (list 'error "array-tile: Index to result array is not valid: " domain sides result-domain ,@args))
-                                     (error "array-tile: Index to result array is not valid: " ,@args))
+                                   (error "array-tile: Index to result array is not valid: " ,@args)
                                    (let* (,@(map (lambda (l j)
                                                    `(,l (vector-ref lower-bounds ,j)))
                                                  lowers indices)
@@ -2327,7 +2370,6 @@
 	 `(begin
 	    ,(reverser '%%getter values)
 	    ,(reverser '%%setter (lambda (args) (cons 'v args))))))
-    #;(pp result)
     result))
 
 (setup-reversed-getters-and-setters)
@@ -2456,7 +2498,6 @@
          `(begin
             ,(sampler '%%getter values)
             ,(sampler '%%setter (lambda (args) (cons 'v args))))))
-    #;(pp result)
     result))
 
 (macro-generate-sample)
@@ -3072,7 +3113,43 @@
         ((not (interval= (%%array-domain destination)
                          (%%array-domain source)))
          (error "array-assign!: The arguments do not have the same domain: " destination source))
+        ;; We decide whether a block copy can be done.
+        
+        ;; NOTE: A block copy might use memmove, which can give results different to
+        ;; an element-by-element copy; that's why we changed the documentation to say
+        ;; that results are undefined if modifying destination can affect source.
+        
+        ;; The next check about whether a block copy can be done is bit heavyweight.
+        ((and (specialized-array? destination)
+              (specialized-array? source)
+              (equal? (%%array-storage-class destination)
+                      (%%array-storage-class source))
+              (array-elements-in-order? destination)
+              (array-elements-in-order? source)
+              ;; does a copier for this storage-class exist?
+              (storage-class-copier (%%array-storage-class destination)))
+         ;; do a block copy
+         (let* ((source-indexer
+                 (array-indexer source))
+                (destination-indexer
+                 (array-indexer destination))
+                (copier
+                 (storage-class-copier (array-storage-class source)))
+                (initial-multi-index
+                 (interval-lower-bounds->list (array-domain source)))
+                (destination-start
+                 (apply destination-indexer initial-multi-index))
+                (source-start
+                 (apply source-indexer initial-multi-index))
+                (source-end
+                 (+ source-start (interval-volume (array-domain source)))))
+           (copier (array-body destination)
+                   destination-start
+                   (array-body source)
+                   source-start
+                   source-end)))
         (else
+         ;; do an element-by-element copy
          (let ((source-getter
                 (%%array-getter source))
                (destination-setter
