@@ -58,14 +58,16 @@ MathJax.Hub.Config({
 	     ".  To subscribe to the list, follow "
 	     (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
 	     ".  You can access previous messages via the mailing list "
-	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")". There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a reference implementation, a test file, and other materials.")
+	     (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".")
+        
         
 	(<ul> (<li> "Received: 2020-01-11")
               (<li> "60-day deadline: 2020-03-13")
               (<li> "Draft #1 published: 2020-01-11")
               (<li> "Draft #2 published: 2020-01-25")
               (<li> "Draft #3 published: 2020-02-04")
-              (<li> "Draft #4 published: 2020-03-25"))
+              (<li> "Draft #4 published: 2020-03-25")
+              (<li> "Draft #5 published: 2020-04-29"))
 
 	(<h2> "Abstract")
 	(<p>
@@ -88,8 +90,25 @@ MathJax.Hub.Config({
          )
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI 122")" in the following ways:")
         (<ul>
-         (<li> "The procedures "(<code>'interval-for-each)", "(<code>'interval-cartesian-product)", "(<code>'interval-rotate)", "(<code>'array-outer-product)", "(<code>'array-tile)", "(<code>'array-rotate)", "(<code>'array-reduce)", "(<code>'array-assign!)", and "(<code>'array-swap!)" have been added together with some examples.")
+         (<li> "The procedures "
+               (<code>'specialized-array-default-mutable?)", "
+               (<code>'interval-for-each)", "
+               (<code>'interval-cartesian-product)", "
+               (<code>'interval-rotate)" and "
+               (<code>'array-elements-in-order?)", "
+               (<code>'array-outer-product)", "
+               (<code>'array-tile)", "
+               (<code>'array-rotate)", "
+               (<code>'array-reduce)", "
+               (<code>'array-assign!)", "
+               (<code>'array-swap!)
+               " have been added together with some examples.")
+         (<li> "Global variables "
+               (<code>'f16-storage-class)" and "
+               (<code>'f32-storage-class)" have been added.")
+         (<li> "Homogeneous storage classes must be implemented using homogeneous vectors, or be defined as "(<code>'#f)".")
          (<li> "The procedure "(<code>'make-interval)" now takes one or two arguments.")
+         (<li> "Specialized arrays can be mutable or immutable; the default, which can be changed, is mutable. Shared arrays inherit safety and mutability from source arrays.")
          (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
          (<li> "The documentation has a few more examples of image processing algorithms.")
          (<li> "Some matrix examples have been added to this document."))
@@ -269,6 +288,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#storage-class-setter" "storage-class-setter") END
                  (<a> href: "#storage-class-checker" "storage-class-checker") END
                  (<a> href: "#storage-class-maker" "storage-class-maker") END
+                 (<a> href: "#storage-class-copier" "storage-class-copier") END
                  (<a> href: "#storage-class-length" "storage-class-length") END
                  (<a> href: "#storage-class-default" "storage-class-default") END
                  (<a> href: "#generic-storage-class" "generic-storage-class") END
@@ -281,6 +301,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#u16-storage-class" "u16-storage-class") END
                  (<a> href: "#u32-storage-class" "u32-storage-class") END
                  (<a> href: "#u64-storage-class" "u64-storage-class") END
+                 (<a> href: "#f8-storage-class" "f8-storage-class") END
+                 (<a> href: "#f16-storage-class" "f16-storage-class") END
                  (<a> href: "#f32-storage-class" "f32-storage-class") END
                  (<a> href: "#f64-storage-class" "f64-storage-class") END
                  (<a> href: "#c64-storage-class" "c64-storage-class") END
@@ -295,12 +317,14 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
                  (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
+                 (<a> href: "#specialized-array-default-mutable?" "specialized-array-default-mutable?") END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
                  (<a> href: "#array-storage-class" "array-storage-class")END
                  (<a> href: "#array-indexer" "array-indexer")END
                  (<a> href: "#array-body" "array-body")END
                  (<a> href: "#array-safe?" "array-safe?") END
+                 (<a> href: "#array-elements-in-order?" "array-elements-in-order?") END
                  (<a> href: "#specialized-array-share" "specialized-array-share")END
                  (<a> href: "#array->specialized-array" "array->specialized-array")END
                  (<a> href: "#array-curry" "array-curry")END
@@ -351,7 +375,7 @@ $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
         (<h3> "Procedures")
         (format-lambda-list '(make-interval arg1 #!optional arg2))
         (<p> "Create a new interval. "(<code> (<var>"arg1"))" and "(<code> (<var>"arg2"))" (if given) are nonempty vectors (of the same length) of exact integers.")
-        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))" must be positive, and they are taken as the "(<var>"upper-bounds")" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
+        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))" must be positive, and they are taken as the "(<code>(<var>"upper-bounds"))" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
         (<p> "If "(<code> (<var>"arg2"))" is given, then "(<code> (<var>"arg1"))" is taken to be "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"arg2"))" is taken to be "(<code> (<var>"upper-bounds"))", which must satisfy")
         (<pre>
          (<code>" (< (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
@@ -574,11 +598,12 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
-(format-lambda-list '(make-storage-class getter setter checker maker length default))
+(format-lambda-list '(make-storage-class getter setter checker maker copier length default))
 (<p> "Here we assume the following relationships between the arguments of "(<code> 'make-storage-class)".  Assume that the \"elements\" of
 the backing store are of some \"type\", either heterogeneous (all Scheme types) or homogeneous (of some restricted type).")
 (<ul>
- (<li> (<code> "("(<var>"maker n")" "(<var> 'value)")")" returns an object containing "(<code>(<var> 'n))" elements of value "(<code>(<var> 'value))".")
+ (<li> (<code> "("(<var>"maker n")" "(<var> 'value)")")" returns a linearly addressed object containing "(<code>(<var> 'n))" elements of value "(<code>(<var> 'value))".")
+ (<li> (<var>'copier)" may be #f or a procedure; if a procedure then if "(<code>(<var>'to))" and "(<code>(<var>'from))" were created by "(<code>(<var>'maker))", then "(<code>"("(<var> "copier to at from start end")")")" copies elements from "(<code>(<var>'from))" beginning at "(<code>(<var>'start))" (inclusive) and ending at "(<code>(<var>'end))" (exclusive) to "(<code>(<var>'to))" beginning at "(<code>(<var>'at))".  It is assumed that all the indices involved are within the domain of "(<code>(<var>'from))" and "(<code>(<var>'to))", as needed.  The order in which the elements are copied is unspecified.")
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
        " and  0 <= "(<code>(<var> 'i))" < "(<code>(<var> 'n))", then "(<code> "("(<var>"getter v i")")")" returns the current value of the "(<code>(<var> 'i))"'th element of "(<code>(<var> 'v))", and "(<code> "("(<var> 'checker)" ("(<var>"getter v i")")) => #t")".")
@@ -598,16 +623,18 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-lambda-list '(storage-class-setter m))
 (format-lambda-list '(storage-class-checker m))
 (format-lambda-list '(storage-class-maker m))
+(format-lambda-list '(storage-class-copier m))
 (format-lambda-list '(storage-class-length m))
 (format-lambda-list '(storage-class-default m))
 (<p> "If "(<code>(<var> 'm))" is an object created by")
 (<blockquote>
- (<code>"(make-storage-class "(<var> "getter setter checker maker length default")")"))
+ (<code>"(make-storage-class "(<var> "getter setter checker maker copier length default")")"))
 (<p> " then "
      (<code> 'storage-class-getter)" returns "(<code>(<var> 'getter))", "
      (<code> 'storage-class-setter)" returns "(<code>(<var> 'setter))", "
      (<code> 'storage-class-checker)" returns "(<code>(<var> 'checker))", "
-     (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", and "
+     (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", "
+     (<code> 'storage-class-copier)" returns "(<code>(<var> 'copier))", "
      (<code> 'storage-class-length)" returns "(<code>(<var> 'length))", and "
      (<code> 'storage-class-default)" returns "(<code>(<var> 'default))".  Otherwise, it is an error to call any of these routines.")
 
@@ -622,6 +649,8 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-global-variable 'u16-storage-class)
 (format-global-variable 'u32-storage-class)
 (format-global-variable 'u64-storage-class)
+(format-global-variable 'f8-storage-class)
+(format-global-variable 'f16-storage-class)
 (format-global-variable 'f32-storage-class)
 (format-global-variable 'f64-storage-class)
 (format-global-variable 'c64-storage-class)
@@ -635,17 +664,17 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
                       vector-set!
                       (lambda (arg) #t)
                       make-vector
+                      vector-copy!
                       vector-length
                       #f))"))
-"Furthermore, "(<code> "s"(<var> 'X)"-storage-class")" is defined for "(<code>(<var> 'X))"=8, 16, 32, and 64 (which have default values 0 and
+(<p> "Implementations shall define "(<code> "s"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"=8, 16, 32, and 64 (which have default values 0 and
 manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 2"(<sup> (<var> 'X)"-1")"-1 inclusive),
- "(<code> "u"(<var> 'X)"-storage-class")" is defined for "(<code>(<var> 'X))"=1, 8, 16, 32, and 64 (which have default values 0 and manipulate exact integer values between 0 and
+ "(<code> "u"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"=1, 8, 16, 32, and 64 (which have default values 0 and manipulate exact integer values between 0 and
 2"(<sup> (<var> 'X))"-1 inclusive),
-"(<code> "f"(<var> 'X)"-storage-class")" is defined for "(<code>(<var> 'X))"= 32 and 64 (which have default value 0.0 and manipulate 32- and 64-bit floating-point numbers), and
-"(<code> "c"(<var> 'X)"-storage-class")" is defined for "(<code>(<var> 'X))"= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively, 32- and 64-bit floating-point numbers as real and imaginary parts).  Each of these
-could be defined simply as "(<code>'generic-storage-class)", but it is assumed that implementations with homogeneous vectors will give definitions
-that either save space, avoid boxing, etc., for the specialized arrays."
+"(<code> "f"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"= 8, 16, 32, and 64 (which have default value 0.0 and manipulate 8-, 16-, 32-, and 64-bit floating-point numbers), and
+"(<code> "c"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively, 32- and 64-bit floating-point numbers as real and imaginary parts).")
+(<p> "Implementations with an appropriate homogeneous vector type should define the associated global variable using "(<code>'make-storage-class)", otherwise they shall define the associated global variable to "(<code>'#f)".")
 
 (<h2> "Arrays")
 (<p> "Arrays are a data type distinct from other Scheme data types.")
@@ -762,13 +791,19 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 if "(<code>(<var> 'array))" is not a mutable array.")
 
 (format-lambda-list '(specialized-array-default-safe? #\[ bool #\]))
-(<p> "With no argument, returns "(<code>'#t)" if newly-constructed specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
+(<p> "With no argument, returns "(<code>'#t)" if newly constructed specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
 (<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#t)";
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
 otherwise it is an error.")
 
+(format-lambda-list '(specialized-array-default-mutable? #\[ bool #\]))
+(<p> "With no argument, returns "(<code>'#t)" if newly constructed specialized arrays are mutable by default, and "(<code>'#f)" otherwise.")
+(<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-mutable?)" will return "(<code>'#t)";
+if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-mutable?)" will return "(<code>'#f)";
+otherwise it is an error.")
+
 (format-lambda-list '(make-specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
-(<p> "Constructs a specialized-array from its arguments.")
+(<p> "Constructs a mutable specialized array from its arguments.")
 (<p> (<code>(<var>'interval))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
 
 (<p>"The body of the result is constructed as ")
@@ -816,10 +851,14 @@ otherwise it is an error.")
 (format-lambda-list '(array-safe? array))
 (<p> (<code>'array-storage-class)" returns the storage-class of "(<code>(<var> 'array))". "
      (<code>'array-safe?)" is true if and only if the arguments of "(<code> "(array-getter "(<var> 'array)")")" and "(<code> "(array-setter "(<var> 'array)")")" (including the value to be stored in the array) are checked for correctness.")
-(<p> (<code>"(array-body "(<var>'array)")")" is a linearly-indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.")
+(<p> (<code>"(array-body "(<var>'array)")")" is a linearly indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.")
 (<p> (<code>"(array-indexer "(<var> 'array)")")" is assumed to be a one-to-one, but not necessarily onto,  affine mapping from "(<code> "(array-domain "(<var> 'array)")")" into  the indexing domain of "(<code>"(array-body "(<var> 'array)")")".")
 (<p> "Please see "(<a> href: "#make-specialized-array" (<code>'make-specialized-array))" for how "(<code>"(array-body "(<var>'array)")")", etc., are used.")
 (<p> "It is an error to call any of these routines if "(<code>(<var> 'array))" is not a specialized-array.")
+
+(format-lambda-list '(array-elements-in-order? A))
+(<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))" are in order and stored adjacently in "(<code>"(array-body "(<var>'A)")")" and "(<code>'#f)" otherwise.")
+(<p> "It is an error if "(<code>(<var>'A))" is not a specialized array.")
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
 (<p> "Constructs a new specialized-array that shares the body of the specialized-array "(<code>(<var> 'array))".
@@ -835,10 +874,10 @@ indexer:       (lambda multi-index
                        (apply "(<var>'new-domain->old-domain)"
                               multi-index))
                    (array-indexer "(<var> 'array)")))"))
-(<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>(<var> 'new-domain))" to
-"(<code>"(array-domain "(<var> 'array)")")".")
 
-(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(array-indexer "(<var> 'array)")")" will be used to simplify:")
+(<p> "The resulting array inherits its safety and mutability from "(<code>(<var>'array))".")
+
+(<p> "Note: It is assumed that the affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(array-indexer "(<var> 'array)")")" will be used to simplify:")
 (<pre>
  (<code>"
   (lambda multi-index
@@ -847,7 +886,8 @@ indexer:       (lambda multi-index
           (apply "(<var>'new-domain->old-domain)" multi-index))
       (array-indexer "(<var> 'array)")))"
       ))
-(<p> "It is an error if "(<code>(<var>'array))" is not a specialized array, or if "(<code>(<var>'new-domain))" is not an interval, or if "(<code>(<var>'new-domain->old-domain))" is not a one-to-one affine mapping with the appropriate domain and range.")
+(<p> "It is an error if "(<code>(<var>'array))" is not a specialized array, or if "(<code>(<var>'new-domain))" is not an interval, or if "(<code>(<var>'new-domain->old-domain))" is not a one-to-one affine mapping from "(<code>(<var> 'new-domain))" to
+"(<code>"(array-domain "(<var> 'array)")")".")
 
 (<p> (<b> "Example: ")
      "One can apply a \"shearing\" operation to an array as follows: ")
@@ -878,7 +918,7 @@ indexer:       (lambda multi-index
   ))
 (<p> "This \"shearing\" operation cannot be achieved by combining the procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", "(<code>'array-translate)", "(<code>'array-curry)", "(<code>'array-reverse)", and "(<code>'array-sample)".")
 
-(format-lambda-list '(array->specialized-array array #\[ result-storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
+(format-lambda-list '(array->specialized-array array #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "If "(<code>(<var> 'array))" is an array whose elements can be manipulated by the storage-class
 "(<code>(<var> 'result-storage-class))", then the specialized-array returned by "(<code> 'array->specialized-array)" can be defined conceptually by:")
 (<pre>
@@ -891,8 +931,9 @@ indexer:       (lambda multi-index
                                 "(<var>'safe?)")))
   (array-assign! result "(<var>'array)")
   result)"))
+(<p> "If "(<code>(<var>'mutable?))" is "(<code>'#f)", then the setter of the resulting array is set to "(<code>'#f)".")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
-(<p> "It is an error if "(<code>(<var>'result-storage-class))" does not satisfy these conditions, or if "(<code>(<var>'safe?))" is not a boolean.")
+(<p> "It is an error if "(<code>(<var>'result-storage-class))" does not satisfy these conditions, or if "(<code>(<var>'safe?))" or "(<code>(<var>'mutable?))" are not booleans.")
 
 
 (format-lambda-list '(array-curry array inner-dimension))
@@ -987,6 +1028,7 @@ of whose elements is itself an (immutable) array and ")
                  (append outer-multi-index
                          inner-multi-index))))))))"))
 (<p> "It is an error to call "(<code> 'array-curry)" if its arguments do not satisfy these conditions.")
+(<p> "If "(<code>(<var>'array))" is a specialized array, the subarrays of the result inherit their safety and mutability from "(<code>(<var>'array))".")
 (<p> "Please see the note in the discussion of "(<a> href: "#array-tile" "array-tile")".")
 
 (<p>"Example:")
@@ -1028,6 +1070,7 @@ of whose elements is itself an (immutable) array and ")
 "
               ))
 (<p> "It is an error if the arguments of "(<code>'array-extract)" do not satisfy these conditions.")
+(<p> "If "(<code>(<var>'array))" is a specialized array, the resulting array inherits its mutability and safety from "(<code>(<var>'array))".")
 
 (format-lambda-list '(array-tile A S))
 
@@ -1042,6 +1085,7 @@ $$
 $$
 (The \"minimum\" operators are necessary if $u_j-l_j$ is not divisible by $s_j$.) Thus, each entry of $T$ will be a specialized, mutable, or immutable array, depending on the type of the input array "(<code>(<var>'A))".")
 (<p> "It is an error if the arguments of "(<code>'array-tile)" do not satisfy these conditions.")
+(<p> "If "(<code>(<var>'A))" is a specialized array, the subarrays of the result inherit safety and mutability from "(<code>(<var>'A))".")
 
 (<p> (<b> "Note: ")"The routines "(<code>'array-tile)" and "(<code>'array-curry)" both decompose an array into subarrays, but in different ways.  For example, if "(<code>(<var>'A))" is defined as "(<code>"(make-array (make-interval '#(10 10)) list)")", then "(<code>"(array-tile "(<var>'A)" '#(1 10))")" returns an array with domain "(<code>"(make-interval '#(10 1))")", each element of which is an array with domain "(<code>"(make-interval '#(1 10))")" (i.e., a two-dimensional array whose elements are two-dimensional arrays), while "(<code>"(array-curry "(<var>'A)" 1)")" returns an array with domain "(<code>"(make-interval '#(10))")", each element of which has domain "(<code>"(make-interval '#(10))")" (i.e., a one-dimensional array whose elements are one-dimensional arrays).")
 
@@ -1061,7 +1105,7 @@ $$
                multi-index
                (vector->list "(<var>'translation)")))))
 "))
-(<p>"that shares the body of "(<code>(<var>'array))".")
+(<p> "that shares the body of "(<code>(<var>'array))", as well as inheriting its safety and mutability.")
 (<p> "If "(<code>(<var>'array))" is not a specialized array but is a mutable array, returns a new mutable array")
 (<pre>
  (<code>"
@@ -1116,7 +1160,7 @@ $$
                          (interval-permute (array-domain "(<var>'array)") "(<unprotected>"&pi;")")
                          (lambda multi-index
                            (apply values ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
-(<p> "The result array shares "(<code>"(array-body "(<var>'array)")")" with the argument.")
+(<p> "The resulting array shares the body of "(<code>(<var>'array))", as well as its safety and mutability.")
 
 
 (<p> "Again employing this same pseudo-code, if "(<code>(<var>'array))" is not a specialized array, but is
@@ -1163,7 +1207,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
            (vector->list "(<var>'flip?)")
            lowers
            uppers))))"))
-(<p> "Then if "(<code>(<var>'array))" is specialized, then "(<code>'array-reverse)" returns ")
+(<p> "Then if "(<code>(<var>'array))" is specialized, "(<code>'array-reverse)" returns ")
 (<pre>
  (<code>"
 (specialized-array-share
@@ -1172,6 +1216,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
  (lambda multi-index
    (apply values
           (flip-multi-index multi-index))))"))
+(<p> "and the result inherits the safety and mutability of "(<code>(<var>'array))".")
 (<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-reverse)" returns")
 (<pre>
  (<code>"
@@ -1231,7 +1276,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 (format-lambda-list '(array-sample array scales))
 (<p> "We assume that "(<code>(<var>'array))" is an array all of whose lower bounds are zero, "
      "and "(<code>(<var>'scales))" is a vector of positive exact integers whose length is the same as the dimension of "(<code>(<var>'array))".")
-(<p> (<code>'array-sample)" returns a new array  that is specialized,  mutable, or immutable according to whether "(<code>(<var>'array))" is specialized, mutable, or immutable, respectively.  Informally, if we construct a new matrix $S$ with the entries of "(<code>(<var>'scales))" on the main diagonal, then "
+(<p>"Informally, if we construct a new matrix $S$ with the entries of "(<code>(<var>'scales))" on the main diagonal, then "
      "the $\\vec i$th element of "(<code>"(array-sample "(<var>'array)" "(<var>'scales)")")" is the $S\\vec i$th element of "(<code>(<var>'array))".")
 (<p> "More formally, if "(<code>(<var>'array))" is specialized, then "(<code>'array-sample)" returns ")
 (<pre>
@@ -1243,6 +1288,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
  (lambda multi-index
    (apply values
           (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
+(<p> "with the result inheriting the safety and mutability of "(<code>(<var>'array))".")
 
 
 
@@ -1457,28 +1503,32 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 
 (format-lambda-list '(array->list array))
-(<p> "Stores the elements of "(<code>(<var>'array))" into a newly-allocated list in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
+(<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated list in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 
-(format-lambda-list '(list->specialized-array l interval  #\[ result-storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
-(<p> "Returns a specialized-array with domain "(<code>(<var>'interval))" whose elements are the elements of the list "(<code>(<var>'l))" stored in lexicographical order.  It is an error if "(<code>(<var>'l))" is not a list, if "(<code>(<var>'interval))" is not an interval, if the length of "(<code>(<var>'l))" is not the same as the volume of  "(<code>(<var>'interval))", if "(<code>(<var>'result-storage-class))" (when given) is not a storage class, if "(<code>(<var>'safe?))" (when given) is not a boolean, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised if "(<code>(<var>'safe))" is "(<code>'#t)".")
+(format-lambda-list '(list->specialized-array l interval  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
+(<p> "Returns a specialized-array with domain "(<code>(<var>'interval))" whose elements are the elements of the list "(<code>(<var>'l))" stored in lexicographical order.  It is an error if "(<code>(<var>'l))" is not a list, if "(<code>(<var>'interval))" is not an interval, if the length of "(<code>(<var>'l))" is not the same as the volume of  "(<code>(<var>'interval))", if "(<code>(<var>'result-storage-class))" (when given) is not a storage class, if "(<code>(<var>'mutable?))" (when given) is not a boolean, if "(<code>(<var>'safe?))" (when given) is not a boolean, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+(<p> "If "(<code>(<var>'mutable?))" is "(<code>'#f)", then the setter of the resulting array is set to "(<code>'#f)".")
 
 (format-lambda-list '(array-assign! destination source))
 (<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array, both with the same domains, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
-(<p> "Evaluates "(<code>"(array-getter "(<var>'source)")")" on the multi-indices in "(<code>"(array-domain "(<var>'source)")")" in lexicographical order, "
+(<p> "Evaluates "(<code>"(array-getter "(<var>'source)")")" on the multi-indices in "(<code>"(array-domain "(<var>'source)")")" in an unspecified order, "
      "and associates each value to the same multi-index in "(<code>(<var>'destination))".")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
+(<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
 
 (format-lambda-list '(array-swap! A B))
-(<p> "Assumes that "(<code>(<var>'A))" and "(<code>(<var>'B))" are mutable arrays with the same domain, and that the elements of each of them can ge stored in the other.")
-(<p> "Evaluates "(<code>"(array-getter "(<var>'A)")")" on the multi-indices in "(<code>"(array-domain "(<var>'A)")")" in lexicographical order, "
+(<p> "Assumes that "(<code>(<var>'A))" and "(<code>(<var>'B))" are mutable arrays with the same domain, and that the elements of each of them can get stored in the other.")
+(<p> "Evaluates "(<code>"(array-getter "(<var>'A)")")" on the multi-indices in "(<code>"(array-domain "(<var>'A)")")" in an unspecified order, "
      "and associates each value to the same multi-index in "(<code>(<var>'B))"; similarly it assigns the values of "(<code>"(array-getter "(<var>'B)")")" applied to the  multi-indices of "(<code>"(array-domain "(<var>'B)")")" to the associated indices in "(<code>(<var>'A))".")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
+(<p> "If assigning any element of "(<code>(<var>'A))" affects the value of any element of "(<code>(<var>'B))", or vice versa, then the result is undefined.")
 
 (<h2> "Implementation")
 (<p> "We provide an implementation in Gambit-C; the nonstandard techniques used
 in the implementation are: DSSSL-style optional and keyword arguments; a
 unique object to indicate absent arguments; "(<code>"define-structure")";
 and "(<code>"define-macro")".")
+(<p> "There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a sample implementation, a test file, and other materials.")
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI

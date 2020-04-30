@@ -43,6 +43,45 @@
       (+ a (random-integer (- b a)))
       (random-integer a)))
 
+(define (random-sample n #!optional (l 4))
+  (list->vector (map (lambda (i)
+                       (random-integer 1 l))
+                     (iota n))))
+
+(define (random-permutation n)
+  (let ((result (make-vector n)))
+    ;; fill it
+    (do ((i 0 (fx+ i 1)))
+	((fx= i n))
+      (vector-set! result i i))
+    ;; permute it
+    (do ((i 0 (fx+ i 1)))
+	((fx= i n) result)
+      (let* ((index (random i n))
+	     (temp (vector-ref result index)))
+	(vector-set! result index (vector-ref result i))
+	(vector-set! result i temp)))))
+
+(define (vector-permute v permutation)
+  (let* ((n (vector-length v))
+	 (result (make-vector n)))
+    (do ((i 0 (+ i 1)))
+	((= i n) result)
+      (vector-set! result i (vector-ref v (vector-ref permutation i))))))
+
+(define (filter p l)
+  (cond ((null? l) l)
+        ((p (car l))
+         (cons (car l) (filter p (cdr l))))
+        (else
+         (filter p (cdr l)))))
+
+(define (in-order < l)
+  (or (null? l)
+      (null? (cdr l))
+      (and (< (car l) (cadr l))
+           (in-order < (cdr l)))))
+
 ;; (include "generic-arrays.scm")
 
 (pp "Interval error tests")
@@ -320,8 +359,8 @@
 					   (list->vector upper1))
 			    (make-interval (list->vector lower2)
 					   (list->vector upper2)))
-	  (and (##every >= lower1 lower2)
-	       (##every <= upper1 upper2)))))
+	  (and (%%every >= lower1 lower2)
+	       (%%every <= upper1 upper2)))))
 
 (pp "interval-contains-multi-index?  error tests")
 
@@ -480,7 +519,7 @@
 
 (let ((getter (lambda args 1.)))
   (test (make-array (make-interval '#(3) '#(4)) getter)
-	(make-##array-base (make-interval '#(3) '#(4))
+	(make-%%array (make-interval '#(3) '#(4))
 			   getter
 			   #f
 			   #f
@@ -519,7 +558,7 @@
     (test (make-array domain
 		      getter
 		      setter)
-	  (make-##array-base domain
+	  (make-%%array domain
 			     getter
 			     setter
 			     #f
@@ -612,7 +651,7 @@
 				(call-with-values
 				    (lambda () (apply new-domain->old-domain args))
 				  old-indexer))
-			      (##compose-indexers old-indexer new-domain  new-domain->old-domain)
+			      (%%compose-indexers old-indexer new-domain  new-domain->old-domain)
 			      new-domain)))
 	(pp (list new-domain
 		  old-domain-dimension
@@ -655,10 +694,225 @@
 (test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a)
       "make-specialized-array: The third argument is not a boolean: ")
 
+(define random-storage-class-and-initializer
+  (let* ((storage-classes
+          (vector
+           ;; generic
+           (list generic-storage-class
+                 (lambda args (random-permutation (length args))))
+           ;; signed integer
+           (list s8-storage-class
+                 (lambda args (random (- (expt 2 7)) (- (expt 2 7) 1))))
+           (list s16-storage-class
+                 (lambda args (random (- (expt 2 15)) (- (expt 2 15) 1))))
+           (list s32-storage-class
+                 (lambda args (random (- (expt 2 31)) (- (expt 2 31) 1))))
+           (list s64-storage-class
+                 (lambda args (random (- (expt 2 63)) (- (expt 2 63) 1))))
+           ;; unsigned integer
+           (list u1-storage-class
+                 (lambda args (random (expt 2 1))))
+           (list u8-storage-class
+                 (lambda args (random (expt 2 8))))
+           (list u16-storage-class
+                 (lambda args (random (expt 2 16))))
+           (list u32-storage-class
+                 (lambda args (random (expt 2 32))))
+           (list u64-storage-class
+                 (lambda args (random (expt 2 64))))
+           ;; float
+           (list f32-storage-class
+                 (lambda args (random-real)))
+           (list f64-storage-class
+                 (lambda args (random-real)))
+           ;; complex-float
+           (list c64-storage-class
+                 (lambda args (make-rectangular (random-real) (random-real))))
+           (list c128-storage-class
+                 (lambda args (make-rectangular (random-real) (random-real))))))
+         (n
+          (vector-length storage-classes)))
+    (lambda ()
+      (vector-ref storage-classes (random n)))))
 
+(pp "array-elements-in-order? tests")
 
+;; We'll use specialized arrays with u1-storage-class---we never
+;; use the array contents, just the indexers, and it saves storage.
 
+(test (array-elements-in-order? 1)
+      "array-elements-in-order?: The argument is not a specialized array: ")
 
+(test (array-elements-in-order? (make-array (make-interval '#(1 2)) list))
+      "array-elements-in-order?: The argument is not a specialized array: ")
+
+(test (array-elements-in-order? (make-array (make-interval '#(1 2)) list list)) ;; not valid setter
+      "array-elements-in-order?: The argument is not a specialized array: ")
+
+;; all these are true, we'll have to see how to screw it up later.
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let ((array
+         (make-specialized-array (random-interval 1 6)
+                                 u1-storage-class)))
+    (test (array-elements-in-order? array)
+          #t)))
+
+;; the elements of curried arrays are in order
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 2 5)
+                                  u1-storage-class))
+         (curried
+          (array-curry base (random 1 (array-dimension base)))))
+    (test (array-every array-elements-in-order? curried)
+          #t)))
+
+;; Elements of extracted arrays of newly created specialized
+;; arrays are not in order unless 
+;; (1) the differences in the upper and lower bounds of the
+;;     first dimensions all equal 1 *and*
+;; (2) the next dimension doesn't matter *and*
+;; (3) the upper and lower bounds of the latter dimensions
+;;     of the original and extracted arrays are the same
+;; Whew!
+
+(define (extracted-array-elements-in-order? base extracted)
+  (let ((base-domain (array-domain base))
+        (extracted-domain (array-domain extracted))
+        (dim (array-dimension base)))
+    (let loop-1 ((i 0))
+      (or (= i (- dim 1))
+          (or (and (= 1 (- (interval-upper-bound extracted-domain i)
+                           (interval-lower-bound extracted-domain i)))
+                   (loop-1 (+ i 1)))
+              (let loop-2 ((i (+ i 1)))
+                (or (= i dim)
+                    (and (= (interval-upper-bound extracted-domain i)
+                            (interval-upper-bound base-domain i))
+                         (= (interval-lower-bound extracted-domain i)
+                            (interval-lower-bound base-domain i))
+                         (loop-2 (+ i 1))))))))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 2 6)
+                                  u1-storage-class))
+         (extracted
+          (array-extract base (random-subinterval (array-domain base)))))
+    (test (array-elements-in-order? extracted)
+          (extracted-array-elements-in-order? base extracted))))
+
+;; Should we do reversed now?
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 1 6)
+                                  u1-storage-class))
+         (domain
+          (array-domain base))
+         (reversed-dimensions
+          (vector-map (lambda args (random-boolean))
+                      (make-vector (array-dimension base))))
+         (reversed
+          (array-reverse base reversed-dimensions)))
+    (test (array-elements-in-order? reversed)
+          (%%vector-every
+           (lambda (lower upper reversed)
+             (or (= (+ 1 lower) upper) ;; side-length 1
+                 (not reversed)))      ;; dimension not reversed
+           (interval-lower-bounds->vector domain)
+           (interval-upper-bounds->vector domain)
+           reversed-dimensions))))
+
+;; permutations
+
+;; A permuted array has elements in order iff all the dimensions with
+;; sidelength > 1 are in the same order.
+
+(define (permuted-array-elements-in-order? array permutation)
+  (let* ((domain
+          (array-domain array))
+         (axes-and-limits
+          (vector-map list
+                      (list->vector (iota (vector-length permutation)))
+                      (interval-lower-bounds->vector domain)
+                      (interval-upper-bounds->vector domain)))
+         (permuted-axes-and-limits
+          (vector->list (vector-permute axes-and-limits permutation))))
+    (in-order (lambda (x y)
+                (< (car x) (car y)))
+              (filter (lambda (l)
+                        (let ((i (car l))
+                              (l (cadr l))
+                              (u (caddr l)))
+                          (< 1 (- u l))))
+                      permuted-axes-and-limits))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-interval 1 6)
+                                  u1-storage-class))
+         (domain
+          (array-domain base))
+         (permutation
+          (random-permutation (array-dimension base)))
+         (permuted
+          (array-permute base permutation)))
+    (test (array-elements-in-order? permuted)
+          (permuted-array-elements-in-order? base permutation))))
+
+;; a sampled array has elements in order iff after a string of
+;; dimensions with side-length 1 at the beginning, all the rest
+;; of the dimensions have sidelengths the same as the original
+
+(define (sampled-array-elements-in-order? base scales)
+  (let* ((domain
+          (array-domain base))
+         (sampled-base
+          (array-sample base scales))
+         (scaled-domain
+          (array-domain sampled-base))
+         (base-sidelengths
+          (vector->list
+           (vector-map -
+                       (interval-upper-bounds->vector domain)
+                       (interval-lower-bounds->vector domain))))
+         (scaled-sidelengths
+          (vector->list
+           (vector-map -
+                       (interval-upper-bounds->vector scaled-domain)
+                       (interval-lower-bounds->vector scaled-domain)))))
+    (let loop-1 ((base-lengths   base-sidelengths)
+                 (scaled-lengths scaled-sidelengths))
+      (or (null? base-lengths)
+          (if (= (car scaled-lengths) 1)
+              (loop-1 (cdr base-lengths)
+                      (cdr scaled-lengths))
+              (let loop-2 ((base-lengths   base-lengths)
+                           (scaled-lengths scaled-lengths))
+                (or (null? base-lengths)
+                    (and (= (car base-lengths) (car scaled-lengths))
+                         (loop-2 (cdr base-lengths)
+                                 (cdr scaled-lengths))))))))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((base
+          (make-specialized-array (random-nonnegative-interval 1 6)
+                                   u1-storage-class))
+         (scales
+          (random-positive-vector (array-dimension base) 4))
+         (sampled
+          (array-sample base scales)))
+    (test (array-elements-in-order? sampled)
+          (sampled-array-elements-in-order? base scales))))
 
 (pp "array->specialized-array error tests")
 
@@ -893,7 +1147,7 @@
           ;; once for each random
           (random (max 0 (- n 10)) n))
          (indexer
-          (##interval->basic-indexer interval))
+          (%%interval->basic-indexer interval))
          (arguments-1
           '())
          (array-1
@@ -1419,35 +1673,14 @@
 
 (pp "specialized-array-share result tests")
 
-(define (random-permutation n)
-  (let ((result (make-vector n)))
-    ;; fill it
-    (do ((i 0 (fx+ i 1)))
-	((fx= i n))
-      (vector-set! result i i))
-    ;; permute it
-    (do ((i 0 (fx+ i 1)))
-	((fx= i n) result)
-      (let* ((index (random i n))
-	     (temp (vector-ref result index)))
-	(vector-set! result index (vector-ref result i))
-	(vector-set! result i temp)))))
-
-(define (vector-permute v permutation)
-  (let* ((n (vector-length v))
-	 (result (make-vector n)))
-    (do ((i 0 (+ i 1)))
-	((= i n) result)
-      (vector-set! result i (vector-ref v (vector-ref permutation i))))))
-
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((n (random 1 11))
 	 (permutation (random-permutation n))
 	 (input-vec (list->vector (f64vector->list (random-f64vector n)))))
     (test (vector-permute input-vec permutation)
-	  (##vector-permute input-vec permutation))
-    (test (list->vector (##vector-permute->list input-vec permutation))
+	  (%%vector-permute input-vec permutation))
+    (test (list->vector (%%vector-permute->list input-vec permutation))
 	  (vector-permute input-vec permutation))))
 
 
@@ -1638,7 +1871,7 @@
 			     (make-array (array-domain temp)
 					 (array-getter temp)
 					 (array-setter temp)))))))
-	   (translation (list->vector (map (lambda (x) (random -10 10)) (vector->list (##interval-lower-bounds domain))))))
+	   (translation (list->vector (map (lambda (x) (random -10 10)) (vector->list (%%interval-lower-bounds domain))))))
       ;;(pp (list domain translation (interval-volume domain)))
       (let ((translated-array       (array-translate Array translation))
 	    (my-translated-array (my-array-translate Array translation)))
@@ -1749,7 +1982,7 @@
 	(let* ((array-copy (array->specialized-array Array))
 	       (getter (array-getter array-copy))
 	       (setter (array-setter array-copy))
-	       (permutation-inverse (##permutation-invert permutation)))
+	       (permutation-inverse (%%permutation-invert permutation)))
 	  (make-array (interval-permute (array-domain Array)
 					permutation)
 		      (lambda args
@@ -1806,7 +2039,7 @@
 	(let* ((array-copy (array->specialized-array Array))
 	       (getter (array-getter array-copy))
 	       (setter (array-setter array-copy))
-	       (permutation-inverse (##permutation-invert permutation)))
+	       (permutation-inverse (%%permutation-invert permutation)))
 	  (make-array (interval-permute (array-domain Array)
 					permutation)
 		      (lambda args
@@ -1971,7 +2204,7 @@
 				 (car lowers)
 				 lowers))))
     ;; (pp (list args new-lowers new-uppers (vector-every < new-lowers new-uppers)))
-    (and (##vector-every < new-lowers new-uppers)
+    (and (%%vector-every < new-lowers new-uppers)
 	 (make-interval new-lowers new-uppers))))
 
 
@@ -1986,7 +2219,7 @@
     (test (apply my-interval-intersect intervals)
 	  (apply interval-intersect intervals))))
 
-(pp "test interval-scale and array-scale")
+(pp "test interval-scale and array-sample")
 
 (test (interval-scale 1 'a)
       "interval-scale: The first argument is not an interval with all lower bounds zero: ")
@@ -2197,9 +2430,9 @@
   (let* ((domain
           (array-domain array))
          (lowers
-          (##interval-lower-bounds domain))
+          (%%interval-lower-bounds domain))
          (uppers
-          (##interval-upper-bounds domain))
+          (%%interval-upper-bounds domain))
          (result-lowers
           (vector-map (lambda (x)
                         0)
@@ -2239,9 +2472,9 @@
                (let ((res (array->specialized-array res)))
                  (make-array domain (array-getter res) (array-setter res)))))))
          (lowers
-          (##interval-lower-bounds domain))
+          (%%interval-lower-bounds domain))
          (uppers
-          (##interval-upper-bounds domain))
+          (%%interval-upper-bounds domain))
          (sidelengths
           (vector-map (lambda (l u)
                         (let ((dim (- u l)))
@@ -2294,8 +2527,8 @@
 (define (myarray-reverse array flip?)
   (let* ((flips (vector->list flip?))
          (domain (array-domain array))
-         (lowers (##interval-lower-bounds->list domain))
-         (uppers (##interval-upper-bounds->list domain))
+         (lowers (%%interval-lower-bounds->list domain))
+         (uppers (%%interval-upper-bounds->list domain))
          (transform
           (lambda (multi-index)
             (map (lambda (i_k l_k u_k f_k?)
@@ -2416,10 +2649,21 @@
           (random-interval 1 6))
          (subinterval
           (random-subinterval interval))
+         (storage-class-and-initializer
+          (random-storage-class-and-initializer))
+         (storage-class
+          (car storage-class-and-initializer))
+         (initializer
+          (cadr storage-class-and-initializer))
          (specialized-array
-          (array->specialized-array (make-array interval list)))
+          (array->specialized-array
+           (make-array interval initializer)
+           storage-class))
          (mutable-array
-          (let ((specialized-array (array->specialized-array (make-array interval list))))
+          (let ((specialized-array
+                 (array->specialized-array
+                  (make-array interval initializer)
+                  storage-class)))
             (make-array interval
                         (array-getter specialized-array)
                         (array-setter specialized-array))))
@@ -2428,22 +2672,25 @@
          (mutable-subarray
           (array-extract mutable-array subinterval))
          (new-subarray
-          (array->specialized-array (make-array subinterval (lambda args (reverse args))))))
+          (array->specialized-array
+           (make-array subinterval initializer)
+           storage-class)))
+    ;; (pp specialized-array)
     (array-assign! specialized-subarray new-subarray)
     (array-assign! mutable-subarray new-subarray)
     (if (not (myarray= specialized-array
                        (make-array interval
                                    (lambda multi-index
                                      (if (apply interval-contains-multi-index? subinterval multi-index)
-                                         (reverse multi-index)
-                                         multi-index)))))
+                                         (apply (array-getter new-subarray) multi-index)
+                                         (apply (array-getter specialized-array) multi-index))))))
         (error "arggh"))
     (test (myarray= mutable-array
                     (make-array interval
                                 (lambda multi-index
                                   (if (apply interval-contains-multi-index? subinterval multi-index)
-                                      (reverse multi-index)
-                                      multi-index))))
+                                      (apply (array-getter new-subarray) multi-index)
+                                      (apply (array-getter mutable-array) multi-index)))))
           #t)))
 
 (pp "array-swap! tests")

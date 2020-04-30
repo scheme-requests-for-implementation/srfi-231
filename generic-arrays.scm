@@ -6,21 +6,76 @@
          (mostly-fixnum)
          (not safe))
 
-;;; Our naming convention prefixes ## to the names of internal procedures,
-;;; which is also Gambit's naming convention.
+;;; Our naming convention prefixes %% to the names of internal procedures,
 
-;;; The following macro is used to determine whether certain keyword arguments
-;;; were omitted.  It is specific to Gambit-C's compiler.
-;;; Redefine it for other schemes.
+(cond-expand
+ (gambit
+  (##define-macro (macro-absent-obj)  `',(##type-cast -6 2)))
+ (else
+  (define macro-absent-obj
+    (let ((obj (list 'absent-obj)))
+      (lambda ()
+        obj)))))
+
+(cond-expand
+ (gambit
+  ;; define some R7RS small procedures for Gambit.
+  ;; sub@vector-move! uses memmove in C back end
+  (begin
+    (define (vector-copy! to at from start end)
+      (subvector-move! from start end to at))
+    (define (s8vector-copy! to at from start end)
+      (subs8vector-move! from start end to at))
+    (define (s16vector-copy! to at from start end)
+      (subs16vector-move! from start end to at))
+    (define (s32vector-copy! to at from start end)
+      (subs32vector-move! from start end to at))
+    (define (s64vector-copy! to at from start end)
+      (subs64vector-move! from start end to at))
+    (define (u8vector-copy! to at from start end)
+      (subu8vector-move! from start end to at))
+    (define (u16vector-copy! to at from start end)
+      (subu16vector-move! from start end to at))
+    (define (u32vector-copy! to at from start end)
+      (subu32vector-move! from start end to at))
+    (define (u64vector-copy! to at from start end)
+      (subu64vector-move! from start end to at))
+    (define (f32vector-copy! to at from start end)
+      (subf32vector-move! from start end to at))
+    (define (f64vector-copy! to at from start end)
+      (subf64vector-move! from start end to at))
+    ;; next two are not R7RS small
+    (define (c64vector-copy! to at from start end)
+      (subf32vector-move! from (* 2 start) (* 2 end) to (* 2 at)))
+    (define (c128vector-copy! to at from start end)
+      (subf64vector-move! from (* 2 start) (* 2 end) to (* 2 at)))))
+ (r7rs
+  ;; The other procedures are in R7RS small
+  (begin
+    (define (c64vector-copy! to at from start end)
+      (f32vector-copy! to (* 2 at) from (* 2 start) (* 2 end)))
+    (define (c128vector-copy! to at from start end)
+      (f64vector-copy! to (* 2 at) from (* 2 start) (* 2 end)))))
+  (else
+   ;; Punt
+   (begin
+     (define vector-copy! #f)
+     (define s8vector-copy! #f)
+     (define s16vector-copy! #f)
+     (define s32vector-copy! #f)
+     (define s64vector-copy! #f)
+     (define u8vector-copy! #f)
+     (define u16vector-copy! #f)
+     (define u32vector-copy! #f)
+     (define u64vector-copy! #f)
+     (define c64vector-copy! #f)
+     (define c128vector-copy! #f))))
 
 
-(##define-macro (macro-absent-obj)  `',(##type-cast -6 2))
-
-
-;;; We need a multi-argument every, but not something as fancy as in Olin Shiver's
+;;; We need a multi-argument every, but not as fancy as in Olin Shiver's
 ;;; list library.  (Shiver's version works fine, though, for our purposes.)
 
-(define (##every pred list . lists)
+(define (%%every pred list . lists)
   (if (pair? lists)
       (let loop ((lists (cons list lists)))
 	(or (null? (car lists))
@@ -33,7 +88,7 @@
 
 ;;; the following is used in error checks.
 
-(define (##vector-every pred vec #!optional (vec2 (macro-absent-obj)) #!rest vecs)
+(define (%%vector-every pred vec #!optional (vec2 (macro-absent-obj)) #!rest vecs)
 
   (define (every1 vec i)
     (or (< i 0)
@@ -75,12 +130,12 @@
 
 ;;; where l_i < u_i for 0 <= i < n, and n > 0 is the dimension of the interval
 
-(define-structure ##interval
+(define-structure %%interval
   lower-bounds            ;; a vector of exact integers l_0,...,l_n-1
   upper-bounds)           ;; a vector of exact integers u_0,...,u_n-1
 
 (define (interval? x)
-  (##interval? x))
+  (%%interval? x))
 
 (declare (not inline))
 
@@ -89,52 +144,52 @@
       (let ((upper-bounds arg1))
         (cond ((not (and (vector? upper-bounds)
                          (< 0 (vector-length upper-bounds))
-                         (##vector-every exact-integer? upper-bounds)
-                         (##vector-every positive? upper-bounds)))
+                         (%%vector-every exact-integer? upper-bounds)
+                         (%%vector-every positive? upper-bounds)))
                (error "make-interval: The argument is not a nonempty vector of positive exact integers: " upper-bounds))
               (else
-               (make-##interval (make-vector (vector-length upper-bounds) 0)
+               (make-%%interval (make-vector (vector-length upper-bounds) 0)
                                 (vector-copy upper-bounds)))))
       (let ((lower-bounds arg1)
             (upper-bounds arg2))
         (cond ((not (and (vector? lower-bounds)
                          (< 0 (vector-length lower-bounds))
-                         (##vector-every exact-integer? lower-bounds)))
+                         (%%vector-every exact-integer? lower-bounds)))
                (error "make-interval: The first argument is not a nonempty vector of exact integers: " lower-bounds upper-bounds))
               ((not (and (vector? upper-bounds)
                          (< 0 (vector-length upper-bounds))
-                         (##vector-every exact-integer? upper-bounds)))
+                         (%%vector-every exact-integer? upper-bounds)))
                (error "make-interval: The second argument is not a nonempty vector of exact integers: " lower-bounds upper-bounds))
               ((not (= (vector-length lower-bounds) (vector-length upper-bounds)))
                (error "make-interval: The first and second arguments are not the same length: " lower-bounds upper-bounds))
-              ((not (##vector-every (lambda (x y) (< x y)) lower-bounds upper-bounds))
+              ((not (%%vector-every (lambda (x y) (< x y)) lower-bounds upper-bounds))
                (error "make-interval: Each lower-bound must be less than the associated upper-bound: " lower-bounds upper-bounds))
               (else
-               (make-##interval (vector-copy lower-bounds) (vector-copy upper-bounds)))))))
+               (make-%%interval (vector-copy lower-bounds) (vector-copy upper-bounds)))))))
 
 
 (declare (inline))
 
-(define (##interval-dimension interval)
-  (vector-length (##interval-lower-bounds interval)))
+(define (%%interval-dimension interval)
+  (vector-length (%%interval-lower-bounds interval)))
 
-(define (##interval-lower-bound interval i)
-  (vector-ref (##interval-lower-bounds interval) i))
+(define (%%interval-lower-bound interval i)
+  (vector-ref (%%interval-lower-bounds interval) i))
 
-(define (##interval-upper-bound interval i)
-  (vector-ref (##interval-upper-bounds interval) i))
+(define (%%interval-upper-bound interval i)
+  (vector-ref (%%interval-upper-bounds interval) i))
 
-(define (##interval-lower-bounds->vector interval)
-  (vector-copy (##interval-lower-bounds interval)))
+(define (%%interval-lower-bounds->vector interval)
+  (vector-copy (%%interval-lower-bounds interval)))
 
-(define (##interval-upper-bounds->vector interval)
-  (vector-copy (##interval-upper-bounds interval)))
+(define (%%interval-upper-bounds->vector interval)
+  (vector-copy (%%interval-upper-bounds interval)))
 
-(define (##interval-lower-bounds->list interval)
-  (vector->list (##interval-lower-bounds interval)))
+(define (%%interval-lower-bounds->list interval)
+  (vector->list (%%interval-lower-bounds interval)))
 
-(define (##interval-upper-bounds->list interval)
-  (vector->list (##interval-upper-bounds interval)))
+(define (%%interval-upper-bounds->list interval)
+  (vector->list (%%interval-upper-bounds interval)))
 
 (declare (not inline))
 
@@ -142,69 +197,69 @@
   (cond ((not (interval? interval))
 	 (error "interval-dimension: The argument is not an interval: " interval))
 	(else
-	 (##interval-dimension interval))))
+	 (%%interval-dimension interval))))
 
 (define (interval-lower-bound interval i)
   (cond ((not (interval? interval))
 	 (error "interval-lower-bound: The first argument is not an interval: " interval i))
 	((not (exact-integer? i))
 	 (error "interval-lower-bound: The second argument is not an exact integer: " interval i))
-	((not (< -1 i (##interval-dimension interval)))
+	((not (< -1 i (%%interval-dimension interval)))
 	 (error "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
 	(else
-	 (##interval-lower-bound interval i))))
+	 (%%interval-lower-bound interval i))))
 
 (define (interval-upper-bound interval i)
   (cond ((not (interval? interval))
 	 (error "interval-upper-bound: The first argument is not an interval: " interval i))
 	((not (exact-integer? i))
 	 (error "interval-upper-bound: The second argument is not an exact integer: " interval i))
-	((not (< -1 i (##interval-dimension interval)))
+	((not (< -1 i (%%interval-dimension interval)))
 	 (error "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
 	(else
-	 (##interval-upper-bound interval i))))
+	 (%%interval-upper-bound interval i))))
 
 (define (interval-lower-bounds->vector interval)
   (cond ((not (interval? interval))
 	 (error "interval-lower-bounds->vector: The argument is not an interval: " interval))
 	(else
-	 (##interval-lower-bounds->vector interval))))
+	 (%%interval-lower-bounds->vector interval))))
 
 (define (interval-upper-bounds->vector interval)
   (cond ((not (interval? interval))
 	 (error "interval-upper-bounds->vector: The argument is not an interval: " interval))
 	(else
-	 (##interval-upper-bounds->vector interval))))
+	 (%%interval-upper-bounds->vector interval))))
 
 (define (interval-lower-bounds->list interval)
   (cond ((not (interval? interval))
 	 (error "interval-lower-bounds->list: The argument is not an interval: " interval))
 	(else
-	 (##interval-lower-bounds->list interval))))
+	 (%%interval-lower-bounds->list interval))))
 
 (define (interval-upper-bounds->list interval)
   (cond ((not (interval? interval))
 	 (error "interval-upper-bounds->list: The argument is not an interval: " interval))
 	(else
-	 (##interval-upper-bounds->list interval))))
+	 (%%interval-upper-bounds->list interval))))
 
 (define (interval-projections interval right-dimension)
   (cond ((not (interval? interval))
 	 (error "interval-projections: The first argument is not an interval: " interval right-dimension))
-	((not (< 1 (##interval-dimension interval)))  ;; redundant check, but useful error message
+	((not (< 1 (%%interval-dimension interval)))  ;; redundant check, but useful error message
 	 (error "interval-projections: The dimension of the first argument is not greater than 1: " interval right-dimension))
 	((not (exact-integer? right-dimension))
 	 (error "interval-projections: The second argument is not an exact integer: " interval right-dimension))
-	((not (< 0 right-dimension (##interval-dimension interval)))
+	((not (< 0 right-dimension (%%interval-dimension interval)))
 	 (error "interval-projections: The second argument is not between 0 and the dimension of the first argument (exclusive): " interval right-dimension))
 	(else
-	 (##interval-projections interval right-dimension))))
+	 (%%interval-projections interval right-dimension))))
 
-(define (##interval-projections interval right-dimension)
-  (let* ((n (##interval-dimension interval))
+(define (%%interval-projections interval right-dimension)
+  (let* ((n (%%interval-dimension interval))
 	 (left-dimension (fx- n right-dimension))
-	 (lower-bounds (##interval-lower-bounds interval))
-	 (upper-bounds (##interval-upper-bounds interval))
+	 (lower-bounds (%%interval-lower-bounds interval))
+	 (upper-bounds (%%interval-upper-bounds interval))
 	 (left-lower-bounds (make-vector left-dimension))
 	 (left-upper-bounds (make-vector left-dimension))
 	 (right-lower-bounds (make-vector (- n left-dimension)))
@@ -213,9 +268,9 @@
 	((= i left-dimension)
 	 (do ((i i (+ i 1)))
 	     ((= i n)
-	      (values (make-##interval left-lower-bounds
+	      (values (make-%%interval left-lower-bounds
 				       left-upper-bounds)
-		      (make-##interval right-lower-bounds
+		      (make-%%interval right-lower-bounds
 				       right-upper-bounds)))
 	   (vector-set! right-lower-bounds (- i left-dimension) (vector-ref lower-bounds i))
 	   (vector-set! right-upper-bounds (- i left-dimension) (vector-ref upper-bounds i))))
@@ -240,20 +295,20 @@
 
 
 
-(define (##vector-permute vector permutation)
+(define (%%vector-permute vector permutation)
   (let* ((n (vector-length vector))
 	 (result (make-vector n)))
     (do ((i 0 (+ i 1)))
 	((= i n) result)
       (vector-set! result i (vector-ref vector (vector-ref permutation i))))))
 
-(define (##vector-permute->list vector permutation)
+(define (%%vector-permute->list vector permutation)
   (do ((i (- (vector-length vector) 1) (- i 1))
        (result '() (cons (vector-ref vector (vector-ref permutation i))
 			 result)))
       ((< i 0) result)))
 
-(define (##permutation-invert permutation)
+(define (%%permutation-invert permutation)
   (let* ((n (vector-length permutation))
 	 (result (make-vector n)))
     (do ((i 0 (+ i 1)))
@@ -262,9 +317,9 @@
 
 
 
-(define (##interval-permute interval permutation)
-  (make-##interval (##vector-permute (##interval-lower-bounds interval) permutation)
-		   (##vector-permute (##interval-upper-bounds interval) permutation)))
+(define (%%interval-permute interval permutation)
+  (make-%%interval (%%vector-permute (%%interval-lower-bounds interval) permutation)
+		   (%%vector-permute (%%interval-upper-bounds interval) permutation)))
 
 (define (interval-permute interval permutation)
   (cond ((not (interval? interval))
@@ -274,128 +329,128 @@
 	((not (= (interval-dimension interval) (vector-length permutation)))
 	 (error "interval-permute: The dimension of the first argument (an interval) does not equal the length of the second (a permutation): " interval permutation))
 	(else
-	 (##interval-permute interval permutation))))
+	 (%%interval-permute interval permutation))))
 
 (define (translation? translation)
   (and (vector? translation)
-       (##vector-every exact-integer? translation)))
+       (%%vector-every exact-integer? translation)))
 
 (define (interval-translate interval translation)
   (cond ((not (interval? interval))
 	 (error "interval-translate: The first argument is not an interval: " interval translation))
 	((not (translation? translation))
 	 (error "interval-translate: The second argument is not a vector of exact integers: " interval translation))
-	((not (= (##interval-dimension interval)
+	((not (= (%%interval-dimension interval)
 		 (vector-length translation)))
 	 (error "interval-translate: The dimension of the first argument (an interval) does not equal the length of the second (a vector): " interval translation))
 	(else
-	 (##interval-translate interval translation))))
+	 (%%interval-translate interval translation))))
 
-(define (##interval-translate Interval translation)
-  (make-##interval (vector-map + (interval-lower-bounds->vector Interval) translation)
+(define (%%interval-translate Interval translation)
+  (make-%%interval (vector-map + (interval-lower-bounds->vector Interval) translation)
 		   (vector-map + (interval-upper-bounds->vector Interval) translation)))
 
-(define (##interval-scale interval scales)
-  (let* ((uppers (##interval-upper-bounds->vector interval))
-         (lowers (##interval-lower-bounds->vector interval))
+(define (%%interval-scale interval scales)
+  (let* ((uppers (%%interval-upper-bounds->vector interval))
+         (lowers (%%interval-lower-bounds->vector interval))
          (new-uppers (vector-map (lambda (u s)
                                    (quotient (+ u s -1) s))
                                  uppers scales)))
-    (make-##interval lowers new-uppers)))
+    (make-%%interval lowers new-uppers)))
 
 (define (interval-scale interval scales)
   (cond ((not (and (interval? interval)
-                   (##vector-every zero? (interval-lower-bounds->vector interval))))
+                   (%%vector-every zero? (interval-lower-bounds->vector interval))))
          (error "interval-scale: The first argument is not an interval with all lower bounds zero: " interval scales))
         ((not (and (vector? scales)
-                   (##vector-every exact-integer? scales)
-                   (##vector-every positive? scales)))
+                   (%%vector-every exact-integer? scales)
+                   (%%vector-every positive? scales)))
          (error "interval-scale: The second argument is not a vector of positive, exact, integers: " interval scales))
         ((not (= (vector-length scales) (interval-dimension interval)))
          (error "interval-scale: The dimension of the first argument (an interval) is not equal to the length of the second (a vector): "
                 interval scales))
         (else
-         (##interval-scale interval scales))))
+         (%%interval-scale interval scales))))
 
-(define (##interval-cartesian-product intervals)
-  (make-##interval (append-vectors (map ##interval-lower-bounds intervals))
-                   (append-vectors (map ##interval-upper-bounds intervals))))
+(define (%%interval-cartesian-product intervals)
+  (make-%%interval (append-vectors (map %%interval-lower-bounds intervals))
+                   (append-vectors (map %%interval-upper-bounds intervals))))
 
 (define (interval-cartesian-product interval . intervals)
   ;; compare-code-and-srfi.scm doesn't recognize this function definition
   ;; because the call form is not a proper list
   (let ((intervals (cons interval intervals)))
-    (cond ((not (##every interval? intervals))
+    (cond ((not (%%every interval? intervals))
            (apply error "interval-cartesian-product: Not all arguments are intervals: " intervals))
           (else
-           (##interval-cartesian-product intervals)))))
+           (%%interval-cartesian-product intervals)))))
 
 (define (interval-dilate interval lower-diffs upper-diffs)
   (cond ((not (interval? interval))
 	 (error "interval-dilate: The first argument is not an interval: " interval lower-diffs upper-diffs))
 	((not (and (vector? lower-diffs)
-                   (##vector-every exact-integer? lower-diffs)))
+                   (%%vector-every exact-integer? lower-diffs)))
 	 (error "interval-dilate: The second argument is not a vector of exact integers: " interval lower-diffs upper-diffs))
 	((not (and (vector? upper-diffs)
-                   (##vector-every exact-integer? upper-diffs)))
+                   (%%vector-every exact-integer? upper-diffs)))
 	 (error "interval-dilate: The third argument is not a vector of exact integers: " interval lower-diffs upper-diffs))
 	((not (= (vector-length lower-diffs)
 		 (vector-length upper-diffs)
-		 (##interval-dimension interval)))
+		 (%%interval-dimension interval)))
 	 (error "interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: " interval lower-diffs upper-diffs))
 	(else
-	 (let ((new-lower-bounds (vector-map + (##interval-lower-bounds interval) lower-diffs))
-	       (new-upper-bounds (vector-map + (##interval-upper-bounds interval) upper-diffs)))
-	   (if (##vector-every < new-lower-bounds new-upper-bounds)
-	       (make-##interval new-lower-bounds new-upper-bounds)
+	 (let ((new-lower-bounds (vector-map + (%%interval-lower-bounds interval) lower-diffs))
+	       (new-upper-bounds (vector-map + (%%interval-upper-bounds interval) upper-diffs)))
+	   (if (%%vector-every < new-lower-bounds new-upper-bounds)
+	       (make-%%interval new-lower-bounds new-upper-bounds)
 	       (error "interval-dilate: The resulting interval is empty: " interval lower-diffs upper-diffs))))))
 
-(define (##interval-volume interval)
-  (do ((i (- (##interval-dimension interval) 1) (- i 1))
+(define (%%interval-volume interval)
+  (do ((i (- (%%interval-dimension interval) 1) (- i 1))
        (result 1 (let ()
-		   (* result (- (##interval-upper-bound interval i)
-				(##interval-lower-bound interval i))))))
+		   (* result (- (%%interval-upper-bound interval i)
+				(%%interval-lower-bound interval i))))))
       ((< i 0) result)))
 
 (define (interval-volume interval)
   (cond ((not (interval? interval))
 	 (error "interval-volume: The argument is not an interval: " interval))
 	(else
-	 (##interval-volume interval))))
+	 (%%interval-volume interval))))
 
-(define (##interval= interval1 interval2)
-  (and (equal? (##interval-upper-bounds interval1)
-	       (##interval-upper-bounds interval2))
-       (equal? (##interval-lower-bounds interval1)
-	       (##interval-lower-bounds interval2))))
+(define (%%interval= interval1 interval2)
+  (and (equal? (%%interval-upper-bounds interval1)
+	       (%%interval-upper-bounds interval2))
+       (equal? (%%interval-lower-bounds interval1)
+	       (%%interval-lower-bounds interval2))))
 
 (define (interval= interval1 interval2)
   (cond ((not (and (interval? interval1)
 		   (interval? interval2)))
 	 (error "interval=: Not all arguments are intervals: " interval1 interval2))
 	(else
-	 (##interval= interval1 interval2))))
+	 (%%interval= interval1 interval2))))
 
-(define (##interval-subset? interval1 interval2)
-  (and (= (##interval-dimension interval1) (##interval-dimension interval2))
-       (##vector-every >= (##interval-lower-bounds interval1) (##interval-lower-bounds interval2))
-       (##vector-every <= (##interval-upper-bounds interval1) (##interval-upper-bounds interval2))))
+(define (%%interval-subset? interval1 interval2)
+  (and (= (%%interval-dimension interval1) (%%interval-dimension interval2))
+       (%%vector-every >= (%%interval-lower-bounds interval1) (%%interval-lower-bounds interval2))
+       (%%vector-every <= (%%interval-upper-bounds interval1) (%%interval-upper-bounds interval2))))
 
 (define (interval-subset? interval1 interval2)
   (cond ((not (and (interval? interval1)
 		   (interval? interval2)))
 	 (error "interval-subset?: Not all arguments are intervals: " interval1 interval2))
-        ((not (= (##interval-dimension interval1)
-                 (##interval-dimension interval2)))
+        ((not (= (%%interval-dimension interval1)
+                 (%%interval-dimension interval2)))
          (error "interval-subset?: The arguments do not have the same dimension: " interval1 interval2))
 	(else
-	 (##interval-subset? interval1 interval2))))
+	 (%%interval-subset? interval1 interval2))))
 
-(define (##interval-intersect intervals)
-  (let ((lower-bounds (apply vector-map max (map ##interval-lower-bounds intervals)))
-	(upper-bounds (apply vector-map min (map ##interval-upper-bounds intervals))))
-    (and (##vector-every < lower-bounds upper-bounds)
-	 (make-##interval lower-bounds upper-bounds))))
+(define (%%interval-intersect intervals)
+  (let ((lower-bounds (apply vector-map max (map %%interval-lower-bounds intervals)))
+	(upper-bounds (apply vector-map min (map %%interval-upper-bounds intervals))))
+    (and (%%vector-every < lower-bounds upper-bounds)
+	 (make-%%interval lower-bounds upper-bounds))))
 
 (define (interval-intersect interval1 #!optional (interval2 (macro-absent-obj)) #!rest intervals)
   (cond ((eq? interval2 (macro-absent-obj))
@@ -405,42 +460,42 @@
 		interval1)))
 	(else
 	 (let ((intervals (cons interval1 (cons interval2 intervals))))
-	   (cond ((not (##every interval? intervals))
+	   (cond ((not (%%every interval? intervals))
 		  (apply error "interval-intersect: Not all arguments are intervals: " intervals))
-		 ((not (apply = (map ##interval-dimension intervals)))
+		 ((not (apply = (map %%interval-dimension intervals)))
 		  (apply error "interval-intersect: Not all arguments have the same dimension: " intervals))
 		 (else
-		  (##interval-intersect intervals)))))))
+		  (%%interval-intersect intervals)))))))
 
 (declare (inline))
 
-(define (##interval-contains-multi-index?-1 interval i)
-  (and (<= (##interval-lower-bound interval 0) i) (< i (##interval-upper-bound interval 0))))
+(define (%%interval-contains-multi-index?-1 interval i)
+  (and (<= (%%interval-lower-bound interval 0) i) (< i (%%interval-upper-bound interval 0))))
 
-(define (##interval-contains-multi-index?-2 interval i j)
-  (and (<= (##interval-lower-bound interval 0) i) (< i (##interval-upper-bound interval 0))
-       (<= (##interval-lower-bound interval 1) j) (< j (##interval-upper-bound interval 1))))
+(define (%%interval-contains-multi-index?-2 interval i j)
+  (and (<= (%%interval-lower-bound interval 0) i) (< i (%%interval-upper-bound interval 0))
+       (<= (%%interval-lower-bound interval 1) j) (< j (%%interval-upper-bound interval 1))))
 
-(define (##interval-contains-multi-index?-3 interval i j k)
-  (and (<= (##interval-lower-bound interval 0) i) (< i (##interval-upper-bound interval 0))
-       (<= (##interval-lower-bound interval 1) j) (< j (##interval-upper-bound interval 1))
-       (<= (##interval-lower-bound interval 2) k) (< k (##interval-upper-bound interval 2))))
+(define (%%interval-contains-multi-index?-3 interval i j k)
+  (and (<= (%%interval-lower-bound interval 0) i) (< i (%%interval-upper-bound interval 0))
+       (<= (%%interval-lower-bound interval 1) j) (< j (%%interval-upper-bound interval 1))
+       (<= (%%interval-lower-bound interval 2) k) (< k (%%interval-upper-bound interval 2))))
 
-(define (##interval-contains-multi-index?-4 interval i j k l)
-  (and (<= (##interval-lower-bound interval 0) i) (< i (##interval-upper-bound interval 0))
-       (<= (##interval-lower-bound interval 1) j) (< j (##interval-upper-bound interval 1))
-       (<= (##interval-lower-bound interval 2) k) (< k (##interval-upper-bound interval 2))
-       (<= (##interval-lower-bound interval 3) l) (< l (##interval-upper-bound interval 3))))
+(define (%%interval-contains-multi-index?-4 interval i j k l)
+  (and (<= (%%interval-lower-bound interval 0) i) (< i (%%interval-upper-bound interval 0))
+       (<= (%%interval-lower-bound interval 1) j) (< j (%%interval-upper-bound interval 1))
+       (<= (%%interval-lower-bound interval 2) k) (< k (%%interval-upper-bound interval 2))
+       (<= (%%interval-lower-bound interval 3) l) (< l (%%interval-upper-bound interval 3))))
 
 (declare (not inline))
 
-(define (##interval-contains-multi-index?-general interval multi-index)
+(define (%%interval-contains-multi-index?-general interval multi-index)
   (let loop ((i 0)
 	     (multi-index multi-index))
     (or (null? multi-index)
 	(let ((component (car multi-index)))
-	  (and (<= (##interval-lower-bound interval i) component)
-	       (< component (##interval-upper-bound interval i))
+	  (and (<= (%%interval-lower-bound interval i) component)
+	       (< component (%%interval-upper-bound interval i))
 	       (loop (+ i 1)
 		     (cdr multi-index)))))))
 
@@ -453,13 +508,13 @@
 	 (error "interval-contains-multi-index?: The first argument is not an interval: " interval))
 	(else
 	 (let ((multi-index (cons i multi-index-tail)))
-	   (cond ((not (= (##interval-dimension interval)
+	   (cond ((not (= (%%interval-dimension interval)
 			  (length multi-index)))
 		  (apply error "interval-contains-multi-index?: The dimension of the first argument (an interval) does not match number of indices: " interval multi-index))
-		 ((not (##every exact-integer? multi-index))
+		 ((not (%%every exact-integer? multi-index))
 		  (apply error "interval-contains-multi-index?: At least one multi-index component is not an exact integer: " interval multi-index))
 		 (else
-		  (##interval-contains-multi-index?-general interval multi-index)))))))
+		  (%%interval-contains-multi-index?-general interval multi-index)))))))
 
 ;;; Applies f to every element of the domain; assumes that f is thread-safe,
 ;;; the order of application is not specified
@@ -470,21 +525,21 @@
 	((not (procedure? f))
 	 (error "interval-for-each: The first argument is not a procedure: " f))
 	(else
-	 (##interval-for-each f interval))))
+	 (%%interval-for-each f interval))))
 
-(define (##interval-for-each f interval)
-  (case (##interval-dimension interval)
-    ((1) (let ((lower-i (##interval-lower-bound interval 0))
-	       (upper-i (##interval-upper-bound interval 0)))
+(define (%%interval-for-each f interval)
+  (case (%%interval-dimension interval)
+    ((1) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (upper-i (%%interval-upper-bound interval 0)))
 	   (let i-loop ((i lower-i))
 	     (if (< i upper-i)
 		 (begin
 		   (f i)
 		   (i-loop (+ i 1)))))))
-    ((2) (let ((lower-i (##interval-lower-bound interval 0))
-	       (lower-j (##interval-lower-bound interval 1))
-	       (upper-i (##interval-upper-bound interval 0))
-	       (upper-j (##interval-upper-bound interval 1)))
+    ((2) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (lower-j (%%interval-lower-bound interval 1))
+	       (upper-i (%%interval-upper-bound interval 0))
+	       (upper-j (%%interval-upper-bound interval 1)))
 	   (let i-loop ((i lower-i))
 	     (if (< i upper-i)
 		 (let j-loop ((j lower-j))
@@ -493,12 +548,12 @@
 			 (f i j)
 			 (j-loop (+ j 1)))
 		       (i-loop (+ i 1))))))))
-    ((3) (let ((lower-i (##interval-lower-bound interval 0))
-	       (lower-j (##interval-lower-bound interval 1))
-	       (lower-k (##interval-lower-bound interval 2))
-	       (upper-i (##interval-upper-bound interval 0))
-	       (upper-j (##interval-upper-bound interval 1))
-	       (upper-k (##interval-upper-bound interval 2)))
+    ((3) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (lower-j (%%interval-lower-bound interval 1))
+	       (lower-k (%%interval-lower-bound interval 2))
+	       (upper-i (%%interval-upper-bound interval 0))
+	       (upper-j (%%interval-upper-bound interval 1))
+	       (upper-k (%%interval-upper-bound interval 2)))
 	   (let i-loop ((i lower-i))
 	     (if (< i upper-i)
 		 (let j-loop ((j lower-j))
@@ -510,14 +565,14 @@
 			       (k-loop (+ k 1)))
 			     (j-loop (+ j 1))))
 		       (i-loop (+ i 1))))))))
-    ((4) (let ((lower-i (##interval-lower-bound interval 0))
-	       (lower-j (##interval-lower-bound interval 1))
-	       (lower-k (##interval-lower-bound interval 2))
-	       (lower-l (##interval-lower-bound interval 3))
-	       (upper-i (##interval-upper-bound interval 0))
-	       (upper-j (##interval-upper-bound interval 1))
-	       (upper-k (##interval-upper-bound interval 2))
-	       (upper-l (##interval-upper-bound interval 3)))
+    ((4) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (lower-j (%%interval-lower-bound interval 1))
+	       (lower-k (%%interval-lower-bound interval 2))
+	       (lower-l (%%interval-lower-bound interval 3))
+	       (upper-i (%%interval-upper-bound interval 0))
+	       (upper-j (%%interval-upper-bound interval 1))
+	       (upper-k (%%interval-upper-bound interval 2))
+	       (upper-l (%%interval-upper-bound interval 3)))
 	   (let i-loop ((i lower-i))
 	     (if (< i upper-i)
 		 (let j-loop ((j lower-j))
@@ -534,8 +589,8 @@
 		       (i-loop (+ i 1))))))))
     (else
 
-     (let* ((lower-bounds (##interval-lower-bounds->list interval))
-	    (upper-bounds (##interval-upper-bounds->list interval))
+     (let* ((lower-bounds (%%interval-lower-bounds->list interval))
+	    (upper-bounds (%%interval-upper-bounds->list interval))
 	    (arg          (map values lower-bounds)))                ; copy lower-bounds
 
        ;; I'm not particularly happy with set! here because f might capture the continuation
@@ -577,18 +632,18 @@
 ;;; This version assumes, and may use, that f is thread-safe and that operator is associative.
 ;;; The order of application of f and operator is not specified.
 
-(define (##interval-fold f operator identity interval)
-  (case (##interval-dimension interval)
-    ((1) (let ((lower-i (##interval-lower-bound interval 0))
-	       (upper-i (##interval-upper-bound interval 0)))
+(define (%%interval-fold f operator identity interval)
+  (case (%%interval-dimension interval)
+    ((1) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (upper-i (%%interval-upper-bound interval 0)))
 	   (let i-loop ((i lower-i) (result identity))
 	     (if (= i upper-i)
 		 result
 		 (i-loop (+ i 1) (operator (f i) result))))))
-    ((2) (let ((lower-i (##interval-lower-bound interval 0))
-	       (lower-j (##interval-lower-bound interval 1))
-	       (upper-i (##interval-upper-bound interval 0))
-	       (upper-j (##interval-upper-bound interval 1)))
+    ((2) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (lower-j (%%interval-lower-bound interval 1))
+	       (upper-i (%%interval-upper-bound interval 0))
+	       (upper-j (%%interval-upper-bound interval 1)))
 	   (let i-loop ((i lower-i) (result identity))
 	     (if (= i upper-i)
 		 result
@@ -596,12 +651,12 @@
 		   (if (= j upper-j)
 		       (i-loop (+ i 1) result)
 		       (j-loop (+ j 1) (operator (f i j) result))))))))
-    ((3) (let ((lower-i (##interval-lower-bound interval 0))
-	       (lower-j (##interval-lower-bound interval 1))
-	       (lower-k (##interval-lower-bound interval 2))
-	       (upper-i (##interval-upper-bound interval 0))
-	       (upper-j (##interval-upper-bound interval 1))
-	       (upper-k (##interval-upper-bound interval 2)))
+    ((3) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (lower-j (%%interval-lower-bound interval 1))
+	       (lower-k (%%interval-lower-bound interval 2))
+	       (upper-i (%%interval-upper-bound interval 0))
+	       (upper-j (%%interval-upper-bound interval 1))
+	       (upper-k (%%interval-upper-bound interval 2)))
 	   (let i-loop ((i lower-i) (result identity))
 	     (if (= i upper-i)
 		 result
@@ -612,14 +667,14 @@
 			 (if (= k upper-k)
 			     (j-loop (+ j 1) result)
 			     (k-loop (+ k 1) (operator (f i j k) result))))))))))
-    ((4) (let ((lower-i (##interval-lower-bound interval 0))
-	       (lower-j (##interval-lower-bound interval 1))
-	       (lower-k (##interval-lower-bound interval 2))
-	       (lower-l (##interval-lower-bound interval 3))
-	       (upper-i (##interval-upper-bound interval 0))
-	       (upper-j (##interval-upper-bound interval 1))
-	       (upper-k (##interval-upper-bound interval 2))
-	       (upper-l (##interval-upper-bound interval 3)))
+    ((4) (let ((lower-i (%%interval-lower-bound interval 0))
+	       (lower-j (%%interval-lower-bound interval 1))
+	       (lower-k (%%interval-lower-bound interval 2))
+	       (lower-l (%%interval-lower-bound interval 3))
+	       (upper-i (%%interval-upper-bound interval 0))
+	       (upper-j (%%interval-upper-bound interval 1))
+	       (upper-k (%%interval-upper-bound interval 2))
+	       (upper-l (%%interval-upper-bound interval 3)))
 	   (let i-loop ((i lower-i) (result identity))
 	     (if (= i upper-i)
 		 result
@@ -634,8 +689,8 @@
 				   (k-loop (+ k 1) result)
 				   (l-loop (+ l 1) (operator (f i j k l) result))))))))))))
     (else
-     (let* ((lower-bounds (##interval-lower-bounds->list interval))
-	    (upper-bounds (##interval-upper-bounds->list interval))
+     (let* ((lower-bounds (%%interval-lower-bounds->list interval))
+	    (upper-bounds (%%interval-upper-bounds->list interval))
 	    (arg          (map values lower-bounds)))                ; copy lower-bounds
 
        ;; I'm not particularly happy with set! here because f or operator might capture
@@ -680,7 +735,7 @@
 
 (declare (inline))
 
-(define-structure ##array-base
+(define-structure %%array
   ;; Part of all arrays
   domain                  ;; an interval
   getter                  ;; (lambda (i_0 ... i_n-1) ...) returns a value for (i_0,...,i_n-1) in (array-domain a)
@@ -694,14 +749,24 @@
   )
 
 (define specialized-array-default-safe?
-  (let ((##specialized-array-default-safe? #f))
+  (let ((%%specialized-array-default-safe? #f))
     (lambda (#!optional (bool (macro-absent-obj)))
       (cond ((eq? bool (macro-absent-obj))
-	     ##specialized-array-default-safe?)
+	     %%specialized-array-default-safe?)
 	    ((not (boolean? bool))
 	     (error "specialized-array-default-safe?: The argument is not a boolean: " bool))
 	    (else
-	     (set! ##specialized-array-default-safe? bool))))))
+	     (set! %%specialized-array-default-safe? bool))))))
+
+(define specialized-array-default-mutable?
+  (let ((%%specialized-array-default-mutable? #t))
+    (lambda (#!optional (bool (macro-absent-obj)))
+      (cond ((eq? bool (macro-absent-obj))
+	     %%specialized-array-default-mutable?)
+	    ((not (boolean? bool))
+	     (error "specialized-array-default-mutable?: The argument is not a boolean: " bool))
+	    (else
+	     (set! %%specialized-array-default-mutable? bool))))))
 
 
 (declare (not inline))
@@ -721,35 +786,38 @@
 	  ((not (procedure? getter))
 	   (error "make-array: The second argument is not a procedure: " domain getter setter))
 	  (else
-	   (make-##array-base domain
-			      getter
-			      setter
-			      #f        ; storage-class
-			      #f        ; body
-			      #f        ; indexer
-			      #f        ; safe?
-			      )))))
+	   (make-%%array domain
+                         getter
+                         setter
+                         #f        ; storage-class
+                         #f        ; body
+                         #f        ; indexer
+                         #f        ; safe?
+                         )))))
 
 (define (array? x)
-  (##array-base? x))
+  (%%array? x))
 
 (define (array-domain obj)
   (cond ((not (array? obj))
 	 (error "array-domain: The argument is not an array: " obj))
 	(else
-	 (##array-base-domain obj))))
+	 (%%array-domain obj))))
 
 (define (array-getter obj)
   (cond ((not (array? obj))
 	 (error "array-getter: The argument is not an array: " obj))
 	(else
-	 (##array-base-getter obj))))
+	 (%%array-getter obj))))
+
+(define (%%array-dimension array)
+  (%%interval-dimension (%%array-domain array)))
 
 (define (array-dimension array)
   (cond ((not (array? array))
 	 (error "array-dimension: The argument is not an array: " array))
 	(else
-	 (##interval-dimension (array-domain array)))))
+	 (%%array-dimension array))))
 
 
 ;;;
@@ -776,13 +844,13 @@
 
 (define (mutable-array? obj)
   (and (array? obj)
-       (not (eq? (##array-base-setter obj) #f))))
+       (not (eq? (%%array-setter obj) #f))))
 
 (define (array-setter obj)
   (cond ((not (mutable-array? obj))
 	 (error "array-setter: The argument is not an mutable array: " obj))
 	(else
-	 (##array-base-setter obj))))
+	 (%%array-setter obj))))
 
 ;;;
 ;;; A storage-class contains functions and objects to manipulate the
@@ -796,7 +864,7 @@
 ;;; default:  object                  is the default value with which to fill body
 ;;;
 
-(define-structure storage-class getter setter checker maker length default)
+(define-structure storage-class getter setter checker maker copier length default)
 
 ;;; We define specialized storage-classes for:
 ;;;
@@ -831,6 +899,8 @@
 		  ,checker
 		  ;; maker:
 		  ,(symbol-concatenate 'make- prefix 'vector)
+                  ;; copier
+                  ,(symbol-concatenate prefix 'vector-copy!)
 		  ;; length:
 		  ,(symbol-concatenate prefix 'vector-length)
 		  ;; default:
@@ -889,6 +959,11 @@
 
 (make-standard-storage-classes)
 
+;;; This sample implementation does not implement the following.
+
+(define f16-storage-class #f)
+(define f8-storage-class #f)
+
 ;;; for bit-arrays, body is a vector, the first element of which is the actual number of elements,
 ;;; the second element of which is a u16vector that contains the bit string
 
@@ -920,6 +995,8 @@
    (lambda (size initializer)
      (let ((u16-size (fxarithmetic-shift-right (+ size 15) 4)))
        (vector size (make-u16vector u16-size (if (zero? initializer) 0 65535)))))
+   ;; no copier (for now)
+   #f
    ;; length:
    (lambda (v)
      (vector-ref v 0))
@@ -965,6 +1042,8 @@
 		      ((= i l) result)
 		    (,(symbol-concatenate floating-point-prefix 'vector-set!) result i re)
 		    (,(symbol-concatenate floating-point-prefix 'vector-set!) result (fx+ i 1) im)))))
+            ;; copier
+            ,(symbol-concatenate prefix 'vector-copy!)
 	    ;; length
 	    (lambda (body)
 	      (fxquotient (,(symbol-concatenate floating-point-prefix 'vector-length) body) 2))
@@ -998,7 +1077,7 @@
 
 ;; unfortunately, the next two functions were written by hand, so beware of bugs.
 
-(define (##indexer-1 base
+(define (%%indexer-1 base
 		     low-0
 		     increment-0)
   (if (zero? base)
@@ -1017,7 +1096,7 @@
 		((= -1 increment-0)   (lambda (i) (+ base (- low-0 i))))
 		(else                 (lambda (i) (+ base (* increment-0 (- i low-0)))))))))
 
-(define (##indexer-2 base
+(define (%%indexer-2 base
 		     low-0       low-1
 		     increment-0 increment-1)
   (if (zero? base)
@@ -1122,7 +1201,7 @@
 
 ;;; after this we basically punt
 
-(define (##indexer-3 base
+(define (%%indexer-3 base
 		     low-0       low-1       low-2
 		     increment-0 increment-1 increment-2)
   (if (= 0 low-0 low-1 low-2)
@@ -1169,7 +1248,7 @@
 		   (* increment-1 (- j low-1))
 		   (* increment-2 (- k low-2))))))))
 
-(define (##indexer-4 base
+(define (%%indexer-4 base
 		     low-0       low-1       low-2       low-3
 		     increment-0 increment-1 increment-2 increment-3)
   (if (= 0 low-0 low-1 low-2 low-3)
@@ -1224,7 +1303,7 @@
 		   (* increment-2 (- k low-2))
 		   (* increment-3 (- l low-3))))))))
 
-(define (##indexer-generic base lower-bounds increments)
+(define (%%indexer-generic base lower-bounds increments)
   (let ((result
 	 (lambda multi-index
 	   (do ((multi-index  multi-index  (cdr multi-index))
@@ -1266,34 +1345,149 @@
 ;;;
 
 (define (specialized-array? obj)
-  (and (mutable-array? obj)
-       (not (eq? (##array-base-body obj) #f))))
+  (and (array? obj)
+       (not (eq? (%%array-body obj) #f))))
 
 (define (array-body obj)
   (cond ((not (specialized-array? obj))
 	 (error "array-body: The argument is not a specialized array: " obj))
 	(else
-	 (##array-base-body obj))))
+	 (%%array-body obj))))
 
 (define (array-indexer obj)
   (cond ((not (specialized-array? obj))
 	 (error "array-indexer: The argument is not a specialized array: " obj))
 	(else
-	 (##array-base-indexer obj))))
+	 (%%array-indexer obj))))
 
 (define (array-storage-class obj)
   (cond ((not (specialized-array? obj))
 	 (error "array-storage-class: The argument is not a specialized array: " obj))
 	(else
-	 (##array-base-storage-class obj))))
+	 (%%array-storage-class obj))))
 
 (define (array-safe? obj)
   (cond ((not (specialized-array? obj))
 	 (error "array-safe?: The argument is not a specialized array: " obj))
 	(else
-	 (##array-base-safe? obj))))
+	 (%%array-safe? obj))))
 
-(define (##finish-specialized-array domain storage-class body indexer safe?)
+(define (%%array-elements-in-order? array)
+  (let ((domain  (%%array-domain array))
+        (indexer (%%array-indexer array)))
+  (case (%%interval-dimension domain)
+    ((1) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (upper-0 (%%interval-upper-bound domain 0)))
+           (let ((increment 1))
+             (or (= 1 (- upper-0 lower-0))
+                 (= increment
+                    (- (indexer (+ lower-0 1))
+                       (indexer lower-0)))))))
+    ((2) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (lower-1 (%%interval-lower-bound domain 1))
+               (upper-0 (%%interval-upper-bound domain 0))
+               (upper-1 (%%interval-upper-bound domain 1)))
+           (let ((increment 1))
+             (and (or (= 1 (- upper-1 lower-1))
+                      (= increment
+                         (- (indexer lower-0 (+ lower-1 1))
+                            (indexer lower-0    lower-1))))
+                  (let ((increment (* increment (- upper-1 lower-1))))
+                    (or (= 1 (- upper-0 lower-0))
+                        (= increment
+                           (- (indexer (+ lower-0 1) lower-1)
+                              (indexer    lower-0    lower-1)))))))))
+    ((3) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (lower-1 (%%interval-lower-bound domain 1))
+               (lower-2 (%%interval-lower-bound domain 2))
+               (upper-0 (%%interval-upper-bound domain 0))
+               (upper-1 (%%interval-upper-bound domain 1))
+               (upper-2 (%%interval-upper-bound domain 2)))
+           (let ((increment 1))
+             (and (or (= 1 (- upper-2 lower-2))
+                      (= increment
+                         (- (indexer lower-0 lower-1 (+ lower-2 1))
+                            (indexer lower-0 lower-1    lower-2))))
+                  (let ((increment (* increment (- upper-2 lower-2))))
+                    (and (or (= 1 (- upper-1 lower-1))
+                             (= increment
+                                (- (indexer lower-0 (+ lower-1 1) lower-2)
+                                   (indexer lower-0    lower-1    lower-2))))
+                         (let ((increment (* increment (- upper-1 lower-1))))
+                           (or (= 1 (- upper-0 lower-0))
+                               (= increment
+                                  (- (indexer (+ lower-0 1) lower-1 lower-2)
+                                     (indexer    lower-0    lower-1 lower-2)))))))))))
+    ((4) (let ((lower-0 (%%interval-lower-bound domain 0))
+               (lower-1 (%%interval-lower-bound domain 1))
+               (lower-2 (%%interval-lower-bound domain 2))
+               (lower-3 (%%interval-lower-bound domain 3))
+               (upper-0 (%%interval-upper-bound domain 0))
+               (upper-1 (%%interval-upper-bound domain 1))
+               (upper-2 (%%interval-upper-bound domain 2))
+               (upper-3 (%%interval-upper-bound domain 3)))
+           (let ((increment 1))
+             (and (or (= 1 (- upper-3 lower-3))
+                      (= increment
+                         (- (indexer lower-0 lower-1 lower-2 (+ lower-3 1))
+                            (indexer lower-0 lower-1 lower-2    lower-3))))
+                  (let ((increment (* increment (- upper-3 lower-3))))
+                    (and (or (= 1 (- upper-2 lower-2))
+                             (= increment
+                                (- (indexer lower-0 lower-1 (+ lower-2 1) lower-3)
+                                   (indexer lower-0 lower-1    lower-2    lower-3))))
+                         (let ((increment (* increment (- upper-2 lower-2))))
+                           (and (or (= 1 (- upper-1 lower-1))
+                                    (= increment
+                                       (- (indexer lower-0 (+ lower-1 1) lower-2 lower-3)
+                                          (indexer lower-0    lower-1    lower-2 lower-3))))
+                                (let ((increment (* increment (- upper-1 lower-1))))
+                                  (or (= 1 (- upper-0 lower-0))
+                                      (= increment
+                                         (- (indexer (+ lower-0 1) lower-1 lower-2 lower-3)
+                                            (indexer    lower-0    lower-1 lower-2 lower-3)))))))))))))
+    (else (let ((global-lowers
+                 ;; will use as an argument list
+                 (%%interval-lower-bounds->list domain))
+                (global-lowers+1
+                 ;; will modify and use as an argument list
+                 (%%interval-lower-bounds->list domain)))
+            (and
+             (let loop ((lowers global-lowers+1)
+                        (uppers (%%interval-upper-bounds->list domain)))
+               ;; returns either #f or the increment
+               ;; that the difference of indexers must equal.
+               (if (null? lowers)
+                   1 ;; increment
+                   (let ((increment (loop (cdr lowers) (cdr uppers))))
+                     (and increment
+                          (or (and (= 1 (- (car uppers) (car lowers)))
+                                   ;; increment doesn't change
+                                   increment)
+                              (begin
+                                ;; increment the correct index by 1
+                                (set-car! lowers (+ (car lowers) 1))
+                                (and (= (- (apply indexer global-lowers+1)
+                                           (apply indexer global-lowers))
+                                        increment)
+                                     (begin
+                                       ;; set it back
+                                       (set-car! lowers (- (car lowers) 1))
+                                       ;; multiply the increment by the difference in
+                                       ;; the current upper and lower bounds and
+                                       ;; return it.
+                                       (* increment (- (car uppers) (car lowers)))))))))))
+             ;; return a proper boolean instead of the volume of the domain
+             #t))))))
+
+(define (array-elements-in-order? array)
+  (cond ((not (specialized-array? array))
+         (error "array-elements-in-order?: The argument is not a specialized array: " array))
+        (else
+         (%%array-elements-in-order? array))))
+
+
+(define (%%finish-specialized-array domain storage-class body indexer mutable? safe?)
   (let ((storage-class-getter (storage-class-getter storage-class))
 	(storage-class-setter (storage-class-setter storage-class))
 	(checker (storage-class-checker storage-class))
@@ -1334,183 +1528,204 @@
     (define-macro (expand-setters expr)
       `(expand-storage-class -setter -set! ,expr))
 
-    (let ((getter (if safe?
-		      (case (##interval-dimension domain)
-			((1)  (lambda (i)
-				(cond ((not (exact-integer? i))
-				       (error "array-getter: multi-index component is not an exact integer: " i))
-				      ((not (##interval-contains-multi-index?-1 domain i))
-				       (error "array-getter: domain does not contain multi-index: "    domain i))
-				      (else
-				       (storage-class-getter body (indexer i))))))
-			((2)  (lambda (i j)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)))
-				       (error "array-getter: multi-index component is not an exact integer: " i j))
-				      ((not (##interval-contains-multi-index?-2 domain i j))
-				       (error "array-getter: domain does not contain multi-index: "    domain i j))
-				      (else
-				       (storage-class-getter body (indexer i j))))))
-			((3)  (lambda (i j k)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)))
-				       (error "array-getter: multi-index component is not an exact integer: " i j k))
-				      ((not (##interval-contains-multi-index?-3 domain i j k))
-				       (error "array-getter: domain does not contain multi-index: "    domain i j k))
-				      (else
-				       (storage-class-getter body (indexer i j k))))))
-			((4)  (lambda (i j k l)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)
-						 (exact-integer? l)))
-				       (error "array-getter: multi-index component is not an exact integer: " i j k l))
-				      ((not (##interval-contains-multi-index?-4 domain i j k l))
-				       (error "array-getter: domain does not contain multi-index: "    domain i j k l))
-				      (else
-				       (storage-class-getter body (indexer i j k l))))))
-			(else (lambda multi-index
-				(cond ((not (##every exact-integer? multi-index))
-				       (apply error "array-getter: multi-index component is not an exact integer: " multi-index))
-				      ((not (= (##interval-dimension domain) (length multi-index)))
-				       (apply error "array-getter: multi-index is not the correct dimension: " domain multi-index))
-				      ((not (##interval-contains-multi-index?-general domain multi-index))
-				       (apply error "array-getter: domain does not contain multi-index: "    domain multi-index))
-				      (else
-				       (storage-class-getter body (apply indexer multi-index)))))))
-		      (case (##interval-dimension domain)
-			((1)  (expand-getters (lambda (i)         (storage-class-getter body (indexer i)))))
-			((2)  (expand-getters (lambda (i j)       (storage-class-getter body (indexer i j)))))
-			((3)  (expand-getters (lambda (i j k)     (storage-class-getter body (indexer i j k)))))
-			((4)  (expand-getters (lambda (i j k l)   (storage-class-getter body (indexer i j k l)))))
-			(else (expand-getters (lambda multi-index (storage-class-getter body (apply indexer multi-index))))))))
-	  (setter (if safe?
-		      (case (##interval-dimension domain)
-			((1)  (lambda (value i)
-				(cond ((not (exact-integer? i))
-				       (error "array-setter: multi-index component is not an exact integer: " i))
-				      ((not (##interval-contains-multi-index?-1 domain i))
-				       (error "array-setter: domain does not contain multi-index: "    domain i))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i) value)))))
-			((2)  (lambda (value i j)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)))
-				       (error "array-setter: multi-index component is not an exact integer: " i j))
-				      ((not (##interval-contains-multi-index?-2 domain i j))
-				       (error "array-setter: domain does not contain multi-index: "    domain i j))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i j) value)))))
-			((3)  (lambda (value i j k)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)))
-				       (error "array-setter: multi-index component is not an exact integer: " i j k))
-				      ((not (##interval-contains-multi-index?-3 domain i j k))
-				       (error "array-setter: domain does not contain multi-index: "    domain i j k))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i j k) value)))))
-			((4)  (lambda (value i j k l)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)
-						 (exact-integer? l)))
-				       (error "array-setter: multi-index component is not an exact integer: " i j k l))
-				      ((not (##interval-contains-multi-index?-4 domain i j k l))
-				       (error "array-setter: domain does not contain multi-index: "    domain i j k l))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i j k l) value)))))
-			(else (lambda (value . multi-index)
-				(cond ((not (##every exact-integer? multi-index))
-				       (apply error "array-setter: multi-index component is not an exact integer: " multi-index))
-				      ((not (= (##interval-dimension domain) (length multi-index)))
-				       (apply error "array-setter: multi-index is not the correct dimension: " domain multi-index))
-				      ((not (##interval-contains-multi-index?-general domain multi-index))
-				       (apply error "array-setter: domain does not contain multi-index: "    domain multi-index))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (apply indexer multi-index) value))))))
-		      (case (##interval-dimension domain)
-			((1)  (expand-setters (lambda (value i)             (storage-class-setter body (indexer i)                 value))))
-			((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value))))
-			((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value))))
-			((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value))))
-			(else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value))))))))
-      (make-##array-base domain
-			 getter
-			 setter
-			 storage-class
-			 body
-			 indexer
-			 safe?))))
+    (let ((getter
+           (if safe?
+               (case (%%interval-dimension domain)
+                 ((1)  (lambda (i)
+                         (cond ((not (exact-integer? i))
+                                (error "array-getter: multi-index component is not an exact integer: " i))
+                               ((not (%%interval-contains-multi-index?-1 domain i))
+                                (error "array-getter: domain does not contain multi-index: "    domain i))
+                               (else
+                                (storage-class-getter body (indexer i))))))
+                 ((2)  (lambda (i j)
+                         (cond ((not (and (exact-integer? i)
+                                          (exact-integer? j)))
+                                (error "array-getter: multi-index component is not an exact integer: " i j))
+                               ((not (%%interval-contains-multi-index?-2 domain i j))
+                                (error "array-getter: domain does not contain multi-index: "    domain i j))
+                               (else
+                                (storage-class-getter body (indexer i j))))))
+                 ((3)  (lambda (i j k)
+                         (cond ((not (and (exact-integer? i)
+                                          (exact-integer? j)
+                                          (exact-integer? k)))
+                                (error "array-getter: multi-index component is not an exact integer: " i j k))
+                               ((not (%%interval-contains-multi-index?-3 domain i j k))
+                                (error "array-getter: domain does not contain multi-index: "    domain i j k))
+                               (else
+                                (storage-class-getter body (indexer i j k))))))
+                 ((4)  (lambda (i j k l)
+                         (cond ((not (and (exact-integer? i)
+                                          (exact-integer? j)
+                                          (exact-integer? k)
+                                          (exact-integer? l)))
+                                (error "array-getter: multi-index component is not an exact integer: " i j k l))
+                               ((not (%%interval-contains-multi-index?-4 domain i j k l))
+                                (error "array-getter: domain does not contain multi-index: "    domain i j k l))
+                               (else
+                                (storage-class-getter body (indexer i j k l))))))
+                 (else (lambda multi-index
+                         (cond ((not (%%every exact-integer? multi-index))
+                                (apply error "array-getter: multi-index component is not an exact integer: " multi-index))
+                               ((not (= (%%interval-dimension domain) (length multi-index)))
+                                (apply error "array-getter: multi-index is not the correct dimension: " domain multi-index))
+                               ((not (%%interval-contains-multi-index?-general domain multi-index))
+                                (apply error "array-getter: domain does not contain multi-index: "    domain multi-index))
+                               (else
+                                (storage-class-getter body (apply indexer multi-index)))))))
+               (case (%%interval-dimension domain)
+                 ((1)  (expand-getters (lambda (i)         (storage-class-getter body (indexer i)))))
+                 ((2)  (expand-getters (lambda (i j)       (storage-class-getter body (indexer i j)))))
+                 ((3)  (expand-getters (lambda (i j k)     (storage-class-getter body (indexer i j k)))))
+                 ((4)  (expand-getters (lambda (i j k l)   (storage-class-getter body (indexer i j k l)))))
+                 (else (expand-getters (lambda multi-index (storage-class-getter body (apply indexer multi-index))))))))
+	  (setter
+           (and mutable?
+                (if safe?
+                    (case (%%interval-dimension domain)
+                      ((1)  (lambda (value i)
+                              (cond ((not (exact-integer? i))
+                                     (error "array-setter: multi-index component is not an exact integer: " i))
+                                    ((not (%%interval-contains-multi-index?-1 domain i))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i) value)))))
+                      ((2)  (lambda (value i j)
+                              (cond ((not (and (exact-integer? i)
+                                               (exact-integer? j)))
+                                     (error "array-setter: multi-index component is not an exact integer: " i j))
+                                    ((not (%%interval-contains-multi-index?-2 domain i j))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i j))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i j) value)))))
+                      ((3)  (lambda (value i j k)
+                              (cond ((not (and (exact-integer? i)
+                                               (exact-integer? j)
+                                               (exact-integer? k)))
+                                     (error "array-setter: multi-index component is not an exact integer: " i j k))
+                                    ((not (%%interval-contains-multi-index?-3 domain i j k))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i j k))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i j k) value)))))
+                      ((4)  (lambda (value i j k l)
+                              (cond ((not (and (exact-integer? i)
+                                               (exact-integer? j)
+                                               (exact-integer? k)
+                                               (exact-integer? l)))
+                                     (error "array-setter: multi-index component is not an exact integer: " i j k l))
+                                    ((not (%%interval-contains-multi-index?-4 domain i j k l))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i j k l))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i j k l) value)))))
+                      (else (lambda (value . multi-index)
+                              (cond ((not (%%every exact-integer? multi-index))
+                                     (apply error "array-setter: multi-index component is not an exact integer: " multi-index))
+                                    ((not (= (%%interval-dimension domain) (length multi-index)))
+                                     (apply error "array-setter: multi-index is not the correct dimension: " domain multi-index))
+                                    ((not (%%interval-contains-multi-index?-general domain multi-index))
+                                     (apply error "array-setter: domain does not contain multi-index: "    domain multi-index))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (apply indexer multi-index) value))))))
+                    (case (%%interval-dimension domain)
+                      ((1)  (expand-setters (lambda (value i)             (storage-class-setter body (indexer i)                 value))))
+                      ((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value))))
+                      ((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value))))
+                      ((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value))))
+                      (else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value)))))))))
+      (make-%%array domain
+                    getter
+                    setter
+                    storage-class
+                    body
+                    indexer
+                    safe?))))
 
-(define (##interval->basic-indexer interval)
+(define (%%interval->basic-indexer interval)
   (case (interval-dimension interval)
     ((1) (let ((low-0 (interval-lower-bound interval 0))
                (increment-0 1))
-           (##indexer-1 0 low-0 increment-0)))
-    ((2) (let* ((low-0 (##interval-lower-bound interval 0))
-                (low-1 (##interval-lower-bound interval 1))
+           (%%indexer-1 0 low-0 increment-0)))
+    ((2) (let* ((low-0 (%%interval-lower-bound interval 0))
+                (low-1 (%%interval-lower-bound interval 1))
                 (increment-1 1)
                 (increment-0 (* increment-1
-                                (- (##interval-upper-bound interval 1)
-                                   (##interval-lower-bound interval 1)))))
-           (##indexer-2 0
+                                (- (%%interval-upper-bound interval 1)
+                                   (%%interval-lower-bound interval 1)))))
+           (%%indexer-2 0
                         low-0 low-1
                         increment-0 increment-1)))
-    ((3) (let* ((low-0 (##interval-lower-bound interval 0))
-                (low-1 (##interval-lower-bound interval 1))
-                (low-2 (##interval-lower-bound interval 2))
+    ((3) (let* ((low-0 (%%interval-lower-bound interval 0))
+                (low-1 (%%interval-lower-bound interval 1))
+                (low-2 (%%interval-lower-bound interval 2))
                 (increment-2 1)
                 (increment-1 (* increment-2
-                                (- (##interval-upper-bound interval 2)
-                                   (##interval-lower-bound interval 2))))
+                                (- (%%interval-upper-bound interval 2)
+                                   (%%interval-lower-bound interval 2))))
                 (increment-0 (* increment-1
-                                (- (##interval-upper-bound interval 1)
-                                   (##interval-lower-bound interval 1)))))
-           (##indexer-3 0
+                                (- (%%interval-upper-bound interval 1)
+                                   (%%interval-lower-bound interval 1)))))
+           (%%indexer-3 0
                         low-0 low-1 low-2
                         increment-0 increment-1 increment-2)))
-    ((4) (let* ((low-0 (##interval-lower-bound interval 0))
-                (low-1 (##interval-lower-bound interval 1))
-                (low-2 (##interval-lower-bound interval 2))
-                (low-3 (##interval-lower-bound interval 3))
+    ((4) (let* ((low-0 (%%interval-lower-bound interval 0))
+                (low-1 (%%interval-lower-bound interval 1))
+                (low-2 (%%interval-lower-bound interval 2))
+                (low-3 (%%interval-lower-bound interval 3))
                 (increment-3 1)
                 (increment-2 (* increment-3
-                                (- (##interval-upper-bound interval 3)
-                                   (##interval-lower-bound interval 3))))
+                                (- (%%interval-upper-bound interval 3)
+                                   (%%interval-lower-bound interval 3))))
                 (increment-1 (* increment-2
-                                (- (##interval-upper-bound interval 2)
-                                   (##interval-lower-bound interval 2))))
+                                (- (%%interval-upper-bound interval 2)
+                                   (%%interval-lower-bound interval 2))))
                 (increment-0 (* increment-1
-                                (- (##interval-upper-bound interval 1)
-                                   (##interval-lower-bound interval 1)))))
-           (##indexer-4 0
+                                (- (%%interval-upper-bound interval 1)
+                                   (%%interval-lower-bound interval 1)))))
+           (%%indexer-4 0
                         low-0 low-1 low-2 low-3
                         increment-0 increment-1 increment-2 increment-3)))
     (else
-     (let ((lower-bounds (##interval-lower-bounds->list interval))
-           (upper-bounds (##interval-upper-bounds->list interval)))
+     (let ((lower-bounds (%%interval-lower-bounds->list interval))
+           (upper-bounds (%%interval-upper-bounds->list interval)))
        (let ((ranges (map (lambda (u l) (- u l)) upper-bounds lower-bounds)))
          (do ((ranges (reverse ranges) (cdr ranges))
               (increments (list 1) (cons (* (car increments) (car ranges))
                                          increments)))
-             ((null? (cdr ranges)) (##indexer-generic 0 lower-bounds increments))))))))
+             ((null? (cdr ranges)) (%%indexer-generic 0 lower-bounds increments))))))))
+
+(define (%%make-specialized-array interval
+                                  storage-class
+                                  ;; must be mutable
+                                  safe?)
+  (let* ((body    ((storage-class-maker storage-class)
+                   (%%interval-volume interval)
+                   (storage-class-default storage-class)))
+         (indexer (%%interval->basic-indexer interval)))
+    (%%finish-specialized-array interval
+                                storage-class
+                                body
+                                indexer
+                                #t            ;; mutable?
+                                safe?)))
+
 
 (define (make-specialized-array interval
                                 #!optional
                                 (storage-class generic-storage-class)
+                                ;; must be mutable?
                                 (safe? (specialized-array-default-safe?)))
+  ;; Returns a mutable specialized-array
   (cond ((not (interval? interval))
 	 (error "make-specialized-array: The first argument is not an interval: " interval))
 	((not (storage-class? storage-class))
@@ -1518,15 +1733,10 @@
 	((not (boolean? safe?))
 	 (error "make-specialized-array: The third argument is not a boolean: " interval storage-class safe?))
 	(else
-	 (let* ((body        ((storage-class-maker storage-class)
-                              (##interval-volume interval)
-                              (storage-class-default storage-class)))
-		(indexer     (##interval->basic-indexer interval)))
-	   (##finish-specialized-array interval
-				       storage-class
-				       body
-				       indexer
-				       safe?)))))
+	 (%%make-specialized-array interval
+                                   storage-class
+                                   ;; must be mutable
+                                   safe?))))
 
 ;;;
 ;;; The domain of the result is the same as the domain of the argument.
@@ -1538,25 +1748,28 @@
 (define (array->specialized-array array
                                   #!optional
                                   (result-storage-class generic-storage-class)
+                                  (mutable? (specialized-array-default-mutable?))
                                   (safe? (specialized-array-default-safe?)))
   (cond ((not (array? array))
 	 (error "array->specialized-array: The first argument is not an array: " array))
 	((not (storage-class? result-storage-class))
 	 (error "array->specialized-array: The second argument is not a storage-class: " result-storage-class))
 	((not (boolean? safe?))
-	 (error "array->specialized-array: The third argument is not a boolean: " safe?))
+	 (error "array->specialized-array: The fourth argument is not a boolean: " safe?))
+        ((not (boolean? mutable?))
+	 (error "array->specialized-array: The third argument is not a boolean: " mutable?))
 	(else
-	 (let* ((domain               (array-domain array))
-		(result               (make-specialized-array domain
-							      result-storage-class
-							      safe?))
-		(getter               (array-getter array)))
+	 (let* ((domain (%%array-domain array))
+		(result (%%make-specialized-array domain
+                                                  result-storage-class
+                                                  safe?))
+		(getter (%%array-getter array)))
            (if (eq? result-storage-class generic-storage-class)   ;; checker always returns #t
-               (let ((body      (array-body result)))
-                     ;; The result's indexer steps from 0 to (vector-length body) so we
-                     ;; use that fact here instead of calling (array-indexer result).
-                 (##interval-for-each
-                  (case (##interval-dimension domain)
+               (let ((body      (%%array-body result)))
+                 ;; The result's indexer steps from 0 to (vector-length body) so we
+                 ;; use that fact here instead of calling (array-indexer result).
+                 (%%interval-for-each
+                  (case (%%interval-dimension domain)
                     ((1)  (let ((index 0))
                             (lambda (i)
                               (vector-set! body index (getter i))
@@ -1579,12 +1792,12 @@
                               (set! index (fx+ index 1))))))
                   domain))
                (let ((checker              (storage-class-checker result-storage-class))
-                     (body                 (array-body result))
+                     (body                 (%%array-body result))
                      (storage-class-setter (storage-class-setter result-storage-class)))
-                     ;; The result's indexer steps from 0 to (vector-length body) so we
-                     ;; use that fact here instead of calling (array-indexer result).
-                 (##interval-for-each
-                  (case (##interval-dimension domain)
+                 ;; The result's indexer steps from 0 to (vector-length body) so we
+                 ;; use that fact here instead of calling (array-indexer result).
+                 (%%interval-for-each
+                  (case (%%interval-dimension domain)
                     ((1)  (let ((index 0))
                             (lambda (i)
                               (let ((item (getter i)))
@@ -1593,7 +1806,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     ((2)  (let ((index 0))
                             (lambda (i j)
                               (let ((item (getter i j)))
@@ -1602,7 +1815,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     ((3)  (let ((index 0))
                             (lambda (i j k)
                               (let ((item (getter i j k)))
@@ -1611,7 +1824,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     ((4)  (let ((index 0))
                             (lambda (i j k l)
                               (let ((item (getter i j k l)))
@@ -1620,7 +1833,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     (else (let ((index 0))
                             (lambda multi-index
                               (let ((item (apply getter multi-index)))
@@ -1629,8 +1842,10 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?)))))))
+                                           array result-storage-class mutable? safe? item)))))))
                   domain)))
+           (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
+               (%%array-setter-set! result #f))
 	   result))))
 
 ;;;
@@ -1639,10 +1854,10 @@
 ;;; new-domain->old-domain is an affine 1-1 mapping from new-domain to the domain of old-indexer.
 ;;;
 
-(define (##compose-indexers old-indexer new-domain new-domain->old-domain)
-  (case (##interval-dimension new-domain)
-    ((1) (let* ((lower-0 (##interval-lower-bound new-domain 0))
-		(upper-0 (##interval-upper-bound new-domain 0))
+(define (%%compose-indexers old-indexer new-domain new-domain->old-domain)
+  (case (%%interval-dimension new-domain)
+    ((1) (let* ((lower-0 (%%interval-lower-bound new-domain 0))
+		(upper-0 (%%interval-upper-bound new-domain 0))
 		(base (call-with-values
 			  (lambda () (new-domain->old-domain lower-0))
 			old-indexer))
@@ -1652,12 +1867,12 @@
 				      old-indexer)
 				    base)
 				 0)))
-	   (##indexer-1 base lower-0 increment-0)))
+	   (%%indexer-1 base lower-0 increment-0)))
 
-    ((2) (let* ((lower-0 (##interval-lower-bound new-domain 0))
-		(lower-1 (##interval-lower-bound new-domain 1))
-		(upper-0 (##interval-upper-bound new-domain 0))
-		(upper-1 (##interval-upper-bound new-domain 1))
+    ((2) (let* ((lower-0 (%%interval-lower-bound new-domain 0))
+		(lower-1 (%%interval-lower-bound new-domain 1))
+		(upper-0 (%%interval-upper-bound new-domain 0))
+		(upper-1 (%%interval-upper-bound new-domain 1))
 		(base (call-with-values
 			  (lambda () (new-domain->old-domain lower-0 lower-1))
 			old-indexer))
@@ -1673,13 +1888,13 @@
 				      old-indexer)
 				    base)
 				 0)))
-	   (##indexer-2 base lower-0 lower-1 increment-0 increment-1)))
-    ((3) (let* ((lower-0 (##interval-lower-bound new-domain 0))
-		(lower-1 (##interval-lower-bound new-domain 1))
-		(lower-2 (##interval-lower-bound new-domain 2))
-		(upper-0 (##interval-upper-bound new-domain 0))
-		(upper-1 (##interval-upper-bound new-domain 1))
-		(upper-2 (##interval-upper-bound new-domain 2))
+	   (%%indexer-2 base lower-0 lower-1 increment-0 increment-1)))
+    ((3) (let* ((lower-0 (%%interval-lower-bound new-domain 0))
+		(lower-1 (%%interval-lower-bound new-domain 1))
+		(lower-2 (%%interval-lower-bound new-domain 2))
+		(upper-0 (%%interval-upper-bound new-domain 0))
+		(upper-1 (%%interval-upper-bound new-domain 1))
+		(upper-2 (%%interval-upper-bound new-domain 2))
 		(base (call-with-values
 			  (lambda () (new-domain->old-domain lower-0 lower-1 lower-2))
 			old-indexer))
@@ -1701,15 +1916,15 @@
 				      old-indexer)
 				    base)
 				 0)))
-	   (##indexer-3 base lower-0 lower-1 lower-2 increment-0 increment-1 increment-2)))
-    ((4) (let* ((lower-0 (##interval-lower-bound new-domain 0))
-		(lower-1 (##interval-lower-bound new-domain 1))
-		(lower-2 (##interval-lower-bound new-domain 2))
-		(lower-3 (##interval-lower-bound new-domain 3))
-		(upper-0 (##interval-upper-bound new-domain 0))
-		(upper-1 (##interval-upper-bound new-domain 1))
-		(upper-2 (##interval-upper-bound new-domain 2))
-		(upper-3 (##interval-upper-bound new-domain 3))
+	   (%%indexer-3 base lower-0 lower-1 lower-2 increment-0 increment-1 increment-2)))
+    ((4) (let* ((lower-0 (%%interval-lower-bound new-domain 0))
+		(lower-1 (%%interval-lower-bound new-domain 1))
+		(lower-2 (%%interval-lower-bound new-domain 2))
+		(lower-3 (%%interval-lower-bound new-domain 3))
+		(upper-0 (%%interval-upper-bound new-domain 0))
+		(upper-1 (%%interval-upper-bound new-domain 1))
+		(upper-2 (%%interval-upper-bound new-domain 2))
+		(upper-3 (%%interval-upper-bound new-domain 3))
 		(base (call-with-values
 			  (lambda () (new-domain->old-domain lower-0 lower-1 lower-2 lower-3))
 			old-indexer))
@@ -1737,10 +1952,10 @@
 				      old-indexer)
 				    base)
 				 0)))
-	   (##indexer-4 base lower-0 lower-1 lower-2 lower-3 increment-0 increment-1 increment-2 increment-3)))
+	   (%%indexer-4 base lower-0 lower-1 lower-2 lower-3 increment-0 increment-1 increment-2 increment-3)))
     (else
-     (let* ((lower-bounds (##interval-lower-bounds->list new-domain))
-	    (upper-bounds (##interval-upper-bounds->list new-domain))
+     (let* ((lower-bounds (%%interval-lower-bounds->list new-domain))
+	    (upper-bounds (%%interval-upper-bounds->list new-domain))
 	    (base (call-with-values
 		      (lambda () (apply new-domain->old-domain lower-bounds))
 		    old-indexer))
@@ -1767,95 +1982,97 @@
 					(cdr u)
 					(cdr i)
 					new-base)))))))
-       (##indexer-generic base lower-bounds increments)))))
+       (%%indexer-generic base lower-bounds increments)))))
 
-;;;
 ;;; You want to share the backing store of array.
 ;;;
 ;;; So you specify a new domain and an affine 1-1 mapping from the new-domain to the old-domain.
-;;;
+
+(define (%%specialized-array-share array
+                                   new-domain
+                                   new-domain->old-domain)
+  (let ((old-domain        (%%array-domain       array))
+        (old-indexer       (%%array-indexer      array))
+        (body              (%%array-body         array))
+        (storage-class     (%%array-storage-class array)))
+    (%%finish-specialized-array new-domain
+                                storage-class
+                                body
+                                (%%compose-indexers old-indexer new-domain new-domain->old-domain)
+                                (mutable-array? array)
+                                (%%array-safe? array))))
+
 
 (define (specialized-array-share array
 				 new-domain
-				 new-domain->old-domain
-				 #!optional (safe? (specialized-array-default-safe?)))
+				 new-domain->old-domain)
   (cond ((not (specialized-array? array))
-	 (error "specialized-array-share: array is not a specialized-array: " array))
+	 (error "specialized-array-share: The first argument is not a specialized-array: "
+                array new-domain new-domain->old-domain))
 	((not (interval? new-domain))
-	 (error "specialized-array-share: new-domain is not an interval: " new-domain))
+	 (error "specialized-array-share: The second argument is not an interval: "
+                array new-domain new-domain->old-domain))
 	((not (procedure? new-domain->old-domain))
-	 (error "specialized-array-share: new-domain->old-domain is not a procedure: " new-domain->old-domain))
-	((not (boolean? safe?))
-	 (error "specialized-array-share: safe? is not a boolean: " safe?))
+	 (error "specialized-array-share: The third argument is not a procedure: "
+                array new-domain new-domain->old-domain))
 	(else
-	 (let ((old-domain        (array-domain       array))
-	       (old-indexer       (array-indexer      array))
-	       (body              (array-body         array))
-	       (storage-class     (array-storage-class array)))
-	   (##finish-specialized-array new-domain
-				       storage-class
-				       body
-				       (##compose-indexers old-indexer new-domain new-domain->old-domain)
-				       safe?)))))
+	 (%%specialized-array-share array
+                                    new-domain
+                                    new-domain->old-domain))))
 
-(define (##immutable-array-extract array new-domain)
+(define (%%immutable-array-extract array new-domain)
   (make-array new-domain
-	      (array-getter array)))
+	      (%%array-getter array)))
 
-(define (##mutable-array-extract array new-domain)
+(define (%%mutable-array-extract array new-domain)
   (make-array new-domain
-	      (array-getter array)
-	      (array-setter array)))
+	      (%%array-getter array)
+	      (%%array-setter array)))
 
-(define (##specialized-array-extract array new-domain)
-  ;; call ##finish-specialized-array instead of filling the entries of #array-base
-  ;; by hand because specialized-array-default-safe? may not be the same as
-  ;; (array-safe? array)
-  (##finish-specialized-array new-domain
-			      (array-storage-class array)
-			      (array-body array)
-			      (array-indexer array)
-			      (specialized-array-default-safe?)))
+(define (%%specialized-array-extract array new-domain)
+  (%%specialized-array-share array
+                             new-domain
+                             values))
 
-(define (##array-extract array new-domain)
+(define (%%array-extract array new-domain)
   (cond ((specialized-array? array)
-	 (##specialized-array-extract array new-domain))
+	 (%%specialized-array-extract array new-domain))
 	((mutable-array? array)
-	 (##mutable-array-extract array new-domain))
+	 (%%mutable-array-extract array new-domain))
 	(else
-	 (##immutable-array-extract array new-domain))))
+	 (%%immutable-array-extract array new-domain))))
 
 (define (array-extract array new-domain)
   (cond ((not (array? array))
 	 (error "array-extract: The first argument is not an array: " array new-domain))
 	((not (interval? new-domain))
 	 (error "array-extract: The second argument is not an interval: " array new-domain))
-        ((not (= (##interval-dimension (array-domain array))
-                 (##interval-dimension new-domain)))
+        ((not (= (%%interval-dimension (%%array-domain array))
+                 (%%interval-dimension new-domain)))
          (error "array-extract: The dimension of the second argument (an interval) does not equal the dimension of the domain of the first argument (an array): " array new-domain))
-	((not (##interval-subset? new-domain (array-domain array)))
+	((not (%%interval-subset? new-domain (%%array-domain array)))
 	 (error "array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): " array new-domain))
 	(else
-	 (##array-extract array new-domain))))
+	 (%%array-extract array new-domain))))
 
 (define (array-tile array sides)
   (cond ((not (array? array))
          (error "array-tile: The first argument is not an array: " array sides))
         ((not (and (vector? sides)
-                   (##vector-every (lambda (x) (and (exact-integer? x) (positive? x))) sides)))
+                   (%%vector-every (lambda (x) (and (exact-integer? x) (positive? x))) sides)))
          (error "array-tile: The second argument is not a vector of exact positive integers: " array sides))
-        ((not (fx= (array-dimension array)
+        ((not (fx= (%%array-dimension array)
                    (vector-length sides)))
          (error "array-tile: The dimension of the first argument (an array) does not equal the length of the second argument (a vector): " array sides))
         (else
          (let* ((n
                  (vector-length sides))
                 (domain
-                 (array-domain array))
+                 (%%array-domain array))
                 (lower-bounds
-                 (##interval-lower-bounds domain))
+                 (%%interval-lower-bounds domain))
                 (upper-bounds
-                 (##interval-upper-bounds domain))
+                 (%%interval-upper-bounds domain))
                 (result-lower-bounds
                  (make-vector n 0))
                 (result-upper-bounds
@@ -1865,7 +2082,7 @@
                                          s))
                              lower-bounds upper-bounds sides))
                 (result-domain
-                 (make-##interval result-lower-bounds result-upper-bounds)))
+                 (make-%%interval result-lower-bounds result-upper-bounds)))
 
            (define-macro (generate-result)
 
@@ -1897,10 +2114,8 @@
                            `((,k)
                              (lambda ,args
                                (if (not (and ,@(map (lambda (arg) `(exact-integer? ,arg)) args)
-                                             (,(symbol-append '##interval-contains-multi-index?- k) result-domain ,@args)))
-                                   (begin
-                                     (pp (list 'error "array-tile: Index to result array is not valid: " domain sides result-domain ,@args))
-                                     (error "array-tile: Index to result array is not valid: " ,@args))
+                                             (,(symbol-append '%%interval-contains-multi-index?- k) result-domain ,@args)))
+                                   (error "array-tile: Index to result array is not valid: " ,@args)
                                    (let* (,@(map (lambda (l j)
                                                    `(,l (vector-ref lower-bounds ,j)))
                                                  lowers indices)
@@ -1911,34 +2126,34 @@
                                                    `(,s (vector-ref sides ,j)))
                                                  sides indices)
                                           (subdomain
-                                           (make-##interval (vector ,@(map (lambda (l s i)
+                                           (make-%%interval (vector ,@(map (lambda (l s i)
                                                                              `(+ ,l (* ,s ,i)))
                                                                            lowers sides args))
                                                             (vector ,@(map (lambda (l u s i)
                                                                              `(min ,u (+ ,l (* ,s (+ ,i 1)))))
                                                                            lowers uppers sides args)))))
-                                     (##array-extract array subdomain)))))))
+                                     (%%array-extract array subdomain)))))))
                        '(1 2 3 4))
                 (else
                  (lambda i
                    (if (not (and (= (length i) n)
-                                 (##every exact-integer? i)
-                                 (##interval-contains-multi-index?-general result-domain i)))
-                             (apply error "array-tile: Index to result array is not valid: " i)
-                             (let* ((i (list->vector i))
-                                    (subdomain (make-##interval
-                                                (vector-map (lambda (l s i)
-                                                              (+ l (* s i)))
-                                                            lower-bounds sides i)
-                                                (vector-map (lambda (l u s i)
-                                                              (min u (+ l (* s (+ i 1)))))
-                                                            lower-bounds upper-bounds sides i))))
-                               (##array-extract array subdomain)))))))
+                                 (%%every exact-integer? i)
+                                 (%%interval-contains-multi-index?-general result-domain i)))
+                       (apply error "array-tile: Index to result array is not valid: " i)
+                       (let* ((i (list->vector i))
+                              (subdomain (make-%%interval
+                                          (vector-map (lambda (l s i)
+                                                        (+ l (* s i)))
+                                                      lower-bounds sides i)
+                                          (vector-map (lambda (l u s i)
+                                                        (min u (+ l (* s (+ i 1)))))
+                                                      lower-bounds upper-bounds sides i))))
+                         (%%array-extract array subdomain)))))))
 
            (make-array result-domain (generate-result))))))
 
 
-(define (##getter-translate getter translation)
+(define (%%getter-translate getter translation)
   (case (vector-length translation)
     ((1) (lambda (i)
 	   (getter (- i (vector-ref translation 0)))))
@@ -1963,7 +2178,7 @@
 	       (else
 		(apply getter (map - indices translation-list)))))))))
 
-(define (##setter-translate setter translation)
+(define (%%setter-translate setter translation)
   (case (vector-length translation)
     ((1) (lambda (v i)
 	   (setter v
@@ -1992,34 +2207,34 @@
 	       (else
 		(apply setter v (map - indices translation-list)))))))))
 
-(define (##immutable-array-translate array translation)
-  (make-array (##interval-translate (array-domain array) translation)
-	      (##getter-translate (array-getter array) translation)))
+(define (%%immutable-array-translate array translation)
+  (make-array (%%interval-translate (%%array-domain array) translation)
+	      (%%getter-translate (%%array-getter array) translation)))
 
-(define (##mutable-array-translate array translation)
-  (make-array (##interval-translate (array-domain array) translation)
-	      (##getter-translate (array-getter array) translation)
-	      (##setter-translate (array-setter array) translation)))
+(define (%%mutable-array-translate array translation)
+  (make-array (%%interval-translate (%%array-domain array) translation)
+	      (%%getter-translate (%%array-getter array) translation)
+	      (%%setter-translate (%%array-setter array) translation)))
 
-(define (##specialized-array-translate array translation)
-  (specialized-array-share array
-			   (##interval-translate (array-domain array) translation)
-			   (##getter-translate values translation)))
+(define (%%specialized-array-translate array translation)
+  (%%specialized-array-share array
+                             (%%interval-translate (%%array-domain array) translation)
+                             (%%getter-translate values translation)))
 
 (define (array-translate array translation)
   (cond ((not (array? array))
 	 (error "array-translate: The first argument is not an array: " array translation))
 	((not (translation? translation))
 	 (error "array-translate: The second argument is not a vector of exact integers: " array translation))
-	((not (fx= (array-dimension array)
+	((not (fx= (%%array-dimension array)
 		   (vector-length translation)))
 	 (error "array-translate: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector): " array translation))
 	((specialized-array? array)
-	 (##specialized-array-translate array translation))
+	 (%%specialized-array-translate array translation))
 	((mutable-array? array)
-	 (##mutable-array-translate array translation))
+	 (%%mutable-array-translate array translation))
 	(else
-	 (##immutable-array-translate array translation))))
+	 (%%immutable-array-translate array translation))))
 
 (define-macro (setup-permuted-getters-and-setters)
 
@@ -2059,45 +2274,45 @@
 		'(1 2 3 4))
 	 (else
 	  (let ((n (vector-length permutation))
-		(permutation-inverse (##permutation-invert permutation)))
+		(permutation-inverse (%%permutation-invert permutation)))
 	    (lambda ,(transform-arguments 'indices)
 	      (if (not (= (length indices) n))
 		  (error "number of indices does not equal permutation dimension: " indices permutation)
-		  (apply ,name ,@(transform-arguments '((##vector-permute->list (list->vector indices) permutation-inverse)))))))))))
+		  (apply ,name ,@(transform-arguments '((%%vector-permute->list (list->vector indices) permutation-inverse)))))))))))
 
   (let ((result
 	 `(begin
-	    ,(permuter '##getter values)
-	    ,(permuter '##setter (lambda (args) (cons 'v args))))))
+	    ,(permuter '%%getter values)
+	    ,(permuter '%%setter (lambda (args) (cons 'v args))))))
     result))
 
 (setup-permuted-getters-and-setters)
 
-(define (##array-permute array permutation)
+(define (%%array-permute array permutation)
   (cond ((specialized-array? array)
-         (specialized-array-share array
-                                  (##interval-permute (array-domain array) permutation)
-                                  (##getter-permute values permutation)))
+         (%%specialized-array-share array
+                                    (%%interval-permute (%%array-domain array) permutation)
+                                    (%%getter-permute values permutation)))
         ((mutable-array? array)
-         (make-array (##interval-permute (array-domain array) permutation)
-                     (##getter-permute (array-getter array) permutation)
-                     (##setter-permute (array-setter array) permutation)))
+         (make-array (%%interval-permute (%%array-domain array) permutation)
+                     (%%getter-permute (%%array-getter array) permutation)
+                     (%%setter-permute (%%array-setter array) permutation)))
         (else
-         (make-array (##interval-permute (array-domain array) permutation)
-                     (##getter-permute (array-getter array) permutation)))))
+         (make-array (%%interval-permute (%%array-domain array) permutation)
+                     (%%getter-permute (%%array-getter array) permutation)))))
 
 (define (array-permute array permutation)
   (cond ((not (array? array))
 	 (error "array-permute: The first argument is not an array: " array permutation))
 	((not (permutation? permutation))
 	 (error "array-permute: The second argument is not a permutation: " array permutation))
-	((not (fx= (array-dimension array)
+	((not (fx= (%%array-dimension array)
 		   (vector-length permutation)))
 	 (error "array-permute: The dimension of the first argument (an array) does not equal the dimension of the second argument (a permutation): " array permutation))
 	(else
-	 (##array-permute array permutation))))
+	 (%%array-permute array permutation))))
 
-(define (##rotation->permutation k size)
+(define (%%rotation->permutation k size)
   
   ;; Generates a permutation that rotates
   ;; 0 1 ... size-1
@@ -2127,16 +2342,16 @@
         (if (not (and (fixnum? dim)
                       (fx< -1 dim d)))
             (error "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): " interval dim)
-            (##interval-permute interval (##rotation->permutation dim d))))))
-        
+            (%%interval-permute interval (%%rotation->permutation dim d))))))
+
 (define (array-rotate array dim)
   (if (not (array? array))
       (error "array-rotate: The first argument is not an array: " array dim)
-      (let ((d (array-dimension array)))
+      (let ((d (%%array-dimension array)))
         (if (not (and (fixnum? dim)
                       (fx< -1 dim d)))
             (error "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): " array dim)
-            (##array-permute array (##rotation->permutation dim d))))))
+            (%%array-permute array (%%rotation->permutation dim d))))))
 
 (define-macro (setup-reversed-getters-and-setters)
 
@@ -2165,8 +2380,8 @@
 	  (table
 	   (truth-table n)))
       `((,n) (let (,@(map (lambda (k)
-			    `(,(make-symbol 'adjust_ k) (+ (##interval-upper-bound interval ,k)
-							   (##interval-lower-bound interval ,k)
+			    `(,(make-symbol 'adjust_ k) (+ (%%interval-upper-bound interval ,k)
+							   (%%interval-lower-bound interval ,k)
 							   -1)))
 			  zero-to-n-1))
 	       (cond ,@(map (lambda (table-entry)
@@ -2196,8 +2411,8 @@
 		(adjust
 		 (map (lambda (u_k l_k)
 			(+ u_k l_k -1))
-		      (vector->list (##interval-upper-bounds interval))
-		      (vector->list (##interval-lower-bounds interval)))))
+		      (vector->list (%%interval-upper-bounds interval))
+		      (vector->list (%%interval-lower-bounds interval)))))
 	    (lambda ,(transform-arguments 'indices)
 	      (if (not (= (length indices) n))
 		  (error "number of indices does not equal array dimension: " indices)
@@ -2208,45 +2423,44 @@
 							     indices adjust flip?)))))))))))
   (let ((result
 	 `(begin
-	    ,(reverser '##getter values)
-	    ,(reverser '##setter (lambda (args) (cons 'v args))))))
-    #;(pp result)
+	    ,(reverser '%%getter values)
+	    ,(reverser '%%setter (lambda (args) (cons 'v args))))))
     result))
 
 (setup-reversed-getters-and-setters)
 
-(define (##immutable-array-reverse array flip?)
-  (make-array (array-domain array)
-	      (##getter-reverse (array-getter array) flip? (array-domain array))))
+(define (%%immutable-array-reverse array flip?)
+  (make-array (%%array-domain array)
+	      (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))))
 
-(define (##mutable-array-reverse array flip?)
-  (make-array (array-domain array)
-	      (##getter-reverse (array-getter array) flip? (array-domain array))
-	      (##setter-reverse (array-setter array) flip? (array-domain array))))
+(define (%%mutable-array-reverse array flip?)
+  (make-array (%%array-domain array)
+	      (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))
+	      (%%setter-reverse (%%array-setter array) flip? (%%array-domain array))))
 
-(define (##specialized-array-reverse array flip?)
-  (specialized-array-share array
-			   (array-domain array)
-			   (##getter-reverse values flip? (array-domain array))))
+(define (%%specialized-array-reverse array flip?)
+  (%%specialized-array-share array
+                             (%%array-domain array)
+                             (%%getter-reverse values flip? (%%array-domain array))))
 
 (define (array-reverse array #!optional (flip? (macro-absent-obj)))
   (if  (not (array? array))
        (error "array-reverse: The first argument is not an array: " array flip?)
        (let ((flip? (if (eq? flip? (macro-absent-obj))
-                        (make-vector (array-dimension array) #t)
+                        (make-vector (%%array-dimension array) #t)
                         flip?)))
          (cond ((not (and (vector? flip?)
-                          (##vector-every boolean? flip?)))
+                          (%%vector-every boolean? flip?)))
                 (error "array-reverse: The second argument is not a vector of booleans: " array flip?))
-               ((not (fx= (array-dimension array)
+               ((not (fx= (%%array-dimension array)
                           (vector-length flip?)))
                 (error "array-reverse: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): " array flip?))
                ((specialized-array? array)
-                (##specialized-array-reverse array flip?))
+                (%%specialized-array-reverse array flip?))
                ((mutable-array? array)
-                (##mutable-array-reverse array flip?))
+                (%%mutable-array-reverse array flip?))
                (else
-                (##immutable-array-reverse array flip?))))))
+                (%%immutable-array-reverse array flip?))))))
 
 
 
@@ -2284,7 +2498,7 @@
                        (cons `(* ,i_k ,s_k) l))
                      sublists)))
           (append plains
-                scales))))
+                  scales))))
 
   (define (transformer args) args)
   (define name 'getter)
@@ -2337,57 +2551,56 @@
 
   (let ((result
          `(begin
-            ,(sampler '##getter values)
-            ,(sampler '##setter (lambda (args) (cons 'v args))))))
-    #;(pp result)
+            ,(sampler '%%getter values)
+            ,(sampler '%%setter (lambda (args) (cons 'v args))))))
     result))
 
 (macro-generate-sample)
 
 
-(define (##immutable-array-sample array scales)
-  (make-array (##interval-scale (array-domain array) scales)
-              (##getter-sample (array-getter array) scales (array-domain array))))
+(define (%%immutable-array-sample array scales)
+  (make-array (%%interval-scale (%%array-domain array) scales)
+              (%%getter-sample (%%array-getter array) scales (%%array-domain array))))
 
-(define (##mutable-array-sample array scales)
-  (make-array (##interval-scale (array-domain array) scales)
-	      (##getter-sample (array-getter array) scales (array-domain array))
-	      (##setter-sample (array-setter array) scales (array-domain array))))
+(define (%%mutable-array-sample array scales)
+  (make-array (%%interval-scale (%%array-domain array) scales)
+	      (%%getter-sample (%%array-getter array) scales (%%array-domain array))
+	      (%%setter-sample (%%array-setter array) scales (%%array-domain array))))
 
-(define (##specialized-array-sample array scales)
-  (specialized-array-share array
-			   (##interval-scale (array-domain array) scales)
-			   (##getter-sample values scales (array-domain array))))
+(define (%%specialized-array-sample array scales)
+  (%%specialized-array-share array
+                             (%%interval-scale (%%array-domain array) scales)
+                             (%%getter-sample values scales (%%array-domain array))))
 
 (define (array-sample array scales)
   (cond ((not (and (array? array)
-                   (##vector-every zero? (interval-lower-bounds->vector (array-domain array)))))
+                   (%%vector-every zero? (interval-lower-bounds->vector (%%array-domain array)))))
          (error "array-sample: The first argument is an array whose domain has nonzero lower bounds: " array scales))
         ((not (and (vector? scales)
-                   (##vector-every exact-integer? scales)
-                   (##vector-every positive? scales)))
+                   (%%vector-every exact-integer? scales)
+                   (%%vector-every positive? scales)))
          (error "array-sample: The second argument is not a vector of positive, exact, integers: " array scales))
-        ((not (= (vector-length scales) (array-dimension array)))
+        ((not (= (vector-length scales) (%%array-dimension array)))
          (error "array-sample: The dimension of the first argument (an array) is not equal to the length of the second (a vector): "
                 array scales))
         ((specialized-array? array)
-         (##specialized-array-sample array scales))
+         (%%specialized-array-sample array scales))
         ((mutable-array? array)
-         (##mutable-array-sample array scales))
+         (%%mutable-array-sample array scales))
         (else
-         (##immutable-array-sample array scales))))
+         (%%immutable-array-sample array scales))))
 
-(define (##array-outer-product combiner array1 array2)
-  (let* ((domain1 (array-domain array1))
-         (domain2 (array-domain array2))
-         (getter1 (array-getter array1))
-         (getter2 (array-getter array2))
+(define (%%array-outer-product combiner array1 array2)
+  (let* ((domain1 (%%array-domain array1))
+         (domain2 (%%array-domain array2))
+         (getter1 (%%array-getter array1))
+         (getter2 (%%array-getter array2))
          (dimension1
           (interval-dimension domain1))
          (dimension2
           (interval-dimension domain2))
          (result-domain
-          (##interval-cartesian-product (list domain1 domain2)))
+          (%%interval-cartesian-product (list domain1 domain2)))
          (result-getter
           (case dimension1
             ((1)
@@ -2446,25 +2659,25 @@
         ((not (procedure? combiner))
          (error "array-outer-product: The first argument is not a procedure: " combiner array1 array2))
         (else
-         (##array-outer-product combiner array1 array2))))
+         (%%array-outer-product combiner array1 array2))))
 
-(define (##immutable-array-curry array right-dimension)
+(define (%%immutable-array-curry array right-dimension)
   (call-with-values
-      (lambda () (interval-projections (array-domain array) right-dimension))
+      (lambda () (interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
-      (let ((getter (array-getter array)))
+      (let ((getter (%%array-getter array)))
 	(make-array left-interval
-		    (case (##interval-dimension left-interval)
-		      ((1)  (case (##interval-dimension right-interval)
+		    (case (%%interval-dimension left-interval)
+		      ((1)  (case (%%interval-dimension right-interval)
 			      ((1)  (lambda (i)      (make-array right-interval (lambda (j)         (getter i j)))))
 			      ((2)  (lambda (i)      (make-array right-interval (lambda (j k)       (getter i j k)))))
 			      ((3)  (lambda (i)      (make-array right-interval (lambda (j k l)     (getter i j k l)))))
 			      (else (lambda (i)      (make-array right-interval (lambda multi-index (apply getter i multi-index)))))))
-		      ((2)  (case (##interval-dimension right-interval)
+		      ((2)  (case (%%interval-dimension right-interval)
 			      ((1)  (lambda (i j)    (make-array right-interval (lambda   (k)       (getter i j k)))))
 			      ((2)  (lambda (i j)    (make-array right-interval (lambda   (k l)     (getter i j k l)))))
 			      (else (lambda (i j)    (make-array right-interval (lambda multi-index (apply getter i j multi-index)))))))
-		      ((3)  (case (##interval-dimension right-interval)
+		      ((3)  (case (%%interval-dimension right-interval)
 			      ((1)  (lambda (i j k)  (make-array right-interval (lambda     (l)     (getter i j k l)))))
 			      (else (lambda (i j k)  (make-array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
 		      (else (lambda left-multi-index
@@ -2472,15 +2685,15 @@
 					  (lambda right-multi-index
 					    (apply getter (append left-multi-index right-multi-index))))))))))))
 
-(define (##mutable-array-curry array right-dimension)
+(define (%%mutable-array-curry array right-dimension)
   (call-with-values
-      (lambda () (interval-projections (array-domain array) right-dimension))
+      (lambda () (interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
-      (let ((getter (array-getter array))
-	    (setter   (array-setter   array)))
+      (let ((getter (%%array-getter array))
+	    (setter (%%array-setter   array)))
 	(make-array left-interval
-		    (case (##interval-dimension left-interval)
-		      ((1)  (case (##interval-dimension right-interval)
+		    (case (%%interval-dimension left-interval)
+		      ((1)  (case (%%interval-dimension right-interval)
 			      ((1)  (lambda (i)     (make-array right-interval
 								(lambda (  j)     (getter   i j))
 								(lambda (v j)     (setter v i j)))))
@@ -2493,7 +2706,7 @@
 			      (else (lambda (i)     (make-array right-interval
 								(lambda      multi-index  (apply getter   i     multi-index))
 								(lambda (v . multi-index) (apply setter v i     multi-index)))))))
-		      ((2)  (case (##interval-dimension right-interval)
+		      ((2)  (case (%%interval-dimension right-interval)
 			      ((1)  (lambda (i j)   (make-array right-interval
 								(lambda (    k)   (getter   i j k))
 								(lambda (v   k)   (setter v i j k)))))
@@ -2503,7 +2716,7 @@
 			      (else (lambda (i j)   (make-array right-interval
 								(lambda      multi-index  (apply getter   i j   multi-index))
 								(lambda (v . multi-index) (apply setter v i j   multi-index)))))))
-		      ((3)  (case (##interval-dimension right-interval)
+		      ((3)  (case (%%interval-dimension right-interval)
 			      ((1)  (lambda (i j k) (make-array right-interval
 								(lambda (      l) (getter   i j k l))
 								(lambda (v     l) (setter v i j k l)))))
@@ -2515,40 +2728,41 @@
 					  (lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
 					  (lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))
 
-(define (##specialized-array-curry array right-dimension)
+(define (%%specialized-array-curry array right-dimension)
   (call-with-values
-      (lambda () (interval-projections (array-domain array) right-dimension))
+      (lambda () (interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
-      (make-array left-interval
-		  (case (##interval-dimension left-interval)
-		    ((1)  (case (##interval-dimension right-interval)
-			    ((1)  (lambda (i)     (specialized-array-share array right-interval (lambda (j)                         (values i j    )))))
-			    ((2)  (lambda (i)     (specialized-array-share array right-interval (lambda (j k)                       (values i j k  )))))
-			    ((3)  (lambda (i)     (specialized-array-share array right-interval (lambda (j k l)                     (values i j k l)))))
-			    (else (lambda (i)     (specialized-array-share array right-interval (lambda multi-index (apply values i     multi-index)))))))
-		    ((2)  (case (##interval-dimension right-interval)
-			    ((1)  (lambda (i j)   (specialized-array-share array right-interval (lambda (  k)                       (values i j k  )))))
-			    ((2)  (lambda (i j)   (specialized-array-share array right-interval (lambda (  k l)                     (values i j k l)))))
-			    (else (lambda (i j)   (specialized-array-share array right-interval (lambda multi-index (apply values i j   multi-index)))))))
-		    ((3)  (case (##interval-dimension right-interval)
-			    ((1)  (lambda (i j k) (specialized-array-share array right-interval (lambda (    l)                    (values i j k l)))))
-			    (else (lambda (i j k) (specialized-array-share array right-interval (lambda multi-index (apply values i j k multi-index)))))))
-		    (else (lambda left-multi-index
-			    (specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
+      (make-array
+       left-interval
+       (case (%%interval-dimension left-interval)
+         ((1)  (case (%%interval-dimension right-interval)
+                 ((1)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j)                         (values i j    )))))
+                 ((2)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j k)                       (values i j k  )))))
+                 ((3)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j k l)                     (values i j k l)))))
+                 (else (lambda (i)     (%%specialized-array-share array right-interval (lambda multi-index (apply values i     multi-index)))))))
+         ((2)  (case (%%interval-dimension right-interval)
+                 ((1)  (lambda (i j)   (%%specialized-array-share array right-interval (lambda (  k)                       (values i j k  )))))
+                 ((2)  (lambda (i j)   (%%specialized-array-share array right-interval (lambda (  k l)                     (values i j k l)))))
+                 (else (lambda (i j)   (%%specialized-array-share array right-interval (lambda multi-index (apply values i j   multi-index)))))))
+         ((3)  (case (%%interval-dimension right-interval)
+                 ((1)  (lambda (i j k) (%%specialized-array-share array right-interval (lambda (    l)                    (values i j k l)))))
+                 (else (lambda (i j k) (%%specialized-array-share array right-interval (lambda multi-index (apply values i j k multi-index)))))))
+         (else (lambda left-multi-index
+                 (%%specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
 
 (define (array-curry array right-dimension)
   (cond ((not (array? array))
 	 (error "array-curry: The first argument is not an array: " array right-dimension))
 	((not (exact-integer? right-dimension))
 	 (error "array-curry: The second argument is not an exact integer: " array right-dimension))
-	((not (< 0 right-dimension (##interval-dimension (array-domain array))))
+	((not (< 0 right-dimension (%%interval-dimension (array-domain array))))
 	 (error "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " array right-dimension))
 	((specialized-array? array)
-	 (##specialized-array-curry array right-dimension))
+	 (%%specialized-array-curry array right-dimension))
 	((mutable-array? array)
-	 (##mutable-array-curry array right-dimension))
+	 (%%mutable-array-curry array right-dimension))
 	(else ; immutable array
-	 (##immutable-array-curry array right-dimension))))
+	 (%%immutable-array-curry array right-dimension))))
 
 ;;;
 ;;; array-map returns an array whose domain is the same as the common domain of (cons array arrays)
@@ -2561,19 +2775,19 @@
 ;;; function to speed things up a bit.
 ;;;
 
-(define (##specialize-function-applied-to-array-getters f array arrays)
-  (let ((domain (array-domain array))
-	(getter-0 (array-getter array)))
+(define (%%specialize-function-applied-to-array-getters f array arrays)
+  (let ((domain (%%array-domain array))
+	(getter-0 (%%array-getter array)))
     (case (length arrays)
-      ((0) (case (##interval-dimension domain)
+      ((0) (case (%%interval-dimension domain)
 	     ((1)  (lambda (i)         (f (getter-0 i))))
 	     ((2)  (lambda (i j)       (f (getter-0 i j))))
 	     ((3)  (lambda (i j k)     (f (getter-0 i j k))))
 	     ((4)  (lambda (i j k l)   (f (getter-0 i j k l))))
 	     (else (lambda multi-index (f (apply getter-0 multi-index))))))
 
-      ((1) (let ((getter-1 (array-getter (car arrays))))
-	     (case (##interval-dimension domain)
+      ((1) (let ((getter-1 (%%array-getter (car arrays))))
+	     (case (%%interval-dimension domain)
 	       ((1)  (lambda (i)         (f (getter-0 i)
 					    (getter-1 i))))
 	       ((2)  (lambda (i j)       (f (getter-0 i j)
@@ -2584,9 +2798,9 @@
 					    (getter-1 i j k l))))
 	       (else (lambda multi-index (f (apply getter-0 multi-index)
 					    (apply getter-1 multi-index)))))))
-      ((2) (let ((getter-1 (array-getter (car arrays)))
-		 (getter-2 (array-getter (cadr arrays))))
-	     (case (##interval-dimension domain)
+      ((2) (let ((getter-1 (%%array-getter (car arrays)))
+		 (getter-2 (%%array-getter (cadr arrays))))
+	     (case (%%interval-dimension domain)
 	       ((1)  (lambda (i)         (f (getter-0 i)
 					    (getter-1 i)
 					    (getter-2 i))))
@@ -2602,10 +2816,10 @@
 	       (else (lambda multi-index (f (apply getter-0 multi-index)
 					    (apply getter-1 multi-index)
 					    (apply getter-2 multi-index)))))))
-      ((3) (let ((getter-1 (array-getter (car arrays)))
-		 (getter-2 (array-getter (cadr arrays)))
-                 (getter-3 (array-getter (caddr arrays))))
-	     (case (##interval-dimension domain)
+      ((3) (let ((getter-1 (%%array-getter (car arrays)))
+		 (getter-2 (%%array-getter (cadr arrays)))
+                 (getter-3 (%%array-getter (caddr arrays))))
+	     (case (%%interval-dimension domain)
 	       ((1)  (lambda (i)         (f (getter-0 i)
 					    (getter-1 i)
 					    (getter-2 i)
@@ -2628,7 +2842,7 @@
                                             (apply getter-3 multi-index)))))))
       (else
        (let ((getters (cons getter-0 (map array-getter arrays))))
-	 (case (##interval-dimension domain)
+	 (case (%%interval-dimension domain)
 	   ((1)  (lambda (i)         (apply f (map (lambda (g) (g i))                 getters))))
 	   ((2)  (lambda (i j)       (apply f (map (lambda (g) (g i j))               getters))))
 	   ((3)  (lambda (i j k)     (apply f (map (lambda (g) (g i j k))             getters))))
@@ -2638,26 +2852,26 @@
 (define (array-map f array #!rest arrays)
   (cond ((not (procedure? f))
 	 (apply error "array-map: The first argument is not a procedure: " f array arrays))
-	((not (##every array? (cons array arrays)))
+	((not (%%every array? (cons array arrays)))
 	 (apply error "array-map: Not all arguments after the first are arrays: " f array arrays))
-	((not (##every (lambda (d) (##interval= d (array-domain array))) (map array-domain arrays)))
+	((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
 	 (apply error "array-map: Not all arguments after the first have the same domain: " f array arrays))
 	(else
-         (make-array (array-domain array)
-                     (##specialize-function-applied-to-array-getters f array arrays)))))
+         (make-array (%%array-domain array)
+                     (%%specialize-function-applied-to-array-getters f array arrays)))))
 
 ;;; applies f to the elements of the arrays in lexicographical order.
 
 (define (array-for-each f array #!rest arrays)
   (cond ((not (procedure? f))
 	 (apply error "array-for-each: The first argument is not a procedure: " f array arrays))
-	((not (##every array? (cons array arrays)))
+	((not (%%every array? (cons array arrays)))
 	 (apply error "array-for-each: Not all arguments after the first are arrays: " f array arrays))
-	((not (##every (lambda (d) (##interval= d (array-domain array))) (map array-domain arrays)))
+	((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
 	 (apply error "array-for-each: Not all arguments after the first have the same domain: " f array arrays))
 	(else
-	 (##interval-for-each (##specialize-function-applied-to-array-getters f array arrays)
-                              (array-domain array)))))
+	 (%%interval-for-each (%%specialize-function-applied-to-array-getters f array arrays)
+                              (%%array-domain array)))))
 
 (define-macro (macro-make-predicates)
 
@@ -2665,12 +2879,12 @@
     (string->symbol (apply string-append (map (lambda (s) (if (string? s) s (symbol->string s ))) args))))
 
   (define (make-predicate name connector)
-    `(define (,(concat '##interval- name) f interval)
-       (case (##interval-dimension interval)
-         ((1) (let ((lower-i (##interval-lower-bound interval 0))
-                    (upper-i (##interval-upper-bound interval 0))
+    `(define (,(concat '%%interval- name) f interval)
+       (case (%%interval-dimension interval)
+         ((1) (let ((lower-i (%%interval-lower-bound interval 0))
+                    (upper-i (%%interval-upper-bound interval 0))
                     (index   0)
-                    (n       (##interval-volume interval)))
+                    (n       (%%interval-volume interval)))
                 (let i-loop ((i lower-i)
                              (index (- n 1)))
                   (cond ((zero? index)
@@ -2679,11 +2893,11 @@
                          (,connector (f i)
                                      (i-loop (+ i 1)
                                              (- index 1))))))))
-         ((2) (let ((lower-i (##interval-lower-bound interval 0))
-                    (lower-j (##interval-lower-bound interval 1))
-                    (upper-i (##interval-upper-bound interval 0))
-                    (upper-j (##interval-upper-bound interval 1))
-                    (n       (##interval-volume interval)))
+         ((2) (let ((lower-i (%%interval-lower-bound interval 0))
+                    (lower-j (%%interval-lower-bound interval 1))
+                    (upper-i (%%interval-upper-bound interval 0))
+                    (upper-j (%%interval-upper-bound interval 1))
+                    (n       (%%interval-volume interval)))
                 (let i-loop ((i lower-i)
                              (index (- n 1)))
                   ;; (< i upper-i) is always true because index is >= 0
@@ -2698,13 +2912,13 @@
                            (,connector (f i j)
                                        (j-loop (+ j 1)
                                                (- index 1)))))))))
-         ((3) (let ((lower-i (##interval-lower-bound interval 0))
-                    (lower-j (##interval-lower-bound interval 1))
-                    (lower-k (##interval-lower-bound interval 2))
-                    (upper-i (##interval-upper-bound interval 0))
-                    (upper-j (##interval-upper-bound interval 1))
-                    (upper-k (##interval-upper-bound interval 2))
-                    (n       (##interval-volume interval)))
+         ((3) (let ((lower-i (%%interval-lower-bound interval 0))
+                    (lower-j (%%interval-lower-bound interval 1))
+                    (lower-k (%%interval-lower-bound interval 2))
+                    (upper-i (%%interval-upper-bound interval 0))
+                    (upper-j (%%interval-upper-bound interval 1))
+                    (upper-k (%%interval-upper-bound interval 2))
+                    (n       (%%interval-volume interval)))
                 (let i-loop ((i lower-i)
                              (index (- n 1)))
                   ;; (< i upper-i) is always true because index is >= 0
@@ -2724,15 +2938,15 @@
                                                      (- index 1))))))
                         (i-loop (+ i 1)
                                 index))))))
-         ((4) (let ((lower-i (##interval-lower-bound interval 0))
-                    (lower-j (##interval-lower-bound interval 1))
-                    (lower-k (##interval-lower-bound interval 2))
-                    (lower-l (##interval-lower-bound interval 3))
-                    (upper-i (##interval-upper-bound interval 0))
-                    (upper-j (##interval-upper-bound interval 1))
-                    (upper-k (##interval-upper-bound interval 2))
-                    (upper-l (##interval-upper-bound interval 3))
-                    (n       (##interval-volume interval)))
+         ((4) (let ((lower-i (%%interval-lower-bound interval 0))
+                    (lower-j (%%interval-lower-bound interval 1))
+                    (lower-k (%%interval-lower-bound interval 2))
+                    (lower-l (%%interval-lower-bound interval 3))
+                    (upper-i (%%interval-upper-bound interval 0))
+                    (upper-j (%%interval-upper-bound interval 1))
+                    (upper-k (%%interval-upper-bound interval 2))
+                    (upper-l (%%interval-upper-bound interval 3))
+                    (n       (%%interval-volume interval)))
                 (let i-loop ((i lower-i)
                              (index (- n 1)))
                   (let j-loop ((j lower-j)
@@ -2758,8 +2972,8 @@
                                 index))))))
          (else
 
-          (let* ((lowers     (##interval-lower-bounds->vector interval))
-                 (uppers     (##interval-upper-bounds->vector interval))
+          (let* ((lowers     (%%interval-lower-bounds->vector interval))
+                 (uppers     (%%interval-upper-bounds->vector interval))
                  (dimensions (vector-length lowers))
                  (arg        (vector->list lowers))                    ;; the argument to which f is applied
                  (tails      (let ((result (make-vector dimensions)))  ;; the tails of the argument
@@ -2808,28 +3022,28 @@
 (define (array-every f array #!rest arrays)
   (cond ((not (procedure? f))
 	 (apply error "array-every: The first argument is not a procedure: " f array arrays))
-	((not (##every array? (cons array arrays)))
+	((not (%%every array? (cons array arrays)))
 	 (apply error "array-every: Not all arguments after the first are arrays: " f array arrays))
-	((not (##every (lambda (d) (##interval= d (array-domain array))) (map array-domain arrays)))
+	((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
 	 (apply error "array-every: Not all arguments after the first have the same domain: " f array arrays))
 	(else
-         (##interval-every (##specialize-function-applied-to-array-getters f array arrays)
-                           (array-domain array)))))
+         (%%interval-every (%%specialize-function-applied-to-array-getters f array arrays)
+                           (%%array-domain array)))))
 
 (define (array-any f array #!rest arrays)
   (cond ((not (procedure? f))
 	 (apply error "array-any: The first argument is not a procedure: " f array arrays))
-	((not (##every array? (cons array arrays)))
+	((not (%%every array? (cons array arrays)))
 	 (apply error "array-any: Not all arguments after the first are arrays: " f array arrays))
-	((not (##every (lambda (d) (##interval= d (array-domain array))) (map array-domain arrays)))
+	((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
 	 (apply error "array-any: Not all arguments after the first have the same domain: " f array arrays))
 	(else
-         (##interval-any (##specialize-function-applied-to-array-getters f array arrays)
-                         (array-domain array)))))
+         (%%interval-any (%%specialize-function-applied-to-array-getters f array arrays)
+                         (%%array-domain array)))))
 
 
-(define (##array-fold op id a)
-  (##interval-fold (array-getter a) op id (array-domain a)))
+(define (%%array-fold op id a)
+  (%%interval-fold (%%array-getter a) op id (%%array-domain a)))
 
 (define (array-fold op id a)
   (cond ((not (procedure? op))
@@ -2837,7 +3051,7 @@
 	((not (array? a))
 	 (error "array-fold: The third argument is not an array: " op id a))
 	(else
-	 (##array-fold op id a))))
+	 (%%array-fold op id a))))
 
 (define (array-fold-right op id a)
   (cond ((not (procedure? op))
@@ -2845,7 +3059,7 @@
 	((not (array? a))
 	 (error "array-fold-right: The third argument is not an array: " op id a))
 	(else
-	 (##array-fold op id (array-reverse a (make-vector (array-dimension a) #t))))))
+	 (%%array-fold op id (array-reverse a (make-vector (%%array-dimension a) #t))))))
 
 (define (array-reduce sum A)
   (cond ((not (array? A))
@@ -2853,56 +3067,56 @@
         ((not (procedure? sum))
          (error "array-reduce: The first argument is not a procedure: " sum A))
         (else
-         (case (array-dimension A)
+         (case (%%array-dimension A)
            ((1) (let ((box '())
-                      (A_ (array-getter A)))
+                      (A_ (%%array-getter A)))
                   (interval-for-each
                    (lambda (i)
                      (if (null? box)
                          (set! box (list (A_ i)))
                          (set-car! box (sum (car box)
                                             (A_ i)))))
-                   (array-domain A))
+                   (%%array-domain A))
                   (car box)))
            ((2) (let ((box '())
-                      (A_ (array-getter A)))
+                      (A_ (%%array-getter A)))
                   (interval-for-each
                    (lambda (i j)
                      (if (null? box)
                          (set! box (list (A_ i j)))
                          (set-car! box (sum (car box)
                                             (A_ i j)))))
-                   (array-domain A))
+                   (%%array-domain A))
                   (car box)))
            ((3) (let ((box '())
-                      (A_ (array-getter A)))
+                      (A_ (%%array-getter A)))
                   (interval-for-each
                    (lambda (i j k)
                      (if (null? box)
                          (set! box (list (A_ i j k)))
                          (set-car! box (sum (car box)
                                             (A_ i j k)))))
-                   (array-domain A))
+                   (%%array-domain A))
                   (car box)))
            ((4) (let ((box '())
-                      (A_ (array-getter A)))
+                      (A_ (%%array-getter A)))
                   (interval-for-each
                    (lambda (i j k l)
                      (if (null? box)
                          (set! box (list (A_ i j k l)))
                          (set-car! box (sum (car box)
                                             (A_ i j k l)))))
-                   (array-domain A))
+                   (%%array-domain A))
                   (car box)))
            (else (let ((box '())
-                       (A_ (array-getter A)))
+                       (A_ (%%array-getter A)))
                    (interval-for-each
                     (lambda args
                       (if (null? box)
                           (set! box (list (apply A_ args)))
                           (set-car! box (sum (car box)
                                              (apply A_ args)))))
-                    (array-domain A))
+                    (%%array-domain A))
                    (car box)))))))
 
 (define (array->list array)
@@ -2911,33 +3125,43 @@
  	(else
 	 (array-fold-right cons '() array))))
 
-(define (list->specialized-array l interval #!optional (result-storage-class generic-storage-class) (safe? (specialized-array-default-safe?)))
+(define (list->specialized-array l
+                                 interval
+                                 #!optional
+                                 (result-storage-class generic-storage-class)
+                                 (mutable? (specialized-array-default-mutable?))
+                                 (safe? (specialized-array-default-safe?)))
   (cond ((not (list? l))
-	 (error "list->specialized-array: First argument is not a list: " l interval))
+	 (error "list->specialized-array: The first argument is not a list: " l interval))
 	((not (interval? interval))
-	 (error "list->specialized-array: Second argument is not an interval: " l interval))
+	 (error "list->specialized-array: The second argument is not an interval: " l interval))
 	((not (storage-class? result-storage-class))
-	 (error "list->specialized-array: Third argument is not a storage-class: " l interval result-storage-class))
-	((not (boolean? safe?))
-	 (error "list->specialized-array: Fourth argument is not a boolean: " l interval result-storage-class safe?))
+	 (error "list->specialized-array: The third argument is not a storage-class: " l interval result-storage-class))
+	((not (boolean? mutable?))
+	 (error "list->specialized-array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
+        ((not (boolean? safe?))
+	 (error "list->specialized-array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
 	(else
 	 (let* ((checker
 		 (storage-class-checker  result-storage-class))
 		(setter
 		 (storage-class-setter   result-storage-class))
 		(result
-		 (make-specialized-array interval
-				         result-storage-class
-				         safe?))
+		 (%%make-specialized-array interval
+                                           result-storage-class
+                                           safe?))
 		(body
-		 (array-body result))
+		 (%%array-body result))
 		(n
 		 (interval-volume interval)))
 	   (let loop ((i 0)
 		      (local l))
 	     (if (or (= i n) (null? local))
 		 (if (and (= i n) (null? local))
-		     result
+		     (begin
+                       (if (not mutable?)
+                           (%%array-setter-set! result #f))
+                       result)
 		     (error "list->specialized-array: The length of the first argument does not equal the volume of the second: " l interval))
 		 (let ((item (car local)))
 		   (if (checker item)
@@ -2945,23 +3169,59 @@
 			 (setter body i item)
 			 (loop (+ i 1)
 			       (cdr local)))
-		       (error "list->specialized-array: Not every element of the list can be stored in the body of the array: " l interval)))))))))
+		       (error "list->specialized-array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
 
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
          (error "array-assign!: The first argument is not a mutable array: " destination source))
         ((not (array? source))
          (error "array-assign!: The second argument is not an array: " destination source))
-        ((not (interval= (array-domain destination)
-                         (array-domain source)))
+        ((not (interval= (%%array-domain destination)
+                         (%%array-domain source)))
          (error "array-assign!: The arguments do not have the same domain: " destination source))
+        ;; We decide whether a block copy can be done.
+        
+        ;; NOTE: A block copy might use memmove, which can give results different to
+        ;; an element-by-element copy; that's why we changed the documentation to say
+        ;; that results are undefined if modifying destination can affect source.
+        
+        ;; The next check about whether a block copy can be done is a bit heavyweight.
+        ((and (specialized-array? destination)
+              (specialized-array? source)
+              (equal? (%%array-storage-class destination)
+                      (%%array-storage-class source))
+              ;; does a copier for this storage-class exist?
+              (storage-class-copier (%%array-storage-class destination))
+              (array-elements-in-order? destination)
+              (array-elements-in-order? source))
+         ;; do a block copy
+         (let* ((source-indexer
+                 (array-indexer source))
+                (destination-indexer
+                 (array-indexer destination))
+                (copier
+                 (storage-class-copier (array-storage-class source)))
+                (initial-multi-index
+                 (interval-lower-bounds->list (array-domain source)))
+                (destination-start
+                 (apply destination-indexer initial-multi-index))
+                (source-start
+                 (apply source-indexer initial-multi-index))
+                (source-end
+                 (+ source-start (interval-volume (array-domain source)))))
+           (copier (array-body destination)
+                   destination-start
+                   (array-body source)
+                   source-start
+                   source-end)))
         (else
+         ;; do an element-by-element copy
          (let ((source-getter
-                (array-getter source))
+                (%%array-getter source))
                (destination-setter
-                (array-setter destination))
+                (%%array-setter destination))
                (domain
-                (array-domain destination)))
+                (%%array-domain destination)))
            (interval-for-each
             (case (interval-dimension domain)
               ((1) (lambda (i)
@@ -2988,16 +3248,16 @@
          (error "array-swap!: The first argument is not a mutable array: " A B))
         ((not (mutable-array? B))
          (error "array-swap!: The second argument is not a mutable array: " A B))
-        ((not (interval= (array-domain A)
-                         (array-domain B)))
+        ((not (interval= (%%array-domain A)
+                         (%%array-domain B)))
          (error "array-swap!: The arguments do not have the same domain: " A B))
         (else
-         (let ((A_ (array-getter A))
-               (A! (array-setter A))
-               (B_ (array-getter B))
-               (B! (array-setter B)))
+         (let ((A_ (%%array-getter A))
+               (A! (%%array-setter A))
+               (B_ (%%array-getter B))
+               (B! (%%array-setter B)))
            (interval-for-each
-            (case (array-dimension A)
+            (case (%%array-dimension A)
               ((1) (lambda (i)
                      (let ((temp (A_ i)))
                        (A! (B_ i) i)
@@ -3019,6 +3279,6 @@
                  (let ((temp (apply A_ multi-index)))
                    (apply A! (apply B_ multi-index) multi-index)
                    (apply B! temp                   multi-index)))))
-            (array-domain A))))))
+            (%%array-domain A))))))
 
 (declare (inline))
