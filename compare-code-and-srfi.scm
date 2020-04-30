@@ -15,7 +15,7 @@
 		     (symbol? (caadr obj))
 		     (< 0 (string-length (symbol->string (caadr obj))))
 		     (not (eq? (string-ref (symbol->string (caadr obj)) 0)
-			       #\#)))
+			       #\%)))
 		(loop (cons (caadr obj) result)
 		      (read))
 		(loop result (read))))))))

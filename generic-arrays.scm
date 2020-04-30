@@ -10,14 +10,12 @@
 
 (cond-expand
  (gambit
-  ;; What's used when optional arguments are omitted
   (##define-macro (macro-absent-obj)  `',(##type-cast -6 2)))
  (else
-  (begin
-    ;; a unique object
-    (define %%absent-obj (list 'absent-obj))
-    ;; return it
-    (define (macro-absent-obj) %%absent-obj))))
+  (define macro-absent-obj
+    (let ((obj (list 'absent-obj)))
+      (lambda ()
+        obj)))))
 
 (cond-expand
  (gambit
@@ -760,6 +758,16 @@
 	    (else
 	     (set! %%specialized-array-default-safe? bool))))))
 
+(define specialized-array-default-mutable?
+  (let ((%%specialized-array-default-mutable? #t))
+    (lambda (#!optional (bool (macro-absent-obj)))
+      (cond ((eq? bool (macro-absent-obj))
+	     %%specialized-array-default-mutable?)
+	    ((not (boolean? bool))
+	     (error "specialized-array-default-mutable?: The argument is not a boolean: " bool))
+	    (else
+	     (set! %%specialized-array-default-mutable? bool))))))
+
 
 (declare (not inline))
 
@@ -950,6 +958,11 @@
 	      ))))
 
 (make-standard-storage-classes)
+
+;;; This sample implementation does not implement the following.
+
+(define f16-storage-class #f)
+(define f8-storage-class #f)
 
 ;;; for bit-arrays, body is a vector, the first element of which is the actual number of elements,
 ;;; the second element of which is a u16vector that contains the bit string
@@ -1332,7 +1345,7 @@
 ;;;
 
 (define (specialized-array? obj)
-  (and (mutable-array? obj)
+  (and (array? obj)
        (not (eq? (%%array-body obj) #f))))
 
 (define (array-body obj)
@@ -1474,7 +1487,7 @@
          (%%array-elements-in-order? array))))
 
 
-(define (%%finish-specialized-array domain storage-class body indexer safe?)
+(define (%%finish-specialized-array domain storage-class body indexer mutable? safe?)
   (let ((storage-class-getter (storage-class-getter storage-class))
 	(storage-class-setter (storage-class-setter storage-class))
 	(checker (storage-class-checker storage-class))
@@ -1515,118 +1528,121 @@
     (define-macro (expand-setters expr)
       `(expand-storage-class -setter -set! ,expr))
 
-    (let ((getter (if safe?
-		      (case (%%interval-dimension domain)
-			((1)  (lambda (i)
-				(cond ((not (exact-integer? i))
-				       (error "array-getter: multi-index component is not an exact integer: " i))
-				      ((not (%%interval-contains-multi-index?-1 domain i))
-				       (error "array-getter: domain does not contain multi-index: "    domain i))
-				      (else
-				       (storage-class-getter body (indexer i))))))
-			((2)  (lambda (i j)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)))
-				       (error "array-getter: multi-index component is not an exact integer: " i j))
-				      ((not (%%interval-contains-multi-index?-2 domain i j))
-				       (error "array-getter: domain does not contain multi-index: "    domain i j))
-				      (else
-				       (storage-class-getter body (indexer i j))))))
-			((3)  (lambda (i j k)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)))
-				       (error "array-getter: multi-index component is not an exact integer: " i j k))
-				      ((not (%%interval-contains-multi-index?-3 domain i j k))
-				       (error "array-getter: domain does not contain multi-index: "    domain i j k))
-				      (else
-				       (storage-class-getter body (indexer i j k))))))
-			((4)  (lambda (i j k l)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)
-						 (exact-integer? l)))
-				       (error "array-getter: multi-index component is not an exact integer: " i j k l))
-				      ((not (%%interval-contains-multi-index?-4 domain i j k l))
-				       (error "array-getter: domain does not contain multi-index: "    domain i j k l))
-				      (else
-				       (storage-class-getter body (indexer i j k l))))))
-			(else (lambda multi-index
-				(cond ((not (%%every exact-integer? multi-index))
-				       (apply error "array-getter: multi-index component is not an exact integer: " multi-index))
-				      ((not (= (%%interval-dimension domain) (length multi-index)))
-				       (apply error "array-getter: multi-index is not the correct dimension: " domain multi-index))
-				      ((not (%%interval-contains-multi-index?-general domain multi-index))
-				       (apply error "array-getter: domain does not contain multi-index: "    domain multi-index))
-				      (else
-				       (storage-class-getter body (apply indexer multi-index)))))))
-		      (case (%%interval-dimension domain)
-			((1)  (expand-getters (lambda (i)         (storage-class-getter body (indexer i)))))
-			((2)  (expand-getters (lambda (i j)       (storage-class-getter body (indexer i j)))))
-			((3)  (expand-getters (lambda (i j k)     (storage-class-getter body (indexer i j k)))))
-			((4)  (expand-getters (lambda (i j k l)   (storage-class-getter body (indexer i j k l)))))
-			(else (expand-getters (lambda multi-index (storage-class-getter body (apply indexer multi-index))))))))
-	  (setter (if safe?
-		      (case (%%interval-dimension domain)
-			((1)  (lambda (value i)
-				(cond ((not (exact-integer? i))
-				       (error "array-setter: multi-index component is not an exact integer: " i))
-				      ((not (%%interval-contains-multi-index?-1 domain i))
-				       (error "array-setter: domain does not contain multi-index: "    domain i))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i) value)))))
-			((2)  (lambda (value i j)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)))
-				       (error "array-setter: multi-index component is not an exact integer: " i j))
-				      ((not (%%interval-contains-multi-index?-2 domain i j))
-				       (error "array-setter: domain does not contain multi-index: "    domain i j))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i j) value)))))
-			((3)  (lambda (value i j k)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)))
-				       (error "array-setter: multi-index component is not an exact integer: " i j k))
-				      ((not (%%interval-contains-multi-index?-3 domain i j k))
-				       (error "array-setter: domain does not contain multi-index: "    domain i j k))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i j k) value)))))
-			((4)  (lambda (value i j k l)
-				(cond ((not (and (exact-integer? i)
-						 (exact-integer? j)
-						 (exact-integer? k)
-						 (exact-integer? l)))
-				       (error "array-setter: multi-index component is not an exact integer: " i j k l))
-				      ((not (%%interval-contains-multi-index?-4 domain i j k l))
-				       (error "array-setter: domain does not contain multi-index: "    domain i j k l))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (indexer i j k l) value)))))
-			(else (lambda (value . multi-index)
-				(cond ((not (%%every exact-integer? multi-index))
-				       (apply error "array-setter: multi-index component is not an exact integer: " multi-index))
-				      ((not (= (%%interval-dimension domain) (length multi-index)))
-				       (apply error "array-setter: multi-index is not the correct dimension: " domain multi-index))
-				      ((not (%%interval-contains-multi-index?-general domain multi-index))
-				       (apply error "array-setter: domain does not contain multi-index: "    domain multi-index))
-				      ((not (checker value))
-				       (error "array-setter: value cannot be stored in body: " value))
-				      (else
-				       (storage-class-setter body (apply indexer multi-index) value))))))
-		      (case (%%interval-dimension domain)
-			((1)  (expand-setters (lambda (value i)             (storage-class-setter body (indexer i)                 value))))
-			((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value))))
-			((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value))))
-			((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value))))
-			(else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value))))))))
+    (let ((getter
+           (if safe?
+               (case (%%interval-dimension domain)
+                 ((1)  (lambda (i)
+                         (cond ((not (exact-integer? i))
+                                (error "array-getter: multi-index component is not an exact integer: " i))
+                               ((not (%%interval-contains-multi-index?-1 domain i))
+                                (error "array-getter: domain does not contain multi-index: "    domain i))
+                               (else
+                                (storage-class-getter body (indexer i))))))
+                 ((2)  (lambda (i j)
+                         (cond ((not (and (exact-integer? i)
+                                          (exact-integer? j)))
+                                (error "array-getter: multi-index component is not an exact integer: " i j))
+                               ((not (%%interval-contains-multi-index?-2 domain i j))
+                                (error "array-getter: domain does not contain multi-index: "    domain i j))
+                               (else
+                                (storage-class-getter body (indexer i j))))))
+                 ((3)  (lambda (i j k)
+                         (cond ((not (and (exact-integer? i)
+                                          (exact-integer? j)
+                                          (exact-integer? k)))
+                                (error "array-getter: multi-index component is not an exact integer: " i j k))
+                               ((not (%%interval-contains-multi-index?-3 domain i j k))
+                                (error "array-getter: domain does not contain multi-index: "    domain i j k))
+                               (else
+                                (storage-class-getter body (indexer i j k))))))
+                 ((4)  (lambda (i j k l)
+                         (cond ((not (and (exact-integer? i)
+                                          (exact-integer? j)
+                                          (exact-integer? k)
+                                          (exact-integer? l)))
+                                (error "array-getter: multi-index component is not an exact integer: " i j k l))
+                               ((not (%%interval-contains-multi-index?-4 domain i j k l))
+                                (error "array-getter: domain does not contain multi-index: "    domain i j k l))
+                               (else
+                                (storage-class-getter body (indexer i j k l))))))
+                 (else (lambda multi-index
+                         (cond ((not (%%every exact-integer? multi-index))
+                                (apply error "array-getter: multi-index component is not an exact integer: " multi-index))
+                               ((not (= (%%interval-dimension domain) (length multi-index)))
+                                (apply error "array-getter: multi-index is not the correct dimension: " domain multi-index))
+                               ((not (%%interval-contains-multi-index?-general domain multi-index))
+                                (apply error "array-getter: domain does not contain multi-index: "    domain multi-index))
+                               (else
+                                (storage-class-getter body (apply indexer multi-index)))))))
+               (case (%%interval-dimension domain)
+                 ((1)  (expand-getters (lambda (i)         (storage-class-getter body (indexer i)))))
+                 ((2)  (expand-getters (lambda (i j)       (storage-class-getter body (indexer i j)))))
+                 ((3)  (expand-getters (lambda (i j k)     (storage-class-getter body (indexer i j k)))))
+                 ((4)  (expand-getters (lambda (i j k l)   (storage-class-getter body (indexer i j k l)))))
+                 (else (expand-getters (lambda multi-index (storage-class-getter body (apply indexer multi-index))))))))
+	  (setter
+           (and mutable?
+                (if safe?
+                    (case (%%interval-dimension domain)
+                      ((1)  (lambda (value i)
+                              (cond ((not (exact-integer? i))
+                                     (error "array-setter: multi-index component is not an exact integer: " i))
+                                    ((not (%%interval-contains-multi-index?-1 domain i))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i) value)))))
+                      ((2)  (lambda (value i j)
+                              (cond ((not (and (exact-integer? i)
+                                               (exact-integer? j)))
+                                     (error "array-setter: multi-index component is not an exact integer: " i j))
+                                    ((not (%%interval-contains-multi-index?-2 domain i j))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i j))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i j) value)))))
+                      ((3)  (lambda (value i j k)
+                              (cond ((not (and (exact-integer? i)
+                                               (exact-integer? j)
+                                               (exact-integer? k)))
+                                     (error "array-setter: multi-index component is not an exact integer: " i j k))
+                                    ((not (%%interval-contains-multi-index?-3 domain i j k))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i j k))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i j k) value)))))
+                      ((4)  (lambda (value i j k l)
+                              (cond ((not (and (exact-integer? i)
+                                               (exact-integer? j)
+                                               (exact-integer? k)
+                                               (exact-integer? l)))
+                                     (error "array-setter: multi-index component is not an exact integer: " i j k l))
+                                    ((not (%%interval-contains-multi-index?-4 domain i j k l))
+                                     (error "array-setter: domain does not contain multi-index: "    domain i j k l))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (indexer i j k l) value)))))
+                      (else (lambda (value . multi-index)
+                              (cond ((not (%%every exact-integer? multi-index))
+                                     (apply error "array-setter: multi-index component is not an exact integer: " multi-index))
+                                    ((not (= (%%interval-dimension domain) (length multi-index)))
+                                     (apply error "array-setter: multi-index is not the correct dimension: " domain multi-index))
+                                    ((not (%%interval-contains-multi-index?-general domain multi-index))
+                                     (apply error "array-setter: domain does not contain multi-index: "    domain multi-index))
+                                    ((not (checker value))
+                                     (error "array-setter: value cannot be stored in body: " value))
+                                    (else
+                                     (storage-class-setter body (apply indexer multi-index) value))))))
+                    (case (%%interval-dimension domain)
+                      ((1)  (expand-setters (lambda (value i)             (storage-class-setter body (indexer i)                 value))))
+                      ((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value))))
+                      ((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value))))
+                      ((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value))))
+                      (else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value)))))))))
       (make-%%array domain
                     getter
                     setter
@@ -1688,10 +1704,28 @@
                                          increments)))
              ((null? (cdr ranges)) (%%indexer-generic 0 lower-bounds increments))))))))
 
+(define (%%make-specialized-array interval
+                                  storage-class
+                                  ;; must be mutable
+                                  safe?)
+  (let* ((body    ((storage-class-maker storage-class)
+                   (%%interval-volume interval)
+                   (storage-class-default storage-class)))
+         (indexer (%%interval->basic-indexer interval)))
+    (%%finish-specialized-array interval
+                                storage-class
+                                body
+                                indexer
+                                #t            ;; mutable?
+                                safe?)))
+
+
 (define (make-specialized-array interval
                                 #!optional
                                 (storage-class generic-storage-class)
+                                ;; must be mutable?
                                 (safe? (specialized-array-default-safe?)))
+  ;; Returns a mutable specialized-array
   (cond ((not (interval? interval))
 	 (error "make-specialized-array: The first argument is not an interval: " interval))
 	((not (storage-class? storage-class))
@@ -1699,15 +1733,10 @@
 	((not (boolean? safe?))
 	 (error "make-specialized-array: The third argument is not a boolean: " interval storage-class safe?))
 	(else
-	 (let* ((body        ((storage-class-maker storage-class)
-                              (%%interval-volume interval)
-                              (storage-class-default storage-class)))
-		(indexer     (%%interval->basic-indexer interval)))
-	   (%%finish-specialized-array interval
-				       storage-class
-				       body
-				       indexer
-				       safe?)))))
+	 (%%make-specialized-array interval
+                                   storage-class
+                                   ;; must be mutable
+                                   safe?))))
 
 ;;;
 ;;; The domain of the result is the same as the domain of the argument.
@@ -1719,19 +1748,22 @@
 (define (array->specialized-array array
                                   #!optional
                                   (result-storage-class generic-storage-class)
+                                  (mutable? (specialized-array-default-mutable?))
                                   (safe? (specialized-array-default-safe?)))
   (cond ((not (array? array))
 	 (error "array->specialized-array: The first argument is not an array: " array))
 	((not (storage-class? result-storage-class))
 	 (error "array->specialized-array: The second argument is not a storage-class: " result-storage-class))
 	((not (boolean? safe?))
-	 (error "array->specialized-array: The third argument is not a boolean: " safe?))
+	 (error "array->specialized-array: The fourth argument is not a boolean: " safe?))
+        ((not (boolean? mutable?))
+	 (error "array->specialized-array: The third argument is not a boolean: " mutable?))
 	(else
-	 (let* ((domain               (%%array-domain array))
-		(result               (make-specialized-array domain
-							      result-storage-class
-							      safe?))
-		(getter               (%%array-getter array)))
+	 (let* ((domain (%%array-domain array))
+		(result (%%make-specialized-array domain
+                                                  result-storage-class
+                                                  safe?))
+		(getter (%%array-getter array)))
            (if (eq? result-storage-class generic-storage-class)   ;; checker always returns #t
                (let ((body      (%%array-body result)))
                  ;; The result's indexer steps from 0 to (vector-length body) so we
@@ -1774,7 +1806,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     ((2)  (let ((index 0))
                             (lambda (i j)
                               (let ((item (getter i j)))
@@ -1783,7 +1815,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     ((3)  (let ((index 0))
                             (lambda (i j k)
                               (let ((item (getter i j k)))
@@ -1792,7 +1824,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     ((4)  (let ((index 0))
                             (lambda (i j k l)
                               (let ((item (getter i j k l)))
@@ -1801,7 +1833,7 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?))))))
+                                           array result-storage-class mutable? safe? item))))))
                     (else (let ((index 0))
                             (lambda multi-index
                               (let ((item (apply getter multi-index)))
@@ -1810,8 +1842,10 @@
                                       (storage-class-setter body index item)
                                       (set! index (fx+ index 1)))
                                     (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class safe?)))))))
+                                           array result-storage-class mutable? safe? item)))))))
                   domain)))
+           (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
+               (%%array-setter-set! result #f))
 	   result))))
 
 ;;;
@@ -1950,34 +1984,41 @@
 					new-base)))))))
        (%%indexer-generic base lower-bounds increments)))))
 
-;;;
 ;;; You want to share the backing store of array.
 ;;;
 ;;; So you specify a new domain and an affine 1-1 mapping from the new-domain to the old-domain.
-;;;
+
+(define (%%specialized-array-share array
+                                   new-domain
+                                   new-domain->old-domain)
+  (let ((old-domain        (%%array-domain       array))
+        (old-indexer       (%%array-indexer      array))
+        (body              (%%array-body         array))
+        (storage-class     (%%array-storage-class array)))
+    (%%finish-specialized-array new-domain
+                                storage-class
+                                body
+                                (%%compose-indexers old-indexer new-domain new-domain->old-domain)
+                                (mutable-array? array)
+                                (%%array-safe? array))))
+
 
 (define (specialized-array-share array
 				 new-domain
-				 new-domain->old-domain
-				 #!optional (safe? (specialized-array-default-safe?)))
+				 new-domain->old-domain)
   (cond ((not (specialized-array? array))
-	 (error "specialized-array-share: array is not a specialized-array: " array))
+	 (error "specialized-array-share: The first argument is not a specialized-array: "
+                array new-domain new-domain->old-domain))
 	((not (interval? new-domain))
-	 (error "specialized-array-share: new-domain is not an interval: " new-domain))
+	 (error "specialized-array-share: The second argument is not an interval: "
+                array new-domain new-domain->old-domain))
 	((not (procedure? new-domain->old-domain))
-	 (error "specialized-array-share: new-domain->old-domain is not a procedure: " new-domain->old-domain))
-	((not (boolean? safe?))
-	 (error "specialized-array-share: safe? is not a boolean: " safe?))
+	 (error "specialized-array-share: The third argument is not a procedure: "
+                array new-domain new-domain->old-domain))
 	(else
-	 (let ((old-domain        (%%array-domain       array))
-	       (old-indexer       (%%array-indexer      array))
-	       (body              (%%array-body         array))
-	       (storage-class     (%%array-storage-class array)))
-	   (%%finish-specialized-array new-domain
-				       storage-class
-				       body
-				       (%%compose-indexers old-indexer new-domain new-domain->old-domain)
-				       safe?)))))
+	 (%%specialized-array-share array
+                                    new-domain
+                                    new-domain->old-domain))))
 
 (define (%%immutable-array-extract array new-domain)
   (make-array new-domain
@@ -1989,14 +2030,9 @@
 	      (%%array-setter array)))
 
 (define (%%specialized-array-extract array new-domain)
-  ;; call %%finish-specialized-array instead of filling the entries of #array-base
-  ;; by hand because specialized-array-default-safe? may not be the same as
-  ;; (array-safe? array)
-  (%%finish-specialized-array new-domain
-			      (%%array-storage-class array)
-			      (%%array-body array)
-			      (%%array-indexer array)
-			      (specialized-array-default-safe?)))
+  (%%specialized-array-share array
+                             new-domain
+                             values))
 
 (define (%%array-extract array new-domain)
   (cond ((specialized-array? array)
@@ -2181,9 +2217,9 @@
 	      (%%setter-translate (%%array-setter array) translation)))
 
 (define (%%specialized-array-translate array translation)
-  (specialized-array-share array
-			   (%%interval-translate (%%array-domain array) translation)
-			   (%%getter-translate values translation)))
+  (%%specialized-array-share array
+                             (%%interval-translate (%%array-domain array) translation)
+                             (%%getter-translate values translation)))
 
 (define (array-translate array translation)
   (cond ((not (array? array))
@@ -2254,9 +2290,9 @@
 
 (define (%%array-permute array permutation)
   (cond ((specialized-array? array)
-         (specialized-array-share array
-                                  (%%interval-permute (%%array-domain array) permutation)
-                                  (%%getter-permute values permutation)))
+         (%%specialized-array-share array
+                                    (%%interval-permute (%%array-domain array) permutation)
+                                    (%%getter-permute values permutation)))
         ((mutable-array? array)
          (make-array (%%interval-permute (%%array-domain array) permutation)
                      (%%getter-permute (%%array-getter array) permutation)
@@ -2403,9 +2439,9 @@
 	      (%%setter-reverse (%%array-setter array) flip? (%%array-domain array))))
 
 (define (%%specialized-array-reverse array flip?)
-  (specialized-array-share array
-			   (%%array-domain array)
-			   (%%getter-reverse values flip? (%%array-domain array))))
+  (%%specialized-array-share array
+                             (%%array-domain array)
+                             (%%getter-reverse values flip? (%%array-domain array))))
 
 (define (array-reverse array #!optional (flip? (macro-absent-obj)))
   (if  (not (array? array))
@@ -2532,9 +2568,9 @@
 	      (%%setter-sample (%%array-setter array) scales (%%array-domain array))))
 
 (define (%%specialized-array-sample array scales)
-  (specialized-array-share array
-			   (%%interval-scale (%%array-domain array) scales)
-			   (%%getter-sample values scales (%%array-domain array))))
+  (%%specialized-array-share array
+                             (%%interval-scale (%%array-domain array) scales)
+                             (%%getter-sample values scales (%%array-domain array))))
 
 (define (array-sample array scales)
   (cond ((not (and (array? array)
@@ -2696,22 +2732,23 @@
   (call-with-values
       (lambda () (interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
-      (make-array left-interval
-		  (case (%%interval-dimension left-interval)
-		    ((1)  (case (%%interval-dimension right-interval)
-			    ((1)  (lambda (i)     (specialized-array-share array right-interval (lambda (j)                         (values i j    )))))
-			    ((2)  (lambda (i)     (specialized-array-share array right-interval (lambda (j k)                       (values i j k  )))))
-			    ((3)  (lambda (i)     (specialized-array-share array right-interval (lambda (j k l)                     (values i j k l)))))
-			    (else (lambda (i)     (specialized-array-share array right-interval (lambda multi-index (apply values i     multi-index)))))))
-		    ((2)  (case (%%interval-dimension right-interval)
-			    ((1)  (lambda (i j)   (specialized-array-share array right-interval (lambda (  k)                       (values i j k  )))))
-			    ((2)  (lambda (i j)   (specialized-array-share array right-interval (lambda (  k l)                     (values i j k l)))))
-			    (else (lambda (i j)   (specialized-array-share array right-interval (lambda multi-index (apply values i j   multi-index)))))))
-		    ((3)  (case (%%interval-dimension right-interval)
-			    ((1)  (lambda (i j k) (specialized-array-share array right-interval (lambda (    l)                    (values i j k l)))))
-			    (else (lambda (i j k) (specialized-array-share array right-interval (lambda multi-index (apply values i j k multi-index)))))))
-		    (else (lambda left-multi-index
-			    (specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
+      (make-array
+       left-interval
+       (case (%%interval-dimension left-interval)
+         ((1)  (case (%%interval-dimension right-interval)
+                 ((1)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j)                         (values i j    )))))
+                 ((2)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j k)                       (values i j k  )))))
+                 ((3)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j k l)                     (values i j k l)))))
+                 (else (lambda (i)     (%%specialized-array-share array right-interval (lambda multi-index (apply values i     multi-index)))))))
+         ((2)  (case (%%interval-dimension right-interval)
+                 ((1)  (lambda (i j)   (%%specialized-array-share array right-interval (lambda (  k)                       (values i j k  )))))
+                 ((2)  (lambda (i j)   (%%specialized-array-share array right-interval (lambda (  k l)                     (values i j k l)))))
+                 (else (lambda (i j)   (%%specialized-array-share array right-interval (lambda multi-index (apply values i j   multi-index)))))))
+         ((3)  (case (%%interval-dimension right-interval)
+                 ((1)  (lambda (i j k) (%%specialized-array-share array right-interval (lambda (    l)                    (values i j k l)))))
+                 (else (lambda (i j k) (%%specialized-array-share array right-interval (lambda multi-index (apply values i j k multi-index)))))))
+         (else (lambda left-multi-index
+                 (%%specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
 
 (define (array-curry array right-dimension)
   (cond ((not (array? array))
@@ -3088,24 +3125,31 @@
  	(else
 	 (array-fold-right cons '() array))))
 
-(define (list->specialized-array l interval #!optional (result-storage-class generic-storage-class) (safe? (specialized-array-default-safe?)))
+(define (list->specialized-array l
+                                 interval
+                                 #!optional
+                                 (result-storage-class generic-storage-class)
+                                 (mutable? (specialized-array-default-mutable?))
+                                 (safe? (specialized-array-default-safe?)))
   (cond ((not (list? l))
-	 (error "list->specialized-array: First argument is not a list: " l interval))
+	 (error "list->specialized-array: The first argument is not a list: " l interval))
 	((not (interval? interval))
-	 (error "list->specialized-array: Second argument is not an interval: " l interval))
+	 (error "list->specialized-array: The second argument is not an interval: " l interval))
 	((not (storage-class? result-storage-class))
-	 (error "list->specialized-array: Third argument is not a storage-class: " l interval result-storage-class))
-	((not (boolean? safe?))
-	 (error "list->specialized-array: Fourth argument is not a boolean: " l interval result-storage-class safe?))
+	 (error "list->specialized-array: The third argument is not a storage-class: " l interval result-storage-class))
+	((not (boolean? mutable?))
+	 (error "list->specialized-array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
+        ((not (boolean? safe?))
+	 (error "list->specialized-array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
 	(else
 	 (let* ((checker
 		 (storage-class-checker  result-storage-class))
 		(setter
 		 (storage-class-setter   result-storage-class))
 		(result
-		 (make-specialized-array interval
-				         result-storage-class
-				         safe?))
+		 (%%make-specialized-array interval
+                                           result-storage-class
+                                           safe?))
 		(body
 		 (%%array-body result))
 		(n
@@ -3114,7 +3158,10 @@
 		      (local l))
 	     (if (or (= i n) (null? local))
 		 (if (and (= i n) (null? local))
-		     result
+		     (begin
+                       (if (not mutable?)
+                           (%%array-setter-set! result #f))
+                       result)
 		     (error "list->specialized-array: The length of the first argument does not equal the volume of the second: " l interval))
 		 (let ((item (car local)))
 		   (if (checker item)
@@ -3122,7 +3169,7 @@
 			 (setter body i item)
 			 (loop (+ i 1)
 			       (cdr local)))
-		       (error "list->specialized-array: Not every element of the list can be stored in the body of the array: " l interval)))))))))
+		       (error "list->specialized-array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
 
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
