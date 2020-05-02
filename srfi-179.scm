@@ -104,8 +104,8 @@ MathJax.Hub.Config({
                (<code>'array-swap!)
                " have been added together with some examples.")
          (<li> "Global variables "
-               (<code>'f16-storage-class)" and "
-               (<code>'f32-storage-class)" have been added.")
+               (<code>'f8-storage-class)" and "
+               (<code>'f16-storage-class)" have been added.")
          (<li> "Homogeneous storage classes must be implemented using homogeneous vectors, or be defined as "(<code>'#f)".")
          (<li> "The procedure "(<code>'make-interval)" now takes one or two arguments.")
          (<li> "Specialized arrays can be mutable or immutable; the default, which can be changed, is mutable. Shared arrays inherit safety and mutability from source arrays.")

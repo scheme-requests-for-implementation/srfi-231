@@ -1644,22 +1644,17 @@
 (pp "specialized-array-share error tests")
 
 (test (specialized-array-share 1 1 1)
-      "specialized-array-share: array is not a specialized-array: ")
+      "specialized-array-share: The first argument is not a specialized-array: ")
 
 (test (specialized-array-share (make-specialized-array (make-interval '#(1) '#(2)))
 			       1 1)
-      "specialized-array-share: new-domain is not an interval: ")
+      "specialized-array-share: The second argument is not an interval: ")
 
 (test (specialized-array-share (make-specialized-array (make-interval '#(1) '#(2)))
 			       (make-interval '#(0) '#(1))
 			       1)
-      "specialized-array-share: new-domain->old-domain is not a procedure: ")
+      "specialized-array-share: The third argument is not a procedure: ")
 
-(test (specialized-array-share (make-specialized-array (make-interval '#(1) '#(2)))
-			       (make-interval '#(0) '#(1))
-			       (lambda args #t)
-			       'a)
-      "specialized-array-share: safe? is not a boolean: ")
 
 (test (myarray= (list->specialized-array (reverse (local-iota 0 10))
 					 (make-interval '#(0) '#(10)))
@@ -2763,11 +2758,11 @@
 (test (array-dimension 'a)
       "array-dimension: The argument is not an array: ")
 
-(test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #t))
+(test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #t #t))
       #t)
 
 
-(test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #f))
+(test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #t #f))
       #f)
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))) '(a -1))
@@ -2793,6 +2788,7 @@
 	   (invalid-entry (list-ref (caddr builders) (random 2)))
 	   (Array (array->specialized-array (make-array domain random-entry)
 					    storage-class
+                                            #t   ; mutable
 					    #t)) ; safe
 	   (getter (array-getter Array))
 	   (setter (array-setter Array))
@@ -2827,16 +2823,19 @@
       "array->list: The argument is not an array: ")
 
 (test (list->specialized-array 'a 'b)
-      "list->specialized-array: First argument is not a list: ")
+      "list->specialized-array: The first argument is not a list: ")
 
 (test (list->specialized-array '(0) 'b)
-      "list->specialized-array: Second argument is not an interval: ")
+      "list->specialized-array: The second argument is not an interval: ")
 
 (test (list->specialized-array '(0) (make-interval '#(0) '#(1)) 'a)
-      "list->specialized-array: Third argument is not a storage-class: ")
+      "list->specialized-array: The third argument is not a storage-class: ")
 
 (test (list->specialized-array '(0) (make-interval '#(0) '#(1)) generic-storage-class 'a)
-      "list->specialized-array: Fourth argument is not a boolean: ")
+      "list->specialized-array: The fourth argument is not a boolean: ")
+
+(test (list->specialized-array '(0) (make-interval '#(0) '#(1)) generic-storage-class #t 'a)
+      "list->specialized-array: The fifth argument is not a boolean: ")
 
 ;; (list->specialized-array '(0) (make-interval '#(0) '#(10)))
 
