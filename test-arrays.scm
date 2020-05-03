@@ -3581,3 +3581,43 @@ that computes the componentwise products when we need them, the times are
 (display "of LU decomposition of Hilbert matrix:\n\n")
 (array-display product)
 
+(define (inner-product A f g B)
+  (array-outer-product
+   (lambda (a b)
+     (array-reduce f (array-map g a b)))
+   (array-curry A 1)
+   (array-curry (array-rotate B 1) 1)))
+
+;; Examples from
+;; http://microapl.com/apl_help/ch_020_020_880.htm 
+   
+(define TABLE1
+  (list->specialized-array
+   '(1 2
+     5 4
+     3 0)
+   (make-interval '#(3 2))))
+
+(define TABLE2
+  (list->specialized-array
+   '(6 2 3 4
+     7 0 1 8)
+   (make-interval '#(2 4))))
+
+(array-display (inner-product TABLE1 + * TABLE2))
+
+;;; Displays
+;;; 20 2 5 20 
+;;; 58 10 19 52 
+;;; 18 6 9 12 
+
+(define X   ;; a "row vector"
+  (list->specialized-array '(1 3 5 7) (make-interval '#(1 4))))
+
+(define Y   ;; a "column vector"
+  (list->specialized-array '(2 3 6 7) (make-interval '#(4 1))))
+
+(array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
+
+;;; Displays
+;;; 2
