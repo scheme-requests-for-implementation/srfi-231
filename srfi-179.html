@@ -194,7 +194,10 @@
         <a href="#array-&gt;list">array-&gt;list</a>,
         <a href="#list-&gt;specialized-array">list-&gt;specialized-array</a>,
         <a href="#array-assign!">array-assign!</a>,
-        <a href="#array-swap!">array-swap!</a>.</dd></dl>
+        <a href="#array-swap!">array-swap!</a>,
+        <a href="#array-ref">array-ref</a>,
+        <a href="#array-set!">array-set!</a>,
+        .</dd></dl>
     <h2>Miscellaneous Functions</h2>
     <p>This document refers to <i>translations</i> and <i>permutations</i>.
        A translation is a vector of exact integers.  A permutation of dimension $n$
@@ -1152,8 +1155,18 @@ indexer:       (lambda multi-index
     <p>Evaluates <code>(array-getter <var>A</var>)</code> on the multi-indices in <code>(array-domain <var>A</var>)</code> in an unspecified order, and associates each value to the same multi-index in <code><var>B</var></code>; similarly it assigns the values of <code>(array-getter <var>B</var>)</code> applied to the  multi-indices of <code>(array-domain <var>B</var>)</code> to the associated indices in <code><var>A</var></code>.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <p>If assigning any element of <code><var>A</var></code> affects the value of any element of <code><var>B</var></code>, or vice versa, then the result is undefined.</p>
+    <p><b>Procedure: </b><code><a name="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
+    <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not an array, or if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>.</p>
+    <p><b>Procedure: </b><code><a name="array-set!">array-set!</a> <var>A</var> <var>v</var> <var>i0</var> . <var>i-tail</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
+    <p>Returns <code>(apply (array-setter <var>A</var>) <var>v i0 i-tail</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array, or if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>.</p>
+    <p><b>Note: </b>In the sample implementation, because <code>array-ref</code> and <code>array-set!</code> take a variable number of arguments and they must check that <code><var>A</var></code> is an array of the appropriate type, programs written in a style using these functions, rather than the style in which <code>1D-Haar-loop</code> is coded below, can take up to three times as long runtime.</p>
+    <p><b>Note: </b>In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.</p>
     <h2>Implementation</h2>
-    <p>We provide an implementation in Gambit-C; the nonstandard techniques used
+    <p>We provide an implementation in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
       unique object to indicate absent arguments; <code>define-structure</code>;
       and <code>define-macro</code>.</p>
@@ -1166,18 +1179,18 @@ indexer:       (lambda multi-index
     <dl>
       <dt><code>(array? obj)</code></dt>
       <dd><code>(array? obj)</code></dd>
-      <dt><code>(array-rank a)</code></dt>
-      <dd><code>(array-dimension obj)</code></dd>
+      <dt><code>(array-rank A)</code></dt>
+      <dd><code>(array-dimension A)</code></dd>
       <dt><code>(make-array prototype k1 ...)</code></dt>
-      <dd><code>(make-specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)</code>.</dd>
-      <dt><code>(make-shared-array array mapper k1 ...)</code></dt>
-      <dd><code>(specialized-array-share array (make-interval (vector 0 ...) (vector k1 ...)) mapper)</code></dd>
-      <dt><code>(array-in-bounds? array index1 ...)</code></dt>
-      <dd><code>(interval-contains-multi-index? (array-domain array) index1 ...)</code></dd>
-      <dt><code>(array-ref array k1 ...)</code></dt>
-      <dd><code>((array-getter array) k1 ...)</code></dd>
-      <dt><code>(array-set! array obj k1 ...)</code></dt>
-      <dd><code>((array-setter array) obj k1 ...)</code></dd></dl>
+      <dd><code>(make-specialized-array (make-interval (vector k1 ...)) storage-class)</code>.</dd>
+      <dt><code>(make-shared-array A mapper k1 ...)</code></dt>
+      <dd><code>(specialized-array-share A (make-interval (vector k1 ...)) mapper)</code></dd>
+      <dt><code>(array-in-bounds? A index1 ...)</code></dt>
+      <dd><code>(interval-contains-multi-index? (array-domain A) index1 ...)</code></dd>
+      <dt><code>(array-ref A k1 ...)</code></dt>
+      <dd><code>(let ((A_ (array-getter A))) ... (A_ k1 ...) ... )</code> or <code>(array-ref A k1 ...)</code></dd>
+      <dt><code>(array-set! A obj k1 ...)</code></dt>
+      <dd><code>(let ((A! (array-setter A))) ... (A! obj k1 ...) ...)</code> or <code>(array-set! A obj k1 ...)</code></dd></dl>
     <p>At the same time, this SRFI has some special features:</p>
     <ul>
       <li>Intervals, used as the domains of arrays in this SRFI, are useful
@@ -1185,7 +1198,8 @@ indexer:       (lambda multi-index
         of arrays and the arrays themselves.</li>
       <li>Intervals can have nonzero lower bounds in each dimension.</li>
       <li>Intervals cannot be empty.</li>
-      <li>Arrays must have a getter, but may have no setter.</li></ul>
+      <li>Arrays must have a getter, but may have no setter.</li>
+      <li>There are many predefined array transformations: <code>array-extract</code>, <code>array-tile</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-rotate</code>, <code>array-sample</code>, <code>array-reverse</code>.</li></ul>
     <h2>Other examples</h2>
     <p>Image processing applications provided significant motivation for this SRFI.</p>
     <p><b>Manipulating images in PGM format. </b>On a system with eight-bit chars, one

@@ -3281,4 +3281,52 @@
                    (apply B! temp                   multi-index)))))
             (%%array-domain A))))))
 
+;;; Because array-ref and array-set! have variable number of arguments, and
+;;; they have to check that the first argument is an array on every call,
+;;; compiled code using array-ref and array-set! can take up to three times
+;;; as long as our usual notational convention:
+;;;
+;;; (let ((A_ (array-getter A))) ... (A_ i j) ...)
+;;;
+
+(define (array-ref A i0
+                   #!optional
+                   (i1 (macro-absent-obj))
+                   (i2 (macro-absent-obj))
+                   (i3 (macro-absent-obj))
+                   #!rest
+                   i-tail)
+  (cond ((not (array? A))
+         (error "array-ref: The first argument is not an array: " A))
+        ((eq? i1 (macro-absent-obj))
+         ((%%array-getter A) i0))
+        ((eq? i2 (macro-absent-obj))
+         ((%%array-getter A) i0 i1))
+        ((eq? i3 (macro-absent-obj))
+         ((%%array-getter A) i0 i1 i2))
+        ((null? i-tail)
+         ((%%array-getter A) i0 i1 i2 i3))
+        (else
+         (apply (%%array-getter A) i0 i1 i2 i3 i-tail))))
+
+(define (array-set! A v i0
+                    #!optional
+                    (i1 (macro-absent-obj))
+                    (i2 (macro-absent-obj))
+                    (i3 (macro-absent-obj))
+                    #!rest
+                    i-tail)
+  (cond ((not (mutable-array? A))
+         (error "array-set!: The first argument is not mutable array: " A))
+        ((eq? i1 (macro-absent-obj))
+         ((%%array-setter A) v i0))
+        ((eq? i2 (macro-absent-obj))
+         ((%%array-setter A) v i0 i1))
+        ((eq? i3 (macro-absent-obj))
+         ((%%array-setter A) v i0 i1 i2))
+        ((null? i-tail)
+         ((%%array-setter A) v i0 i1 i2 i3))
+        (else
+         (apply (%%array-setter A) v i0 i1 i2 i3 i-tail))))
+
 (declare (inline))

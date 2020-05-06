@@ -15,6 +15,8 @@
 			      ;; I don't expect any of these, but it sure makes debugging easier
 			      ((unbound-global-exception? args)
 			       (unbound-global-exception-variable args))
+                              ((wrong-number-of-arguments-exception? args)
+                               "Wrong number of arguments passed to procedure ")
 			      (else
 			       "piffle")))
 
@@ -506,6 +508,16 @@
 
 (define (random-boolean)
   (zero? (random 2)))
+
+(define (array-display A)
+  ;; Displays a two-dimensional array row by row.
+  (array-for-each (lambda (row)
+                    (array-for-each (lambda (x)
+                                      (display x)
+                                      (display "\t"))
+                                    row)
+                    (newline))
+                  (array-curry A 1)))
 
 (pp "array error tests")
 
@@ -2917,6 +2929,53 @@
                                 list))
           #t)))
 
+
+(pp "array-ref and array-set! tests")
+
+(specialized-array-default-safe? #t)
+
+(define A-ref
+  (array->specialized-array
+   (make-array (make-interval '#(10 10))
+               (lambda (i j) (if (= i j) 1 0)))))
+
+(test (array-ref 1 1 1)
+      "array-ref: The first argument is not an array: ")
+
+(test (array-ref A-ref 1)
+      "Wrong number of arguments passed to procedure ")
+
+(test (array-ref A-ref 1 1001)
+      "array-getter: domain does not contain multi-index: ")
+
+(test (array-ref A-ref 4 4)
+      1)
+
+(test (array-ref A-ref 4 5)
+      0)
+
+(define B-set!
+  (array->specialized-array
+   (make-array (make-interval '#(10 10))
+               (lambda (i j) (if (= i j) 1 0)))
+   u1-storage-class))
+
+(test (array-set! B-set!)
+      "Wrong number of arguments passed to procedure ")
+
+(test (array-set! B-set! 2)
+      "Wrong number of arguments passed to procedure ")
+
+(test (array-set! B-set! 2 1)
+      "Wrong number of arguments passed to procedure ")
+
+(test (array-set! B-set! 2 1 1)
+      "array-setter: value cannot be stored in body: ")
+
+(array-set! B-set! 1 1 2)
+(array-set! B-set! 0 2 2)
+(array-display B-set!)
+  
 (pp "Test code from the SRFI document")
 
 (test (interval= (interval-dilate (make-interval '#(100 100)) '#(1 1) '#(1 1))
@@ -3456,17 +3515,6 @@ that computes the componentwise products when we need them, the times are
   (display "\nReconstructed image: \n")
   (pretty-print (list (array-domain image)
 		      (array->list image))))
-
-
-(define (array-display A)
-  ;; Displays a two-dimensional array row by row.
-  (array-for-each (lambda (row)
-                    (array-for-each (lambda (x)
-                                      (display x)
-                                      (display "\t"))
-                                    row)
-                    (newline))
-                  (array-curry A 1)))
 
 (define (LU-decomposition A)
   ;; Assumes the domain of A is [0,n)\\times [0,n)

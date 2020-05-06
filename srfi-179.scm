@@ -347,7 +347,9 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array->list" "array->list") END
                  (<a> href: "#list->specialized-array" "list->specialized-array") END
                  (<a> href: "#array-assign!" "array-assign!") END
-                 (<a> href: "#array-swap!" "array-swap!")
+                 (<a> href: "#array-swap!" "array-swap!") END
+                 (<a> href: "#array-ref" "array-ref") END
+                 (<a> href: "#array-set!" "array-set!") END
                  "."
                  )))
         (<h2> "Miscellaneous Functions")
@@ -1524,8 +1526,23 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'A))" affects the value of any element of "(<code>(<var>'B))", or vice versa, then the result is undefined.")
 
+(format-lambda-list '(array-ref A i0 #\. i-tail))
+(<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
+(<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>"i0 i-tail")")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not an array, or if the number of arguments specified is not the correct number for "(<code>"(array-getter "(<var>'A)")")".")
+
+(format-lambda-list '(array-set! A v i0 #\. i-tail))
+(<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
+(<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v i0 i-tail")")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array, or if the number of arguments specified is not the correct number for "(<code>"(array-setter "(<var>'A)")")".")
+
+(<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these functions, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
+
+(<p>(<b> "Note: ")"In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.")
+
+
 (<h2> "Implementation")
-(<p> "We provide an implementation in Gambit-C; the nonstandard techniques used
+(<p> "We provide an implementation in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
 in the implementation are: DSSSL-style optional and keyword arguments; a
 unique object to indicate absent arguments; "(<code>"define-structure")";
 and "(<code>"define-macro")".")
@@ -1538,18 +1555,18 @@ translate: ")
 (<dl>
  (<dt> (<code> "(array? obj)"))
  (<dd> (<code> "(array? obj)"))
- (<dt> (<code> "(array-rank a)"))
- (<dd> (<code> "(array-dimension obj)"))
+ (<dt> (<code> "(array-rank A)"))
+ (<dd> (<code> "(array-dimension A)"))
  (<dt> (<code> "(make-array prototype k1 ...)"))
- (<dd> (<code> "(make-specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)")".")
- (<dt> (<code> "(make-shared-array array mapper k1 ...)"))
- (<dd> (<code> "(specialized-array-share array (make-interval (vector 0 ...) (vector k1 ...)) mapper)"))
- (<dt> (<code> "(array-in-bounds? array index1 ...)"))
- (<dd> (<code> "(interval-contains-multi-index? (array-domain array) index1 ...)"))
- (<dt> (<code> "(array-ref array k1 ...)"))
- (<dd> (<code> "((array-getter array) k1 ...)"))
- (<dt> (<code> "(array-set! array obj k1 ...)"))
- (<dd> (<code> "((array-setter array) obj k1 ...)"))
+ (<dd> (<code> "(make-specialized-array (make-interval (vector k1 ...)) storage-class)")".")
+ (<dt> (<code> "(make-shared-array A mapper k1 ...)"))
+ (<dd> (<code> "(specialized-array-share A (make-interval (vector k1 ...)) mapper)"))
+ (<dt> (<code> "(array-in-bounds? A index1 ...)"))
+ (<dd> (<code> "(interval-contains-multi-index? (array-domain A) index1 ...)"))
+ (<dt> (<code> "(array-ref A k1 ...)"))
+ (<dd> (<code> "(let ((A_ (array-getter A))) ... (A_ k1 ...) ... )")" or "(<code> "(array-ref A k1 ...)"))
+ (<dt> (<code> "(array-set! A obj k1 ...)"))
+ (<dd> (<code> "(let ((A! (array-setter A))) ... (A! obj k1 ...) ...)")" or "(<code> "(array-set! A obj k1 ...)"))
  )
 (<p> "At the same time, this SRFI has some special features:")
 (<ul>
@@ -1558,7 +1575,16 @@ objects in their own rights, with their own procedures.  We make a sharp distinc
 of arrays and the arrays themselves.")
  (<li> "Intervals can have nonzero lower bounds in each dimension.")
  (<li> "Intervals cannot be empty.")
- (<li> "Arrays must have a getter, but may have no setter."))
+ (<li> "Arrays must have a getter, but may have no setter.")
+ (<li> "There are many predefined array transformations: "
+       (<code>'array-extract)", "
+       (<code>'array-tile)", "
+       (<code>'array-translate)", "
+       (<code>'array-permute)", "
+       (<code>'array-rotate)", "
+       (<code>'array-sample)", "
+       (<code>'array-reverse)".")
+)
 
 (<h2> "Other examples")
 (<p> "Image processing applications provided significant motivation for this SRFI.")
