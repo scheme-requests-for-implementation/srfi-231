@@ -2700,66 +2700,6 @@
                                       (apply (array-getter mutable-array) multi-index)))))
           #t)))
 
-(pp "array-swap! tests")
-
-(test (array-swap! 'a 'a)
-      "array-swap!: The first argument is not a mutable array: ")
-
-(test (array-swap! (make-array (make-interval '#(0 0) '#(1 1)) values) 'a)
-      "array-swap!: The first argument is not a mutable array: ")
-
-(test (array-swap! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
-      "array-swap!: The second argument is not a mutable array: ")
-
-(test (array-swap! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values))
-                   (make-array (make-interval '#(0 0) '#(1 1)) values))
-      "array-swap!: The second argument is not a mutable array: ")
-
-(test (array-swap! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values))
-                   (array->specialized-array (make-array (make-interval '#(0 0) '#(2 1)) values)))
-      "array-swap!: The arguments do not have the same domain: ")
-
-(do ((i 0 (fx+ i 1)))
-    ((fx= i tests))
-  (let* ((interval
-          (random-interval 1 6))
-         (subinterval
-          (random-subinterval interval))
-         (specialized-array  ;; multi-index in order
-          (array->specialized-array (make-array interval list)))
-         (mutable-array      ;; multi-index in reversed ordr
-          (let ((specialized-array
-                 (array->specialized-array
-                  (make-array interval (lambda args (reverse args))))))
-            (make-array interval
-                        (array-getter specialized-array)
-                        (array-setter specialized-array))))
-         (specialized-subarray
-          (array-extract specialized-array subinterval))
-         (mutable-subarray
-          (array-extract mutable-array subinterval)))
-    (if (zero? (random 0 2))
-        (array-swap! specialized-subarray mutable-subarray)
-        (array-swap! mutable-subarray specialized-subarray))
-    (test (myarray= specialized-array
-                    ;; list of args, reversed in subarray
-                    (make-array interval
-                                (lambda multi-index
-                                  (if (apply interval-contains-multi-index? subinterval multi-index)
-                                      (reverse multi-index)
-                                      multi-index))))
-          #t)
-    (test (myarray= mutable-array
-                    ;; list of reversed args, except in subarray
-                    (make-array interval
-                                (lambda multi-index
-                                  (if (apply interval-contains-multi-index? subinterval multi-index)
-                                      multi-index
-                                      (reverse multi-index)))))
-          #t)))
-
-
-
 (pp "Miscellaneous error tests")
 
 (test (make-array (make-interval '#(0 0) '#(10 10))

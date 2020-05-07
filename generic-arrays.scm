@@ -3212,44 +3212,6 @@
                         multi-index))))
             domain)))))
 
-(define (array-swap! A B)
-  (cond ((not (mutable-array? A))
-         (error "array-swap!: The first argument is not a mutable array: " A B))
-        ((not (mutable-array? B))
-         (error "array-swap!: The second argument is not a mutable array: " A B))
-        ((not (interval= (%%array-domain A)
-                         (%%array-domain B)))
-         (error "array-swap!: The arguments do not have the same domain: " A B))
-        (else
-         (let ((A_ (%%array-getter A))
-               (A! (%%array-setter A))
-               (B_ (%%array-getter B))
-               (B! (%%array-setter B)))
-           (%%interval-for-each
-            (case (%%array-dimension A)
-              ((1) (lambda (i)
-                     (let ((temp (A_ i)))
-                       (A! (B_ i) i)
-                       (B! temp   i))))
-              ((2) (lambda (i j)
-                     (let ((temp (A_ i j)))
-                       (A! (B_ i j) i j)
-                       (B! temp     i j))))
-              ((3) (lambda (i j k)
-                     (let ((temp (A_ i j k)))
-                       (A! (B_ i j k) i j k)
-                       (B! temp       i j k))))
-              ((4) (lambda (i j k l)
-                     (let ((temp (A_ i j k l)))
-                       (A! (B_ i j k l) i j k l)
-                       (B! temp         i j k l))))
-              (else
-               (lambda multi-index
-                 (let ((temp (apply A_ multi-index)))
-                   (apply A! (apply B_ multi-index) multi-index)
-                   (apply B! temp                   multi-index)))))
-            (%%array-domain A))))))
-
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,
 ;;; compiled code using array-ref and array-set! can take up to three times

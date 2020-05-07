@@ -39,7 +39,7 @@
       <li>Encourage <b>bulk processing of arrays</b> rather than word-by-word operations.</li></ul>
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-122/">SRFI 122</a> in the following ways:</p>
     <ul>
-      <li>The procedures <code>specialized-array-default-mutable?</code>, <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>interval-rotate</code> and <code>array-elements-in-order?</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-rotate</code>, <code>array-reduce</code>, <code>array-assign!</code>, <code>array-swap!</code> have been added together with some examples.</li>
+      <li>The procedures <code>specialized-array-default-mutable?</code>, <code>interval-for-each</code>, <code>interval-cartesian-product</code>, <code>interval-rotate</code> and <code>array-elements-in-order?</code>, <code>array-outer-product</code>, <code>array-tile</code>, <code>array-rotate</code>, <code>array-reduce</code>, and <code>array-assign!</code>  have been added together with some examples.</li>
       <li>Global variables <code>f8-storage-class</code> and <code>f16-storage-class</code> have been added.</li>
       <li>Homogeneous storage classes must be implemented using homogeneous vectors, or be defined as <code>#f</code>.</li>
       <li>The procedure <code>make-interval</code> now takes one or two arguments.</li>
@@ -194,7 +194,6 @@
         <a href="#array-&gt;list">array-&gt;list</a>,
         <a href="#list-&gt;specialized-array">list-&gt;specialized-array</a>,
         <a href="#array-assign!">array-assign!</a>,
-        <a href="#array-swap!">array-swap!</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
         .</dd></dl>
@@ -1150,11 +1149,6 @@ indexer:       (lambda multi-index
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in an unspecified order, and associates each value to the same multi-index in <code><var>destination</var></code>.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
-    <p><b>Procedure: </b><code><a name="array-swap!">array-swap!</a> <var>A</var> <var>B</var></code></p>
-    <p>Assumes that <code><var>A</var></code> and <code><var>B</var></code> are mutable arrays with the same domain, and that the elements of each of them can get stored in the other.</p>
-    <p>Evaluates <code>(array-getter <var>A</var>)</code> on the multi-indices in <code>(array-domain <var>A</var>)</code> in an unspecified order, and associates each value to the same multi-index in <code><var>B</var></code>; similarly it assigns the values of <code>(array-getter <var>B</var>)</code> applied to the  multi-indices of <code>(array-domain <var>B</var>)</code> to the associated indices in <code><var>A</var></code>.</p>
-    <p>It is an error if the arguments don't satisfy these assumptions.</p>
-    <p>If assigning any element of <code><var>A</var></code> affects the value of any element of <code><var>B</var></code>, or vice versa, then the result is undefined.</p>
     <p><b>Procedure: </b><code><a name="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>

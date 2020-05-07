@@ -100,9 +100,8 @@ MathJax.Hub.Config({
                (<code>'array-outer-product)", "
                (<code>'array-tile)", "
                (<code>'array-rotate)", "
-               (<code>'array-reduce)", "
-               (<code>'array-assign!)", "
-               (<code>'array-swap!)
+               (<code>'array-reduce)", and "
+               (<code>'array-assign!)" "
                " have been added together with some examples.")
          (<li> "Global variables "
                (<code>'f8-storage-class)" and "
@@ -347,7 +346,6 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array->list" "array->list") END
                  (<a> href: "#list->specialized-array" "list->specialized-array") END
                  (<a> href: "#array-assign!" "array-assign!") END
-                 (<a> href: "#array-swap!" "array-swap!") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
                  "."
@@ -1518,13 +1516,6 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
      "and associates each value to the same multi-index in "(<code>(<var>'destination))".")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
-
-(format-lambda-list '(array-swap! A B))
-(<p> "Assumes that "(<code>(<var>'A))" and "(<code>(<var>'B))" are mutable arrays with the same domain, and that the elements of each of them can get stored in the other.")
-(<p> "Evaluates "(<code>"(array-getter "(<var>'A)")")" on the multi-indices in "(<code>"(array-domain "(<var>'A)")")" in an unspecified order, "
-     "and associates each value to the same multi-index in "(<code>(<var>'B))"; similarly it assigns the values of "(<code>"(array-getter "(<var>'B)")")" applied to the  multi-indices of "(<code>"(array-domain "(<var>'B)")")" to the associated indices in "(<code>(<var>'A))".")
-(<p> "It is an error if the arguments don't satisfy these assumptions.")
-(<p> "If assigning any element of "(<code>(<var>'A))" affects the value of any element of "(<code>(<var>'B))", or vice versa, then the result is undefined.")
 
 (format-lambda-list '(array-ref A i0 #\. i-tail))
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
