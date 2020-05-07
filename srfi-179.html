@@ -1314,24 +1314,24 @@ indexer:       (lambda multi-index
     (lambda (port)
       (let* ((greys
               (pgm-greys pgm-data))
-	     (pgm-array
+             (pgm-array
               (pgm-pixels pgm-data))
-	     (domain
+             (domain
               (array-domain pgm-array))
-	     (rows
+             (rows
               (fx- (interval-upper-bound domain 0)
                    (interval-lower-bound domain 0)))
-	     (columns
+             (columns
               (fx- (interval-upper-bound domain 1)
                    (interval-lower-bound domain 1))))
-	(if force-ascii
-	    (display &quot;P2&quot; port)
-	    (display &quot;P5&quot; port))
-	(newline port)
-	(display columns port) (display  port)
-	(display rows port) (newline port)
-	(display greys port) (newline port)
-	(array-for-each
+        (if force-ascii
+            (display &quot;P2&quot; port)
+            (display &quot;P5&quot; port))
+        (newline port)
+        (display columns port) (display  port)
+        (display rows port) (newline port)
+        (display greys port) (newline port)
+        (array-for-each
          (if force-ascii
              (let ((next-pixel-in-line 1))
                (lambda (p)
@@ -1511,9 +1511,9 @@ indexer:       (lambda multi-index
 
 (define (expose difference-images)
   (pretty-print (map (lambda (difference-image)
-		       (list (array-domain difference-image)
-			     (array-&gt;list difference-image)))
-		     difference-images)))
+                       (list (array-domain difference-image)
+                             (array-&gt;list difference-image)))
+                     difference-images)))
 
 (begin
   (display
@@ -1600,16 +1600,16 @@ Second-differences in the direction $k\times (1,-1)$:
     <pre><code>
 (define (1D-Haar-loop a)
   (let ((a_ (array-getter a))
-	(a! (array-setter a))
-	(n (interval-upper-bound (array-domain a) 0)))
+        (a! (array-setter a))
+        (n (interval-upper-bound (array-domain a) 0)))
     (do ((i 0 (fx+ i 2)))
-	((fx= i n))
+        ((fx= i n))
       (let* ((a_i               (a_ i))
-	     (a_i+1             (a_ (fx+ i 1)))
-	     (scaled-sum        (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
-	     (scaled-difference (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
-	(a! scaled-sum i)
-	(a! scaled-difference (fx+ i 1))))))
+             (a_i+1             (a_ (fx+ i 1)))
+             (scaled-sum        (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
+             (scaled-difference (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
+        (a! scaled-sum i)
+        (a! scaled-difference (fx+ i 1))))))
 
 (define 1D-Haar-transform
   (recursively-apply-transform-and-downsample 1D-Haar-loop))
@@ -1645,15 +1645,15 @@ Second-differences in the direction $k\times (1,-1)$:
 Initial image:
 &quot;)
   (pretty-print (list (array-domain image)
-		      (array-&gt;list image)))
+                      (array-&gt;list image)))
   (hyperbolic-Haar-transform image)
   (display &quot;\nArray of hyperbolic Haar wavelet coefficients: \n&quot;)
   (pretty-print (list (array-domain image)
-		      (array-&gt;list image)))
+                      (array-&gt;list image)))
   (hyperbolic-Haar-inverse-transform image)
   (display &quot;\nReconstructed image: \n&quot;)
   (pretty-print (list (array-domain image)
-		      (array-&gt;list image))))
+                      (array-&gt;list image))))
 </code></pre>
     <p>This yields: </p>
     <pre>
@@ -1697,15 +1697,15 @@ Reconstructed image:
                         (else 0.)))))))
   (display &quot;\nInitial image:\n&quot;)
   (pretty-print (list (array-domain image)
-		      (array-&gt;list image)))
+                      (array-&gt;list image)))
   (Haar-transform image)
   (display &quot;\nArray of Haar wavelet coefficients: \n&quot;)
   (pretty-print (list (array-domain image)
-		      (array-&gt;list image)))
+                      (array-&gt;list image)))
   (Haar-inverse-transform image)
   (display &quot;\nReconstructed image: \n&quot;)
   (pretty-print (list (array-domain image)
-		      (array-&gt;list image))))
+                      (array-&gt;list image))))
 </pre>
     <p>This yields: </p>
     <pre>
