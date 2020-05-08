@@ -19,7 +19,6 @@
 
 (cond-expand
  ((or gambit r7rs)
-  ;; The other procedures are in R7RS small
   (begin
     (define (c64vector-copy! to at from start end)
       (f32vector-copy! to (* 2 at) from (* 2 start) (* 2 end)))
@@ -1707,6 +1706,359 @@
                                    ;; must be mutable
                                    safe?))))
 
+;;; We consolidate all moving of array elements to the following procedure.
+
+(define (%%move-array-elements destination source caller)
+  
+  ;; Here's the logic:
+  ;; We require the source and destination to have the same number of elements.
+  ;; If destination is a specialized array
+  ;; then
+  ;;   If its elements are in order
+  ;;   then
+  ;;      If the source is a specialized array
+  ;;         with the same storage class
+  ;;         for which a copier exists
+  ;;         and whose elements are also in order
+  ;;      then
+  ;;         do a block copy
+  ;;      else
+  ;;         if no checks are needed
+  ;;         then
+  ;;            step through the cells of the destination in order,
+  ;;            storing the source elements
+  ;;         else
+  ;;            step through the cells of the destination in order,
+  ;;            storing the source elements after testing they're OK
+  ;;            for the destination
+  ;;   else
+  ;;     we now require that the domains of destination and source are
+  ;;     the same.
+  ;;     If no checks are needed
+  ;;     then
+  ;;        Copy elements from the source to destination, without checks.
+  ;;     else
+  ;;        Copy elements from the source to destination, checking whether
+  ;;        they're OK
+  ;; else
+  ;;    We require the domains of destination and source to be the same.
+  ;;    Copy elements of source to destination
+
+  ;; We check the whether the elements of the destination are in order to save
+  ;; a bit of array indexing (or perhaps to a block copy, which is even better).
+
+  ;; We check that the elements we move to the destination are OK for the
+  ;; destination because if we don't catch errors here can be very tricky to find.
+  
+  (if (not (= (%%interval-volume (%%array-domain source))
+              (%%interval-volume (%%array-domain destination))))
+      (error (string-append caller "Arrays must have the same volume: ")
+             destination source))
+  
+  (if (specialized-array? destination)
+      (if (%%array-elements-in-order? destination)
+          ;; Now we do not assume that the domains are the same
+          ;; maybe we can do a block copy
+          (if (and (specialized-array? source)
+                   (equal? (%%array-storage-class destination)
+                           (%%array-storage-class source))
+                   ;; does a copier for this storage-class exist?
+                   (storage-class-copier (%%array-storage-class destination))
+                   (%%array-elements-in-order? source))
+              ;; do a block copy
+              (let* ((source-indexer
+                      (%%array-indexer source))
+                     (destination-indexer
+                      (%%array-indexer destination))
+                     (copier
+                      (storage-class-copier (%%array-storage-class source)))
+                     (initial-destination-index
+                      (%%interval-lower-bounds->list (%%array-domain destination)))
+                     (destination-start
+                      (apply destination-indexer initial-destination-index))
+                     (initial-source-index
+                      (%%interval-lower-bounds->list (%%array-domain source)))
+                     (source-start
+                      (apply source-indexer initial-source-index))
+                     (source-end
+                      (fx+ source-start (%%interval-volume (%%array-domain source)))))
+                (copier (%%array-body destination)
+                        destination-start
+                        (%%array-body source)
+                        source-start
+                        source-end)
+                "Block copy")
+              ;;  we can step through the elements of destination in order.
+              (let* ((domain
+                      (%%array-domain source))
+                     (getter
+                      (%%array-getter source))
+                     (destination-storage-class
+                      (%%array-storage-class destination))
+                     (initial-offset
+                      (apply (%%array-indexer destination)
+                             (%%interval-lower-bounds->list (%%array-domain destination)))))
+                (cond ((eq? destination-storage-class generic-storage-class)
+                       ;; No checks needed, storage-class-setter is vector-set!
+                       (let ((body (%%array-body destination)))
+                         (%%interval-for-each
+                          (case (%%interval-dimension domain)
+                            ((1)  (let ((index initial-offset))
+                                    (lambda (i)
+                                      (vector-set! body index (getter i))
+                                      (set! index (fx+ index 1)))))
+                            ((2)  (let ((index initial-offset))
+                                    (lambda (i j)
+                                      (vector-set! body index (getter i j))
+                                      (set! index (fx+ index 1)))))
+                            ((3)  (let ((index initial-offset))
+                                    (lambda (i j k)
+                                      (vector-set! body index (getter i j k))
+                                      (set! index (fx+ index 1)))))
+                            ((4)  (let ((index initial-offset))
+                                    (lambda (i j k l)
+                                      (vector-set! body index (getter i j k l))
+                                      (set! index (fx+ index 1)))))
+                            (else (let ((index initial-offset))
+                                    (lambda multi-index
+                                      (vector-set! body index (apply getter multi-index))
+                                      (set! index (fx+ index 1))))))
+                          domain))
+                       "In order, no checks needed, generic-storage-class")
+                      ((and (specialized-array? source)
+                            (equal? destination-storage-class
+                                    (%%array-storage-class source)))
+                       ;; No checks needed
+                       (let ((setter (storage-class-setter destination-storage-class))
+                             (body (%%array-body destination)))
+                         (%%interval-for-each
+                          (case (%%interval-dimension domain)
+                            ((1)  (let ((index initial-offset))
+                                    (lambda (i)
+                                      (setter body index (getter i))
+                                      (set! index (fx+ index 1)))))
+                            ((2)  (let ((index initial-offset))
+                                    (lambda (i j)
+                                      (setter body index (getter i j))
+                                      (set! index (fx+ index 1)))))
+                            ((3)  (let ((index initial-offset))
+                                    (lambda (i j k)
+                                      (setter body index (getter i j k))
+                                      (set! index (fx+ index 1)))))
+                            ((4)  (let ((index initial-offset))
+                                    (lambda (i j k l)
+                                      (setter body index (getter i j k l))
+                                      (set! index (fx+ index 1)))))
+                            (else (let ((index initial-offset))
+                                    (lambda multi-index
+                                      (setter body index (apply getter multi-index))
+                                      (set! index (fx+ index 1))))))
+                          domain))
+                       "In order, no checks needed")
+                      (else
+                       ;; checks needed
+                       (let ((checker
+                              (storage-class-checker destination-storage-class))
+                             (body
+                              (%%array-body destination))
+                             (setter
+                              (storage-class-setter destination-storage-class)))
+                         (%%interval-for-each
+                          (case (%%interval-dimension domain)
+                            ((1)
+                             (let ((index initial-offset))
+                               (lambda (i)
+                                 (let ((item (getter i)))
+                                   (if (checker item)
+                                       (begin
+                                         (setter body index item)
+                                         (set! index (fx+ index 1)))
+                                       (error
+                                        (string-append
+                                         caller
+                                         "Not all elements of the source can be stored in destination: ")
+                                        destination source i item))))))
+                            ((2)
+                             (let ((index initial-offset))
+                               (lambda (i j)
+                                 (let ((item (getter i j)))
+                                   (if (checker item)
+                                       (begin
+                                         (setter body index item)
+                                         (set! index (fx+ index 1)))
+                                       (error
+                                        (string-append
+                                         caller
+                                         "Not all elements of the source can be stored in destination: ")
+                                        destination source i j item))))))
+                            ((3)
+                             (let ((index initial-offset))
+                               (lambda (i j k)
+                                 (let ((item (getter i j k)))
+                                   (if (checker item)
+                                       (begin
+                                         (setter body index item)
+                                         (set! index (fx+ index 1)))
+                                       (error
+                                        (string-append
+                                         caller
+                                         "Not all elements of the source can be stored in destination: ")
+                                        destination source i j k item) )))))
+                            ((4)
+                             (let ((index initial-offset))
+                               (lambda (i j k l)
+                                 (let ((item (getter i j k l)))
+                                   (if (checker item)
+                                       (begin
+                                         (setter body index item)
+                                         (set! index (fx+ index 1)))
+                                       (error
+                                        (string-append
+                                         caller
+                                         "Not all elements of the source can be stored in destination: ")
+                                        destination source i j k l item))))))
+                            (else
+                             (let ((index 0))
+                               (lambda multi-index
+                                 (let ((item (apply getter multi-index)))
+                                   (if (checker item)
+                                       (begin
+                                         (setter body index item)
+                                         (set! index (fx+ index 1)))
+                                       (error
+                                        (string-append
+                                         caller
+                                         "Not all elements of the source can be stored in destination: ")
+                                        destination source multi-index item)))))))
+                          domain))
+                       "In order, checks needed"))))
+          ;; the elements of destination are not in order.
+          ;; so we need the domains to be the same.
+          (let* ((setter
+                  (%%array-setter destination))
+                 (getter
+                  (%%array-getter source))
+                 (checker
+                  (storage-class-checker (%%array-storage-class destination)))
+                 (domain
+                  (%%array-domain destination)))
+            (cond ((not (equal? domain (%%array-domain source)))
+                   (error (string-append
+                           caller
+                           "Arrays must have the same domains: ")
+                          destination source))
+                  ((or (equal? (%%array-storage-class destination) generic-storage-class)
+                       (and (specialized-array? source)
+                            (equal? (%%array-storage-class destination)
+                                    (%%array-storage-class source))))
+                   ;; no checks needed
+                   (%%interval-for-each
+                    (case (%%interval-dimension domain)
+                      ((1) (lambda (i)
+                             (setter (getter i) i)))
+                      ((2) (lambda (i j)
+                             (setter (getter i j) i j)))
+                      ((3) (lambda (i j k)
+                             (setter (getter i j k) i j k)))
+                      ((4) (lambda (i j k l)
+                             (setter (getter i j k l) i j k l)))
+                      (else
+                       (lambda multi-index
+                         (apply setter (apply getter multi-index) multi-index))))
+                    domain)
+                   "Out of order, no checks needed")
+                  (else
+                   ;; checks needed
+                   (%%interval-for-each
+                    (case (%%interval-dimension domain)
+                      ((1)
+                       (lambda (i)
+                         (let ((item (getter i)))
+                           (if (checker item)
+                               (setter item i)
+                               (error
+                                (string-append
+                                 caller
+                                 "Not all elements of the source can be stored in destination: ")
+                                destination source i item)))))
+                      ((2)
+                       (lambda (i j)
+                         (let ((item (getter i j)))
+                           (if (checker item)
+                               (setter item i j)
+                               (error
+                                (string-append
+                                 caller
+                                 "Not all elements of the source can be stored in destination: ")
+                                destination source i j item)))))
+                      ((3)
+                       (lambda (i j k)
+                         (let ((item (getter i j k)))
+                           (if (checker item)
+                               (setter item i j k)
+                               (error
+                                (string-append
+                                 caller
+                                 "Not all elements of the source can be stored in destination: ")
+                                destination source i j k item)))))
+                      ((4)
+                       (lambda (i j k l)
+                         (let ((item (getter i j k l)))
+                           (if (checker item)
+                               (setter item i j k l)
+                               (error
+                                (string-append
+                                 caller
+                                 "Not all elements of the source can be stored in destination: ")
+                                destination source i j k l item)))))
+                      (else
+                       (lambda multi-index
+                         (let ((item (apply getter multi-index)))
+                           (if (checker item)
+                               (apply setter item multi-index)
+                               (error
+                                (string-append
+                                 caller
+                                 "Not all elements of the source can be stored in destination: ")
+                                destination source multi-index item))))))
+                    domain)
+                   "Out of order, checks needed"))))
+      ;; destination is not a specialized array, so checks,
+      ;; if any, are built into the setter.
+      (let ((domain (%%array-domain destination)))
+        (if (not (equal? domain (%%array-domain source)))
+            (error (string-append
+                    caller
+                    "Arrays must have the same domains: ")
+                   destination source)
+            (let* ((setter
+                    (%%array-setter destination))
+                   (getter
+                    (%%array-getter source))
+                   (domain
+                    (%%array-domain destination)))
+              (%%interval-for-each
+               (case (%%interval-dimension domain)
+                 ((1) (lambda (i)
+                        (setter (getter i)
+                                i)))
+                 ((2) (lambda (i j)
+                        (setter (getter i j)
+                                i j)))
+                 ((3) (lambda (i j k)
+                        (setter (getter i j k)
+                                i j k)))
+                 ((4) (lambda (i j k l)
+                        (setter (getter i j k l)
+                                i j k l)))
+                 (else
+                  (lambda multi-index
+                    (apply setter
+                           (apply getter multi-index)
+                           multi-index))))
+               domain)
+              "Destination not specialized array")))))
+
 ;;;
 ;;; The domain of the result is the same as the domain of the argument.
 ;;;
@@ -1731,88 +2083,8 @@
          (let* ((domain (%%array-domain array))
                 (result (%%make-specialized-array domain
                                                   result-storage-class
-                                                  safe?))
-                (getter (%%array-getter array)))
-           (if (eq? result-storage-class generic-storage-class)   ;; checker always returns #t
-               (let ((body      (%%array-body result)))
-                 ;; The result's indexer steps from 0 to (vector-length body) so we
-                 ;; use that fact here instead of calling (array-indexer result).
-                 (%%interval-for-each
-                  (case (%%interval-dimension domain)
-                    ((1)  (let ((index 0))
-                            (lambda (i)
-                              (vector-set! body index (getter i))
-                              (set! index (fx+ index 1)))))
-                    ((2)  (let ((index 0))
-                            (lambda (i j)
-                              (vector-set! body index (getter i j))
-                              (set! index (fx+ index 1)))))
-                    ((3)  (let ((index 0))
-                            (lambda (i j k)
-                              (vector-set! body index (getter i j k))
-                              (set! index (fx+ index 1)))))
-                    ((4)  (let ((index 0))
-                            (lambda (i j k l)
-                              (vector-set! body index (getter i j k l))
-                              (set! index (fx+ index 1)))))
-                    (else (let ((index 0))
-                            (lambda multi-index
-                              (vector-set! body index (apply getter multi-index))
-                              (set! index (fx+ index 1))))))
-                  domain))
-               (let ((checker              (storage-class-checker result-storage-class))
-                     (body                 (%%array-body result))
-                     (storage-class-setter (storage-class-setter result-storage-class)))
-                 ;; The result's indexer steps from 0 to (vector-length body) so we
-                 ;; use that fact here instead of calling (array-indexer result).
-                 (%%interval-for-each
-                  (case (%%interval-dimension domain)
-                    ((1)  (let ((index 0))
-                            (lambda (i)
-                              (let ((item (getter i)))
-                                (if (checker item)
-                                    (begin
-                                      (storage-class-setter body index item)
-                                      (set! index (fx+ index 1)))
-                                    (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class mutable? safe? item))))))
-                    ((2)  (let ((index 0))
-                            (lambda (i j)
-                              (let ((item (getter i j)))
-                                (if (checker item)
-                                    (begin
-                                      (storage-class-setter body index item)
-                                      (set! index (fx+ index 1)))
-                                    (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class mutable? safe? item))))))
-                    ((3)  (let ((index 0))
-                            (lambda (i j k)
-                              (let ((item (getter i j k)))
-                                (if (checker item)
-                                    (begin
-                                      (storage-class-setter body index item)
-                                      (set! index (fx+ index 1)))
-                                    (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class mutable? safe? item))))))
-                    ((4)  (let ((index 0))
-                            (lambda (i j k l)
-                              (let ((item (getter i j k l)))
-                                (if (checker item)
-                                    (begin
-                                      (storage-class-setter body index item)
-                                      (set! index (fx+ index 1)))
-                                    (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class mutable? safe? item))))))
-                    (else (let ((index 0))
-                            (lambda multi-index
-                              (let ((item (apply getter multi-index)))
-                                (if (checker item)
-                                    (begin
-                                      (storage-class-setter body index item)
-                                      (set! index (fx+ index 1)))
-                                    (error "array->specialized-array: not all elements of the array can be manipulated by the storage class: "
-                                           array result-storage-class mutable? safe? item)))))))
-                  domain)))
+                                                  safe?)))
+           (%%move-array-elements result array "array->specialized-array: ")
            (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
                (%%array-setter-set! result #f))
            result))))
@@ -2724,7 +2996,7 @@
          (error "array-curry: The first argument is not an array: " array right-dimension))
         ((not (exact-integer? right-dimension))
          (error "array-curry: The second argument is not an exact integer: " array right-dimension))
-        ((not (< 0 right-dimension (%%interval-dimension (array-domain array))))
+        ((not (< 0 right-dimension (%%interval-dimension (%%array-domain array))))
          (error "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " array right-dimension))
         ((specialized-array? array)
          (%%specialized-array-curry array right-dimension))
@@ -3148,69 +3420,8 @@
         ((not (interval= (%%array-domain destination)
                          (%%array-domain source)))
          (error "array-assign!: The arguments do not have the same domain: " destination source))
-        ;; We decide whether a block copy can be done.
-        
-        ;; NOTE: A block copy might use memmove, which can give results different to
-        ;; an element-by-element copy; that's why we changed the documentation to say
-        ;; that results are undefined if modifying destination can affect source.
-        
-        ;; The next check about whether a block copy can be done is a bit heavyweight.
-        ((and (specialized-array? destination)
-              (specialized-array? source)
-              (equal? (%%array-storage-class destination)
-                      (%%array-storage-class source))
-              ;; does a copier for this storage-class exist?
-              (storage-class-copier (%%array-storage-class destination))
-              (%%array-elements-in-order? destination)
-              (%%array-elements-in-order? source))
-         ;; do a block copy
-         (let* ((source-indexer
-                 (array-indexer source))
-                (destination-indexer
-                 (array-indexer destination))
-                (copier
-                 (storage-class-copier (array-storage-class source)))
-                (initial-multi-index
-                 (interval-lower-bounds->list (array-domain source)))
-                (destination-start
-                 (apply destination-indexer initial-multi-index))
-                (source-start
-                 (apply source-indexer initial-multi-index))
-                (source-end
-                 (+ source-start (interval-volume (array-domain source)))))
-           (copier (array-body destination)
-                   destination-start
-                   (array-body source)
-                   source-start
-                   source-end)))
         (else
-         ;; do an element-by-element copy
-         (let ((source-getter
-                (%%array-getter source))
-               (destination-setter
-                (%%array-setter destination))
-               (domain
-                (%%array-domain destination)))
-           (%%interval-for-each
-            (case (interval-dimension domain)
-              ((1) (lambda (i)
-                     (destination-setter (source-getter i)
-                                         i)))
-              ((2) (lambda (i j)
-                     (destination-setter (source-getter i j)
-                                         i j)))
-              ((3) (lambda (i j k)
-                     (destination-setter (source-getter i j k)
-                                         i j k)))
-              ((4) (lambda (i j k l)
-                     (destination-setter (source-getter i j k l)
-                                         i j k l)))
-              (else
-               (lambda multi-index
-                 (apply destination-setter
-                        (apply source-getter multi-index)
-                        multi-index))))
-            domain)))))
+         (%%move-array-elements destination source "array-assign!: "))))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,

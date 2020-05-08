@@ -1,5 +1,5 @@
-(declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (include "generic-arrays.scm")
+(declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (declare (inlining-limit 0))
 (define tests 100)
 (set! tests tests)
@@ -31,12 +31,6 @@
      (lambda args
        (if (not (equal? args ,vals))
            (pp (list ',expr  " => " args ", not " ,vals #\newline))))))
-
-(define-macro (do-times  var n . body)
-  ;; not so useful when the debugger can't report line numbers inside macros.
-  `(do ((,var 0 (+ ,var 1)))
-       ((= ,var ,n))
-     ,@body))
 
 ;;; requires make-list function
 
@@ -926,6 +920,138 @@
     (test (array-elements-in-order? sampled)
           (sampled-array-elements-in-order? base scales))))
 
+(pp "%%move-array-elements tests")
+
+;; error tests
+
+(test (%%move-array-elements (array-reverse (make-specialized-array (make-interval '#(2 2))))
+                             (make-array (make-interval '#(1 4)) list)
+                             "")
+      "Arrays must have the same domains: ")
+
+(test (%%move-array-elements (make-specialized-array (make-interval '#(2 2)))
+                             (make-array (make-interval '#(1 5)) list)
+                             "")
+      "Arrays must have the same volume: ")
+
+(test (%%move-array-elements (make-array (make-interval '#(2 2)) list list) ;; not a valid setter
+                             (make-array (make-interval '#(1 4)) list)
+                             "")
+      "Arrays must have the same domains: ")
+
+(do ((d 1 (fx+ d 1)))
+    ((= d 6))
+  (let* ((uppers-list
+          (iota d 2))
+         (domain
+          (make-interval (list->vector uppers-list)))
+         (reversed-domain
+          (make-interval (list->vector (reverse uppers-list)))))
+    (do ((i 0 (fx+ i 1)))
+        ;; distribute "tests" results over five dimensions
+        ((= i (quotient tests 5)))
+      (let* ((storage-class-and-initializer
+              (random-storage-class-and-initializer))
+             (storage-class
+              (car storage-class-and-initializer))
+             (initializer
+              (cadr storage-class-and-initializer))
+             (specialized-source
+              (array->specialized-array
+               (make-array domain
+                           (lambda args
+                             (initializer)))
+               storage-class))
+             (rotated-specialized-source
+              (array-rotate specialized-source (- d 1)))
+             (specialized-reversed-source
+              (array->specialized-array
+               (make-array reversed-domain
+                           (lambda args
+                             (initializer)))
+               storage-class))
+             (specialized-destination
+              (make-specialized-array domain
+                                      storage-class))
+             (specialized-reversed-destination
+              (make-specialized-array reversed-domain
+                                      storage-class))
+             (source
+              (make-array domain
+                          (array-getter (array-reverse specialized-source))))
+             (destination
+              (make-array (array-domain specialized-destination)
+                          (array-getter specialized-destination)
+                          (array-setter specialized-destination)))
+             (rotated-specialized-source
+              (array-rotate specialized-source (- d 1)))
+             (rotated-source
+              (array-rotate source (- d 1)))
+             (reversed-source
+              (make-array reversed-domain
+                          (array-getter specialized-reversed-source)))
+             (reversed-destination
+              (make-array reversed-domain
+                          (array-getter specialized-reversed-source)
+                          (array-setter specialized-reversed-source))))
+        ;; specialized-to-specialized, use fast copy
+        (test (%%move-array-elements specialized-destination specialized-source "test: ")
+              (if (equal? storage-class u1-storage-class)
+                  ;; no copier
+                  "In order, no checks needed"
+                  "Block copy"))
+        (test (myarray= specialized-source specialized-destination)
+              #t)
+        ;; fast copying between specialized of the same volume
+        (test (%%move-array-elements specialized-destination specialized-reversed-source "test: ")
+              (if (equal? storage-class u1-storage-class)
+                  ;; no copier
+                  "In order, no checks needed"
+                  "Block copy"))
+        ;; copy to adjacent elements of destination, checking needed
+        (test (%%move-array-elements specialized-destination source "test: ")
+              (if (equal? storage-class generic-storage-class)
+                  "In order, no checks needed, generic-storage-class"
+                  "In order, checks needed"))
+        (test (myarray= source specialized-destination)
+              #t)
+        ;; copy to adjacent elements of destination, no checking needed
+        ;; arrays of different shapes
+        (test (%%move-array-elements specialized-destination rotated-specialized-source "test: ")
+              (if (and (array-elements-in-order? rotated-specialized-source) ;; one dimension
+                       (not (equal? storage-class u1-storage-class)))
+                  "Block copy"
+                  (if (equal? storage-class generic-storage-class)
+                      "In order, no checks needed, generic-storage-class"
+                      "In order, no checks needed")))
+        (test (equal? (array->list rotated-specialized-source)
+                      (array->list specialized-destination))
+              #t)
+        ;; copy to adjacent elements of destination, checking needed
+        ;; arrays of different shapes
+        (test (%%move-array-elements specialized-destination rotated-source "test: ")
+              (if (equal? storage-class generic-storage-class)
+                  "In order, no checks needed, generic-storage-class"
+                  "In order, checks needed"))
+        (test (equal? (array->list rotated-source)
+                      (array->list specialized-destination))
+              #t)
+        ;; copy to non-adjacent elements of destination, no checking needed
+        (test (%%move-array-elements (array-reverse specialized-destination) specialized-source "test: ")
+              (if (array-elements-in-order? (array-reverse specialized-destination))
+                  "Out of order, no checks needed"
+                  "Out of order, no checks needed" ))
+        (test (myarray= specialized-source (array-reverse specialized-destination))
+              #t)
+        ;; copy to non-specialized array
+        (test (%%move-array-elements destination source "test: ")
+              "Destination not specialized array")
+        (test (myarray= destination source)
+              #t)
+        ))))
+        
+        
+          
 (pp "array->specialized-array error tests")
 
 (test (array->specialized-array #f generic-storage-class)
@@ -947,31 +1073,43 @@
 (test (array->specialized-array (make-array (make-interval '#(1) '#(2))
                                             list)
                                 u16-storage-class)
-      "array->specialized-array: not all elements of the array can be manipulated by the storage class: ")
+      "array->specialized-array: Not all elements of the source can be stored in destination: ")
 
 (test (array->specialized-array (make-array (make-interval '#(1 1) '#(2 2))
                                             list)
                                 u16-storage-class)
-      "array->specialized-array: not all elements of the array can be manipulated by the storage class: ")
+      "array->specialized-array: Not all elements of the source can be stored in destination: ")
 
 (test (array->specialized-array (make-array (make-interval '#(1 1 1) '#(2 2 2))
                                             list)
                                 u16-storage-class)
-      "array->specialized-array: not all elements of the array can be manipulated by the storage class: ")
+     "array->specialized-array: Not all elements of the source can be stored in destination: " )
 
 (test (array->specialized-array (make-array (make-interval '#(1 1 1 1) '#(2 2 2 2))
                                             list)
                                 u16-storage-class)
-      "array->specialized-array: not all elements of the array can be manipulated by the storage class: ")
+      "array->specialized-array: Not all elements of the source can be stored in destination: ")
 
 (test (array->specialized-array (make-array (make-interval '#(1 1 1 1 1) '#(2 2 2 2 2))
                                             list)
                                 u16-storage-class)
-      "array->specialized-array: not all elements of the array can be manipulated by the storage class: ")
+      "array->specialized-array: Not all elements of the source can be stored in destination: ")
 
 (test (specialized-array-default-safe? 'a)
       "specialized-array-default-safe?: The argument is not a boolean: ")
 
+(test (specialized-array-default-mutable? 'a)
+      "specialized-array-default-mutable?: The argument is not a boolean: ")
+
+(let* ((mutable-default (specialized-array-default-mutable?))
+       (ignore (specialized-array-default-mutable? #f))
+       (A (array->specialized-array (make-array (make-interval '#(10)) (lambda args 10))))
+       (ignore (specialized-array-default-mutable? #t)))
+  (test (array-set! A 0 19)
+        "array-set!: The first argument is not mutable array: ")
+  (test (array-assign! A A)
+        "array-assign!: The first argument is not a mutable array: "))
+  
 
 (pp "array->specialized-array result tests")
 
@@ -2428,6 +2566,14 @@
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
       "array-tile: The dimension of the first argument (an array) does not equal the length of the second argument (a vector): ")
 
+(do ((d 1 (fx+ d 1)))
+     ((fx= d 6))
+  (let* ((A (make-array (make-interval (make-vector d 100)) list))
+         (B (array-tile A (make-vector d 10)))
+         (index (make-list d 12)))
+    (test (apply (array-getter B) index)
+          "array-tile: Index to result array is not valid: ")))
+
 (define (ceiling-quotient x d)
   ;; assumes x and d are positive
   (quotient (+ x d -1) d))
@@ -2650,6 +2796,29 @@
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
       "array-assign!: The arguments do not have the same domain: ")
 
+(do ((d 1 (fx+ d 1)))
+    ((= d 6))
+  (let* ((unsafe-specialized-destination
+          (make-specialized-array (make-interval (make-vector d 10))
+                                  u1-storage-class))
+         (safe-specialized-destination
+          (make-specialized-array (make-interval (make-vector d 10))
+                                  u1-storage-class
+                                  #t))
+         (mutable-destination
+          (make-array (array-domain safe-specialized-destination)
+                      (array-getter safe-specialized-destination)
+                      (array-setter safe-specialized-destination)))
+         (source
+          (make-array (array-domain safe-specialized-destination)
+                      (lambda args 100)))) ;; not 0 or 1
+    (test (array-assign! unsafe-specialized-destination source) ;; should check anyway
+          "array-assign!: Not all elements of the source can be stored in destination: ")
+    (test (array-assign! safe-specialized-destination source)
+          "array-assign!: Not all elements of the source can be stored in destination: ")
+    (test (array-assign! mutable-destination source)
+          "array-setter: value cannot be stored in body: ")))
+                      
 (do ((i 0 (fx+ i 1)))
     ((fx= i tests))
   (let* ((interval
@@ -2899,6 +3068,9 @@
    (make-array (make-interval '#(10 10))
                (lambda (i j) (if (= i j) 1 0)))
    u1-storage-class))
+
+(test (array-set! 1 1 1)
+      "array-set!: The first argument is not mutable array: ")
 
 (test (array-set! B-set!)
       "Wrong number of arguments passed to procedure ")
