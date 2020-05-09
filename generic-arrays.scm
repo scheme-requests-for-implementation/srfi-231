@@ -3379,22 +3379,22 @@
         (else
          (array-fold-right cons '() array))))
 
-(define (list->specialized-array l
-                                 interval
-                                 #!optional
-                                 (result-storage-class generic-storage-class)
-                                 (mutable? (specialized-array-default-mutable?))
-                                 (safe? (specialized-array-default-safe?)))
+(define (list->array l
+                     interval
+                     #!optional
+                     (result-storage-class generic-storage-class)
+                     (mutable? (specialized-array-default-mutable?))
+                     (safe? (specialized-array-default-safe?)))
   (cond ((not (list? l))
-         (error "list->specialized-array: The first argument is not a list: " l interval))
+         (error "list->array: The first argument is not a list: " l interval))
         ((not (interval? interval))
-         (error "list->specialized-array: The second argument is not an interval: " l interval))
+         (error "list->array: The second argument is not an interval: " l interval))
         ((not (storage-class? result-storage-class))
-         (error "list->specialized-array: The third argument is not a storage-class: " l interval result-storage-class))
+         (error "list->array: The third argument is not a storage-class: " l interval result-storage-class))
         ((not (boolean? mutable?))
-         (error "list->specialized-array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
+         (error "list->array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
         ((not (boolean? safe?))
-         (error "list->specialized-array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
+         (error "list->array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
         (else
          (let* ((checker
                  (storage-class-checker  result-storage-class))
@@ -3416,14 +3416,14 @@
                        (if (not mutable?)
                            (%%array-setter-set! result #f))
                        result)
-                     (error "list->specialized-array: The length of the first argument does not equal the volume of the second: " l interval))
+                     (error "list->array: The length of the first argument does not equal the volume of the second: " l interval))
                  (let ((item (car local)))
                    (if (checker item)
                        (begin
                          (setter body i item)
                          (loop (+ i 1)
                                (cdr local)))
-                       (error "list->specialized-array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
+                       (error "list->array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
 
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))

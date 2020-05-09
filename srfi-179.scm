@@ -345,7 +345,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-any" "array-any")END
                  (<a> href: "#array-every" "array-every")END
                  (<a> href: "#array->list" "array->list") END
-                 (<a> href: "#list->specialized-array" "list->specialized-array") END
+                 (<a> href: "#list->array" "list->array") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
@@ -934,11 +934,11 @@ indexer:       (lambda multi-index
 (<p> "The specialized array returned by "(<code> 'array-copy)" can be defined conceptually by:")
 (<pre>
  (<code>"
-(list->specialized-array (array->list array)
-                         new-domain
-                         result-storage-class
-                         mutable?
-                         safe?)
+(list->array (array->list array)
+             new-domain
+             result-storage-class
+             mutable?
+             safe?)
 "))
 (<p> "It is an error if the arguments do not satisfy these conditions.")
 (<p>(<b> "Note: ")"If "(<code>(<var> 'new-domain))" is not the same as "(<code>"(array-domain "(<var>'array)")")", one can think of the resulting array as a "(<i>'reshaped)" version of "(<code>(<var> 'array))".")
@@ -1514,7 +1514,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated list in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
 
-(format-lambda-list '(list->specialized-array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
+(format-lambda-list '(list->array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "Assumes that "
      (<code>(<var> 'l))" is an list, "
      (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
@@ -1788,14 +1788,14 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
 (<pre>
  (<code>"
 (define sharpen-filter
-  (list->specialized-array
+  (list->array
    '(0 -1  0
     -1  5 -1
      0 -1  0)
    (make-interval '#(-1 -1) '#(2 2))))
 
 (define edge-filter
-  (list->specialized-array
+  (list->array
    '(0 -1  0
     -1  4 -1
      0 -1  0)
@@ -2334,14 +2334,14 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 ;; http://microapl.com/apl_help/ch_020_020_880.htm 
    
 (define TABLE1
-  (list->specialized-array
+  (list->array
    '(1 2
      5 4
      3 0)
    (make-interval '#(3 2))))
 
 (define TABLE2
-  (list->specialized-array
+  (list->array
    '(6 2 3 4
      7 0 1 8)
    (make-interval '#(2 4))))
@@ -2354,10 +2354,10 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 ;;; 18      6       9       12
 
 (define X   ;; a \"row vector\"
-  (list->specialized-array '(1 3 5 7) (make-interval '#(1 4))))
+  (list->array '(1 3 5 7) (make-interval '#(1 4))))
 
 (define Y   ;; a \"column vector\"
-  (list->specialized-array '(2 3 6 7) (make-interval '#(4 1))))
+  (list->array '(2 3 6 7) (make-interval '#(4 1))))
 
 (array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 

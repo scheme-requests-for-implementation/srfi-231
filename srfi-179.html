@@ -193,7 +193,7 @@
         <a href="#array-any">array-any</a>,
         <a href="#array-every">array-every</a>,
         <a href="#array-&gt;list">array-&gt;list</a>,
-        <a href="#list-&gt;specialized-array">list-&gt;specialized-array</a>,
+        <a href="#list-&gt;array">list-&gt;array</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
@@ -656,11 +656,11 @@ indexer:       (lambda multi-index
     <p>If <code><var>new-domain</var></code> is <code>#f</code>, then it is set to <code>(array-domain <var>array</var>)</code>. </p>
     <p>The specialized array returned by <code>array-copy</code> can be defined conceptually by:</p>
     <pre><code>
-(list-&gt;specialized-array (array-&gt;list array)
-                         new-domain
-                         result-storage-class
-                         mutable?
-                         safe?)
+(list-&gt;array (array-&gt;list array)
+             new-domain
+             result-storage-class
+             mutable?
+             safe?)
 </code></pre>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Note: </b>If <code><var>new-domain</var></code> is not the same as <code>(array-domain <var>array</var>)</code>, one can think of the resulting array as a <i>reshaped</i> version of <code><var>array</var></code>.</p>
@@ -1141,7 +1141,7 @@ indexer:       (lambda multi-index
     <p><b>Procedure: </b><code><a name="array-&gt;list">array-&gt;list</a> <var>array</var></code></p>
     <p>Stores the elements of <code><var>array</var></code> into a newly allocated list in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
-    <p><b>Procedure: </b><code><a name="list-&gt;specialized-array">list-&gt;specialized-array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a name="list-&gt;array">list-&gt;array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>l</var></code> is an list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized-array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
@@ -1387,14 +1387,14 @@ indexer:       (lambda multi-index
     <p>together with some filters</p>
     <pre><code>
 (define sharpen-filter
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(0 -1  0
     -1  5 -1
      0 -1  0)
    (make-interval '#(-1 -1) '#(2 2))))
 
 (define edge-filter
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(0 -1  0
     -1  4 -1
      0 -1  0)
@@ -1917,14 +1917,14 @@ Reconstructed image:
 ;; http://microapl.com/apl_help/ch_020_020_880.htm 
    
 (define TABLE1
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(1 2
      5 4
      3 0)
    (make-interval '#(3 2))))
 
 (define TABLE2
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(6 2 3 4
      7 0 1 8)
    (make-interval '#(2 4))))
@@ -1937,10 +1937,10 @@ Reconstructed image:
 ;;; 18      6       9       12
 
 (define X   ;; a &quot;row vector&quot;
-  (list-&gt;specialized-array '(1 3 5 7) (make-interval '#(1 4))))
+  (list-&gt;array '(1 3 5 7) (make-interval '#(1 4))))
 
 (define Y   ;; a &quot;column vector&quot;
-  (list-&gt;specialized-array '(2 3 6 7) (make-interval '#(4 1))))
+  (list-&gt;array '(2 3 6 7) (make-interval '#(4 1))))
 
 (array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 
