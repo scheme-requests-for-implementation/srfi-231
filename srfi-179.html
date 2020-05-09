@@ -102,7 +102,7 @@
       <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
       <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li>
       <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would a compatible extension of this SRFI.</li>
-      <li><b>No low-level specialized-array constructor. </b>While the author of the SRFI uses mainly <code>(make-array ...)</code>, <code>array-map</code>, and <code>array-copy</code> to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple <code>(make-array ...)</code> mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.</li></ul>
+      <li><b>No low-level specialized array constructor. </b>While the author of the SRFI uses mainly <code>(make-array ...)</code>, <code>array-map</code>, and <code>array-copy</code> to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple <code>(make-array ...)</code> mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.</li></ul>
     <h2>Specification</h2>
     <dl>
       <dt>Miscellaneous Functions</dt>
@@ -387,7 +387,7 @@
                (list-&gt;vector (apply append (map array-upper-bounds-&gt;list (cons interval intervals)))))</code></pre>
     <p>It is an error if any argument is not an interval.</p>
     <h2>Storage classes</h2>
-    <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
+    <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a name="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var></code></p>
@@ -599,12 +599,12 @@
     <p><code>(array-body <var>array</var>)</code> is a linearly indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.</p>
     <p><code>(array-indexer <var>array</var>)</code> is assumed to be a one-to-one, but not necessarily onto,  affine mapping from <code>(array-domain <var>array</var>)</code> into  the indexing domain of <code>(array-body <var>array</var>)</code>.</p>
     <p>Please see <a href="#make-specialized-array"><code>make-specialized-array</code></a> for how <code>(array-body <var>array</var>)</code>, etc., are used.</p>
-    <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized-array.</p>
+    <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized array.</p>
     <p><b>Procedure: </b><code><a name="array-elements-in-order?">array-elements-in-order?</a> <var>A</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a specialized array, in which case it returns <code>#t</code> if the elements of <code><var>A</var></code> are in order and stored adjacently in <code>(array-body <var>A</var>)</code> and <code>#f</code> otherwise.</p>
     <p>It is an error if <code><var>A</var></code> is not a specialized array.</p>
     <p><b>Procedure: </b><code><a name="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
-    <p>Constructs a new specialized-array that shares the body of the specialized-array <code><var>array</var></code>.
+    <p>Constructs a new specialized array that shares the body of the specialized array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to a specialized array with the following fields:</p>
     <pre><code>
 domain:        new-domain
@@ -846,7 +846,7 @@ indexer:       (lambda multi-index
 </code></pre>
     <p>So you see that if the first argument if the new getter is in $[0,16)$, then indeed the fourth argument of <code><var>old-getter</var></code> is also in $[0,16)$, as it should be. This is a subtlety that I don't see how to overcome.  It is the listing of the arguments of the new getter, the <code>lambda</code>, that must be permuted.</p>
     <p>Mathematically, we can define $\pi^{-1}$, the inverse of a permutation $\pi$, such that $\pi^{-1}$ composed with $\pi$ gives the identity permutation.  Then the getter of the new array is, in pseudo-code, <code>(lambda multi-index (apply <var>old-getter</var> (</code>$\pi^{-1}$<code> multi-index)))</code>.  We have assumed that $\pi^{-1}$ takes a list as an argument and returns a list as a result.</p>
-    <p>Employing this same pseudo-code, if <code><var>array</var></code> is a specialized-array and we denote the permutation by $\pi$, then <code>array-permute</code> returns the new specialized array</p>
+    <p>Employing this same pseudo-code, if <code><var>array</var></code> is a specialized array and we denote the permutation by $\pi$, then <code>array-permute</code> returns the new specialized array</p>
     <pre><code>
 (specialized-array-share <var>array</var>
                          (interval-permute (array-domain <var>array</var>) &pi;)
@@ -1143,7 +1143,7 @@ indexer:       (lambda multi-index
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
     <p><b>Procedure: </b><code><a name="list-&gt;array">list-&gt;array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>l</var></code> is an list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
-    <p>Returns a specialized-array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
+    <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Procedure: </b><code><a name="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array, both with the same domains, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
@@ -1169,7 +1169,7 @@ indexer:       (lambda multi-index
     <h2>Relationship to other SRFIs</h2>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
-      specialized-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
+      specialized arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
       translate: </p>
     <dl>
       <dt><code>(array? obj)</code></dt>
