@@ -2057,7 +2057,11 @@
                            (apply getter multi-index)
                            multi-index))))
                domain)
-              "Destination not specialized array")))))
+              "Destination not specialized array"))))
+  ;; remove this to have each %%move-array-elements return a
+  ;; string that designates the copying algorithm it used.
+  destination
+  )
 
 ;;;
 ;;; The domain of the result is the same as the domain of the argument.
@@ -2066,25 +2070,34 @@
 ;;; (array-getter array) applied to the elements of (array-domain array)
 
 
-(define (array->specialized-array array
-                                  #!optional
-                                  (result-storage-class generic-storage-class)
-                                  (mutable? (specialized-array-default-mutable?))
-                                  (safe? (specialized-array-default-safe?)))
+(define (array-copy array
+                    #!optional
+                    (result-storage-class generic-storage-class)
+                    (new-domain #f)
+                    (mutable? (specialized-array-default-mutable?))
+                    (safe? (specialized-array-default-safe?)))
   (cond ((not (array? array))
-         (error "array->specialized-array: The first argument is not an array: " array))
+         (error "array-copy: The first argument is not an array: " array))
         ((not (storage-class? result-storage-class))
-         (error "array->specialized-array: The second argument is not a storage-class: " result-storage-class))
-        ((not (boolean? safe?))
-         (error "array->specialized-array: The fourth argument is not a boolean: " safe?))
+         (error "array-copy: The second argument is not a storage-class: " result-storage-class))
+        ((not (or (eq? new-domain #f) (%%interval? new-domain)))
+         (error "array-copy: The third argument is neither #f nor an interval: " new-domain))
+        ((and (%%interval? new-domain)
+              (not (= (%%interval-volume new-domain)
+                      (%%interval-volume (%%array-domain array)))))
+         (error
+          "array-copy: The volume of the third argument is not the volume of the domain of the first argument: "
+          array result-storage-class new-domain))
         ((not (boolean? mutable?))
-         (error "array->specialized-array: The third argument is not a boolean: " mutable?))
+         (error "array-copy: The fourth argument is not a boolean: " mutable?))
+        ((not (boolean? safe?))
+         (error "array-copy: The fifth argument is not a boolean: " safe?))
         (else
-         (let* ((domain (%%array-domain array))
-                (result (%%make-specialized-array domain
+         (let* ((new-domain (if new-domain new-domain (%%array-domain array)))
+                (result (%%make-specialized-array new-domain
                                                   result-storage-class
                                                   safe?)))
-           (%%move-array-elements result array "array->specialized-array: ")
+           (%%move-array-elements result array "array-copy: ")
            (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
                (%%array-setter-set! result #f))
            result))))

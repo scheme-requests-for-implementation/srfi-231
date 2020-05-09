@@ -1,7 +1,7 @@
 (include "generic-arrays.scm")
 (declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (declare (inlining-limit 0))
-(define tests 100)
+(define tests 10)
 (set! tests tests)
 
 (define-macro (test expr value)
@@ -957,7 +957,7 @@
              (initializer
               (cadr storage-class-and-initializer))
              (specialized-source
-              (array->specialized-array
+              (array-copy
                (make-array domain
                            (lambda args
                              (initializer)))
@@ -965,7 +965,7 @@
              (rotated-specialized-source
               (array-rotate specialized-source (- d 1)))
              (specialized-reversed-source
-              (array->specialized-array
+              (array-copy
                (make-array reversed-domain
                            (lambda args
                              (initializer)))
@@ -1052,48 +1052,69 @@
         
         
           
-(pp "array->specialized-array error tests")
+(pp "array-copy error tests")
 
-(test (array->specialized-array #f generic-storage-class)
-      "array->specialized-array: The first argument is not an array: ")
+(test (array-copy #f generic-storage-class)
+      "array-copy: The first argument is not an array: ")
 
-(test (array->specialized-array (make-array (make-interval '#(1) '#(2))
-                                            list)
-                                #f)
-      "array->specialized-array: The second argument is not a storage-class: ")
+(test (array-copy (make-array (make-interval '#(1) '#(2))
+                              list)
+                  #f)
+      "array-copy: The second argument is not a storage-class: ")
 
-(test (array->specialized-array (make-array (make-interval '#(1) '#(2))
-                                            list)
-                                generic-storage-class
-                                'a)
-      "array->specialized-array: The third argument is not a boolean: ")
+(test (array-copy (make-array (make-interval '#(1) '#(2))
+                              list)
+                  generic-storage-class
+                  'a)
+      "array-copy: The third argument is neither #f nor an interval: ")
+
+(test (array-copy (make-array (make-interval '#(1) '#(2))
+                              list)
+                  generic-storage-class
+                  (make-interval '#(10)))
+      "array-copy: The volume of the third argument is not the volume of the domain of the first argument: ")
+
+(test (array-copy (make-array (make-interval '#(1) '#(2))
+                              list)
+                  generic-storage-class
+                  #f
+                  'a)
+      "array-copy: The fourth argument is not a boolean: ")
+
+(test (array-copy (make-array (make-interval '#(1) '#(2))
+                              list)
+                  generic-storage-class
+                  #f
+                  #f
+                  'a)
+      "array-copy: The fifth argument is not a boolean: ")
 
 ;; We gotta make sure than the error checks work in all dimensions ...
 
-(test (array->specialized-array (make-array (make-interval '#(1) '#(2))
-                                            list)
-                                u16-storage-class)
-      "array->specialized-array: Not all elements of the source can be stored in destination: ")
+(test (array-copy (make-array (make-interval '#(1) '#(2))
+                              list)
+                  u16-storage-class)
+      "array-copy: Not all elements of the source can be stored in destination: ")
 
-(test (array->specialized-array (make-array (make-interval '#(1 1) '#(2 2))
-                                            list)
-                                u16-storage-class)
-      "array->specialized-array: Not all elements of the source can be stored in destination: ")
+(test (array-copy (make-array (make-interval '#(1 1) '#(2 2))
+                              list)
+                  u16-storage-class)
+      "array-copy: Not all elements of the source can be stored in destination: ")
 
-(test (array->specialized-array (make-array (make-interval '#(1 1 1) '#(2 2 2))
-                                            list)
-                                u16-storage-class)
-     "array->specialized-array: Not all elements of the source can be stored in destination: " )
+(test (array-copy (make-array (make-interval '#(1 1 1) '#(2 2 2))
+                              list)
+                  u16-storage-class)
+      "array-copy: Not all elements of the source can be stored in destination: " )
 
-(test (array->specialized-array (make-array (make-interval '#(1 1 1 1) '#(2 2 2 2))
-                                            list)
-                                u16-storage-class)
-      "array->specialized-array: Not all elements of the source can be stored in destination: ")
+(test (array-copy (make-array (make-interval '#(1 1 1 1) '#(2 2 2 2))
+                              list)
+                  u16-storage-class)
+      "array-copy: Not all elements of the source can be stored in destination: ")
 
-(test (array->specialized-array (make-array (make-interval '#(1 1 1 1 1) '#(2 2 2 2 2))
-                                            list)
-                                u16-storage-class)
-      "array->specialized-array: Not all elements of the source can be stored in destination: ")
+(test (array-copy (make-array (make-interval '#(1 1 1 1 1) '#(2 2 2 2 2))
+                              list)
+                  u16-storage-class)
+      "array-copy: Not all elements of the source can be stored in destination: ")
 
 (test (specialized-array-default-safe? 'a)
       "specialized-array-default-safe?: The argument is not a boolean: ")
@@ -1103,7 +1124,7 @@
 
 (let* ((mutable-default (specialized-array-default-mutable?))
        (ignore (specialized-array-default-mutable? #f))
-       (A (array->specialized-array (make-array (make-interval '#(10)) (lambda args 10))))
+       (A (array-copy (make-array (make-interval '#(10)) (lambda args 10))))
        (ignore (specialized-array-default-mutable? #t)))
   (test (array-set! A 0 19)
         "array-set!: The first argument is not mutable array: ")
@@ -1111,7 +1132,7 @@
         "array-assign!: The first argument is not a mutable array: "))
   
 
-(pp "array->specialized-array result tests")
+(pp "array-copy result tests")
 
 (specialized-array-default-safe? #t)
 
@@ -1145,7 +1166,7 @@
                       (set! alist (cons (cons indices value)
                                         alist))))))))
          (array2
-          (array->specialized-array array1 generic-storage-class))
+          (array-copy array1 generic-storage-class))
          (setter1
           (array-setter array1))
          (setter2
@@ -1157,7 +1178,7 @@
         (apply setter1 v indices)
         (apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array->specialized-array        array1 generic-storage-class ) array2) (pp "test3"))
+    (or (myarray= (array-copy array1 generic-storage-class ) array2) (pp "test3"))
     ))
 
 (specialized-array-default-safe? #f)
@@ -1192,7 +1213,7 @@
                       (set! alist (cons (cons indices value)
                                         alist))))))))
          (array2
-          (array->specialized-array array1 generic-storage-class ))
+          (array-copy array1 generic-storage-class ))
          (setter1
           (array-setter array1))
          (setter2
@@ -1204,7 +1225,7 @@
         (apply setter1 v indices)
         (apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array->specialized-array        array1 generic-storage-class ) array2) (pp "test3"))
+    (or (myarray= (array-copy array1 generic-storage-class ) array2) (pp "test3"))
     ))
 
 (pp "array-map error tests")
@@ -1419,17 +1440,16 @@
            (arrays
             (map (lambda (ignore)
                    (let ((array-builder (vector-ref array-builders (random (vector-length array-builders)))))
-                     (array->specialized-array (make-array domain
-                                                           (cadr array-builder))
-                                               (car array-builder)
-                                               )))
+                     (array-copy (make-array domain
+                                             (cadr array-builder))
+                                 (car array-builder))))
                  (local-iota 0 (random 1 7))))
            (result-array-1
             (apply array-map
                    list
                    arrays))
            (result-array-2
-            (array->specialized-array
+            (array-copy
              (apply array-map
                     list
                     arrays)))
@@ -1488,17 +1508,16 @@
            (arrays
             (map (lambda (ignore)
                    (let ((array-builder (vector-ref array-builders (random (vector-length array-builders)))))
-                     (array->specialized-array (make-array domain
-                                                           (cadr array-builder))
-                                               (car array-builder)
-                                               )))
+                     (array-copy (make-array domain
+                                             (cadr array-builder))
+                                 (car array-builder))))
                  (local-iota 0 (random 1 7))))
            (result-array-1
             (apply array-map
                    list
                    arrays))
            (result-array-2
-            (array->specialized-array
+            (array-copy
              (apply array-map
                     list
                     arrays)))
@@ -1691,12 +1710,12 @@
            (storage-class
             (car array-builder))
            (Array
-            (array->specialized-array (make-array domain
-                                                  random-array-element)
-                                      storage-class))
+            (array-copy (make-array domain
+                                    random-array-element)
+                        storage-class))
            (copied-array
-            (array->specialized-array Array
-                                      storage-class))
+            (array-copy Array
+                        storage-class))
            (inner-dimension
             (random 1 (interval-dimension domain)))
            (domains
@@ -1837,11 +1856,10 @@
   (let* ((axes (local-iota 0 (random 1 5)))
          (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
          (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
-         (a (array->specialized-array (make-array (make-interval lower-bounds
-                                                                 upper-bounds)
-                                                  list)
-                                      generic-storage-class
-                                      ))
+         (a (array-copy (make-array (make-interval lower-bounds
+                                                   upper-bounds)
+                                    list)
+                        generic-storage-class))
          (new-axis-order (vector-permute (list->vector axes) (random-permutation (length axes))))
          (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
     (let ((b (make-array (make-interval (vector-permute lower-bounds new-axis-order)
@@ -1888,11 +1906,10 @@
   (let* ((axes (local-iota 0 (random 1 5)))
          (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
          (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
-         (a (array->specialized-array (make-array (make-interval lower-bounds
-                                                                 upper-bounds)
-                                                  list)
-                                      generic-storage-class
-                                      ))
+         (a (array-copy (make-array (make-interval lower-bounds
+                                                   upper-bounds)
+                                    list)
+                        generic-storage-class))
          (new-axis-order (vector-permute (list->vector axes) (random-permutation (length axes))))
          (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
     (let ((b (make-array (make-interval (vector-permute lower-bounds new-axis-order)
@@ -1959,9 +1976,9 @@
                  (make-interval (vector-map + lower-bounds translation)
                                 (vector-map + upper-bounds translation))))))
 
-(let* ((specialized-array (array->specialized-array (make-array (make-interval '#(0 0) '#(10 12))
-                                                                list)))
-       (mutable-array (let ((temp (array->specialized-array specialized-array)))
+(let* ((specialized-array (array-copy (make-array (make-interval '#(0 0) '#(10 12))
+                                                  list)))
+       (mutable-array (let ((temp (array-copy specialized-array)))
                         (make-array (array-domain temp)
                                     (array-getter temp)
                                     (array-setter temp))))
@@ -1970,7 +1987,7 @@
        (translation '#(10 -2)))
 
   (define (my-array-translate Array translation)
-    (let* ((array-copy (array->specialized-array Array))
+    (let* ((array-copy (array-copy Array))
            (getter (array-getter array-copy))
            (setter (array-setter array-copy)))
       (make-array (interval-translate (array-domain Array)
@@ -2011,8 +2028,8 @@
            (Array (let ((temp (make-array domain list)))
                     (case (random-integer 3)
                       ((0) temp)
-                      ((1) (array->specialized-array temp))
-                      ((2) (let ((temp (array->specialized-array temp)))
+                      ((1) (array-copy temp))
+                      ((2) (let ((temp (array-copy temp)))
                              (make-array (array-domain temp)
                                          (array-getter temp)
                                          (array-setter temp)))))))
@@ -2074,9 +2091,9 @@
                  (make-interval (vector-permute lower-bounds permutation)
                                 (vector-permute upper-bounds permutation))))))
 
-(let* ((specialized-array (array->specialized-array (make-array (make-interval '#(0 0) '#(10 12))
+(let* ((specialized-array (array-copy (make-array (make-interval '#(0 0) '#(10 12))
                                                                 list)))
-       (mutable-array (let ((temp (array->specialized-array specialized-array)))
+       (mutable-array (let ((temp (array-copy specialized-array)))
                         (make-array (array-domain temp)
                                     (array-getter temp)
                                     (array-setter temp))))
@@ -2116,15 +2133,15 @@
            (Array (let ((temp (make-array domain list)))
                     (case (random-integer 3)
                       ((0) temp)
-                      ((1) (array->specialized-array temp))
-                      ((2) (let ((temp (array->specialized-array temp)))
+                      ((1) (array-copy temp))
+                      ((2) (let ((temp (array-copy temp)))
                              (make-array (array-domain temp)
                                          (array-getter temp)
                                          (array-setter temp)))))))
            (permutation (random-permutation (interval-dimension domain))))
 
       (define (my-array-permute Array permutation)
-        (let* ((array-copy (array->specialized-array Array))
+        (let* ((array-copy (array-copy Array))
                (getter (array-getter array-copy))
                (setter (array-setter array-copy))
                (permutation-inverse (%%permutation-invert permutation)))
@@ -2173,15 +2190,15 @@
            (Array (let ((temp (make-array domain list)))
                     (case (random-integer 3)
                       ((0) temp)
-                      ((1) (array->specialized-array temp))
-                      ((2) (let ((temp (array->specialized-array temp)))
+                      ((1) (array-copy temp))
+                      ((2) (let ((temp (array-copy temp)))
                              (make-array (array-domain temp)
                                          (array-getter temp)
                                          (array-setter temp)))))))
            (permutation (random-permutation (interval-dimension domain))))
 
       (define (my-array-permute Array permutation)
-        (let* ((array-copy (array->specialized-array Array))
+        (let* ((array-copy (array-copy Array))
                (getter (array-getter array-copy))
                (setter (array-setter array-copy))
                (permutation-inverse (%%permutation-invert permutation)))
@@ -2262,13 +2279,13 @@
             (let* ((upper-bounds (make-vector n 2))
                    (lower-bounds (make-vector n 0))
                    (domain (make-interval lower-bounds upper-bounds))
-                   (A (array->specialized-array (make-array domain list)))
+                   (A (array-copy (make-array domain list)))
                    (immutable-A
-                    (let ((A (array->specialized-array A))) ;; copy A
+                    (let ((A (array-copy A))) ;; copy A
                       (make-array domain
                                   (array-getter A))))
                    (mutable-A
-                    (let ((A (array->specialized-array A))) ;; copy A
+                    (let ((A (array-copy A))) ;; copy A
                       (make-array domain
                                   (array-getter A)
                                   (array-setter A)))))
@@ -2453,8 +2470,8 @@
          (Array (let ((temp (make-array domain list)))
                   (case (random-integer 3)
                     ((0) temp)
-                    ((1) (array->specialized-array temp))
-                    ((2) (let ((temp (array->specialized-array temp)))
+                    ((1) (array-copy temp))
+                    ((2) (let ((temp (array-copy temp)))
                            (make-array (array-domain temp)
                                        (array-getter temp)
                                        (array-setter temp)))))))
@@ -2497,20 +2514,20 @@
     ((fx= i tests))
   (let* ((domain (random-interval))
          (subdomain (random-subinterval domain))
-         (spec-A (array->specialized-array (make-array domain list)))
+         (spec-A (array-copy (make-array domain list)))
          (spec-A-extract (array-extract spec-A subdomain))
-         (mut-A (let ((A-prime (array->specialized-array spec-A)))
+         (mut-A (let ((A-prime (array-copy spec-A)))
                   (make-array domain
                               (array-getter A-prime)
                               (array-setter A-prime))))
          (mut-A-extract (array-extract mut-A subdomain))
-         (immutable-A (let ((A-prime (array->specialized-array spec-A)))
+         (immutable-A (let ((A-prime (array-copy spec-A)))
                         (make-array domain
                                     (array-getter A-prime))))
          (immutable-A-extract (array-extract immutable-A subdomain))
-         (spec-B (array->specialized-array (make-array domain list)))
+         (spec-B (array-copy (make-array domain list)))
          (spec-B-extract (array-extract spec-B subdomain))
-         (mut-B (let ((B-prime (array->specialized-array spec-B)))
+         (mut-B (let ((B-prime (array-copy spec-B)))
                   (make-array domain
                               (array-getter B-prime)
                               (array-setter B-prime))))
@@ -2619,10 +2636,10 @@
               ;; immutable
               ((0) res)
               ;; specialized
-              ((1) (array->specialized-array res))
+              ((1) (array-copy res))
               (else
                ;; mutable, but not specialized
-               (let ((res (array->specialized-array res)))
+               (let ((res (array-copy res)))
                  (make-array domain (array-getter res) (array-setter res)))))))
          (lowers
           (%%interval-lower-bounds domain))
@@ -2715,8 +2732,8 @@
          (Array (let ((temp (make-array domain list)))
                   (case (random-integer 3)
                     ((0) temp)
-                    ((1) (array->specialized-array temp))
-                    ((2) (let ((temp (array->specialized-array temp)))
+                    ((1) (array-copy temp))
+                    ((2) (let ((temp (array-copy temp)))
                            (make-array (array-domain temp)
                                        (array-getter temp)
                                        (array-setter temp)))))))
@@ -2744,13 +2761,13 @@
             (let* ((upper-bounds (make-vector n 2))
                    (lower-bounds (make-vector n 0))
                    (domain (make-interval lower-bounds upper-bounds))
-                   (A (array->specialized-array (make-array domain list)))
+                   (A (array-copy (make-array domain list)))
                    (immutable-A
-                    (let ((A (array->specialized-array A))) ;; copy A
+                    (let ((A (array-copy A))) ;; copy A
                       (make-array domain
                                   (array-getter A))))
                    (mutable-A
-                    (let ((A (array->specialized-array A))) ;; copy A
+                    (let ((A (array-copy A))) ;; copy A
                       (make-array domain
                                   (array-getter A)
                                   (array-setter A))))
@@ -2789,10 +2806,10 @@
 (test (array-assign! (make-array (make-interval '#(0 0) '#(1 1)) values) 'a)
       "array-assign!: The first argument is not a mutable array: ")
 
-(test (array-assign! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
+(test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
       "array-assign!: The second argument is not an array: ")
 
-(test (array-assign! (array->specialized-array (make-array (make-interval '#(0 0) '#(1 1)) values))
+(test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values))
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
       "array-assign!: The arguments do not have the same domain: ")
 
@@ -2832,12 +2849,12 @@
          (initializer
           (cadr storage-class-and-initializer))
          (specialized-array
-          (array->specialized-array
+          (array-copy
            (make-array interval initializer)
            storage-class))
          (mutable-array
           (let ((specialized-array
-                 (array->specialized-array
+                 (array-copy
                   (make-array interval initializer)
                   storage-class)))
             (make-array interval
@@ -2848,7 +2865,7 @@
          (mutable-subarray
           (array-extract mutable-array subinterval))
          (new-subarray
-          (array->specialized-array
+          (array-copy
            (make-array subinterval initializer)
            storage-class)))
     ;; (pp specialized-array)
@@ -2879,11 +2896,21 @@
 (test (array-dimension 'a)
       "array-dimension: The argument is not an array: ")
 
-(test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #t #t))
+(test (array-safe?
+       (array-copy (make-array (make-interval '#(0 0) '#(10 10)) list)
+                   generic-storage-class
+                   #f
+                   #t
+                   #t))
       #t)
 
 
-(test (array-safe? (array->specialized-array (make-array (make-interval '#(0 0) '#(10 10)) list) generic-storage-class #t #f))
+(test (array-safe?
+       (array-copy (make-array (make-interval '#(0 0) '#(10 10)) list)
+                   generic-storage-class
+                   #f
+                   #t
+                   #f))
       #f)
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))) '(a -1))
@@ -2907,10 +2934,11 @@
            (storage-class (car builders))
            (random-entry (cadr builders))
            (invalid-entry (list-ref (caddr builders) (random 2)))
-           (Array (array->specialized-array (make-array domain random-entry)
-                                            storage-class
-                                            #t   ; mutable
-                                            #t)) ; safe
+           (Array (array-copy (make-array domain random-entry)
+                              storage-class
+                              #f
+                              #t   ; mutable
+                              #t)) ; safe
            (getter (array-getter Array))
            (setter (array-setter Array))
            (dimension (interval-dimension domain))
@@ -2987,9 +3015,10 @@
            (builders (vector-ref array-builders (random-integer (vector-length array-builders))))
            (storage-class (car builders))
            (random-entry (cadr builders))
-           (Array (array->specialized-array (make-array domain random-entry)
-                                            storage-class
-                                            #t)) ; safe
+           (Array (array-copy (make-array domain random-entry)
+                              storage-class
+                              #f
+                              #t)) ; safe
            (l (array->list Array))
            (new-array (list->specialized-array l domain storage-class (zero? (random-integer 2)))))
       (test (myarray= Array new-array)
@@ -3044,7 +3073,7 @@
 (specialized-array-default-safe? #t)
 
 (define A-ref
-  (array->specialized-array
+  (array-copy
    (make-array (make-interval '#(10 10))
                (lambda (i j) (if (= i j) 1 0)))))
 
@@ -3064,7 +3093,7 @@
       0)
 
 (define B-set!
-  (array->specialized-array
+  (array-copy
    (make-array (make-interval '#(10 10))
                (lambda (i j) (if (= i j) 1 0)))
    u1-storage-class))
@@ -3162,7 +3191,7 @@
 
 (let ()
   (define a
-    (array->specialized-array
+    (array-copy
      (make-array (make-interval '#(5 10))
                  list)))
   (define b
@@ -3251,7 +3280,7 @@
              (rows (read-pgm-object port))
              (greys (read-pgm-object port)))
         (make-pgm greys
-                  (array->specialized-array
+                  (array-copy
                    (make-array
                     (make-interval (vector rows columns))
                     (cond ((or (eq? header 'p5)                                     ;; pgm binary
@@ -3364,7 +3393,7 @@
     663257736 bytes allocated
     676 minor faults
     no major faults
-(time (let* ((greys (pgm-greys test-pgm)) (edge-array (array->specialized-array (array-map abs (array-convolve (pgm-pixels test-pgm) edge-filter)))) (max-pixel (array-fold max 0 edge-array)) (normalizer (/ greys max-pixel))) (write-pgm (make-pgm greys (array-map (lambda (p) (- greys (round-and-clip (* p normalizer) greys))) edge-array)) "edge-test.pgm")))
+(time (let* ((greys (pgm-greys test-pgm)) (edge-array (array-copy (array-map abs (array-convolve (pgm-pixels test-pgm) edge-filter)))) (max-pixel (array-fold max 0 edge-array)) (normalizer (/ greys max-pixel))) (write-pgm (make-pgm greys (array-map (lambda (p) (- greys (round-and-clip (* p normalizer) greys))) edge-array)) "edge-test.pgm")))
     0.571130 secs real time
     0.571136 secs cpu time (0.571136 user, 0.000000 system)
     57 collections accounting for 0.154109 secs real time (0.154093 user, 0.000000 system)
@@ -3383,7 +3412,7 @@ that computes the componentwise products when we need them, the times are
     62189720 bytes allocated
     678 minor faults
     no major faults
-(time (let* ((greys (pgm-greys test-pgm)) (edge-array (array->specialized-array (array-map abs (array-convolve (pgm-pixels test-pgm) edge-filter)))) (max-pixel (array-fold max 0 edge-array)) (normalizer (inexact (/ greys max-pixel)))) (write-pgm (make-pgm greys (array-map (lambda (p) (- greys (round-and-clip (* p normalizer) greys))) edge-array)) "edge-test.pgm")))
+(time (let* ((greys (pgm-greys test-pgm)) (edge-array (array-copy (array-map abs (array-convolve (pgm-pixels test-pgm) edge-filter)))) (max-pixel (array-fold max 0 edge-array)) (normalizer (inexact (/ greys max-pixel)))) (write-pgm (make-pgm greys (array-map (lambda (p) (- greys (round-and-clip (* p normalizer) greys))) edge-array)) "edge-test.pgm")))
     0.165065 secs real time
     0.165066 secs cpu time (0.165061 user, 0.000005 system)
     13 collections accounting for 0.033885 secs real time (0.033878 user, 0.000000 system)
@@ -3436,7 +3465,7 @@ that computes the componentwise products when we need them, the times are
 (time
  (let* ((greys (pgm-greys test-pgm))
         (edge-array
-         (array->specialized-array
+         (array-copy
           (array-map
            abs
            (array-convolve
@@ -3456,7 +3485,7 @@ that computes the componentwise products when we need them, the times are
     "edge-test.pgm")))
 
 
-(define m (array->specialized-array (make-array (make-interval '#(0 0) '#(40 30)) (lambda (i j) (exact->inexact (+ i j))))))
+(define m (array-copy (make-array (make-interval '#(0 0) '#(40 30)) (lambda (i j) (exact->inexact (+ i j))))))
 
 (define (array-sum a)
   (array-fold + 0 a))
@@ -3491,7 +3520,7 @@ that computes the componentwise products when we need them, the times are
                                     (interval-translate image-domain twice-negative-scaled-direction))
                => (lambda (subdomain)
                     (loop (+ i 1)
-                          (cons (array->specialized-array
+                          (cons (array-copy
                                  (array-map (lambda (f_i f_i+d f_i+2d)
                                               (+ f_i+2d
                                                  (* -2. f_i+d)
@@ -3508,9 +3537,9 @@ that computes the componentwise products when we need them, the times are
               (else
                (reverse result)))))))
 
-(define image (array->specialized-array (make-array (make-interval '#(8 8))
-                                                    (lambda (i j)
-                                                      (exact->inexact (+ (* i i) (* j j)))))))
+(define image (array-copy (make-array (make-interval '#(8 8))
+                                      (lambda (i j)
+                                        (exact->inexact (+ (* i i) (* j j)))))))
 
 (define (expose difference-images)
   (pretty-print (map (lambda (difference-image)
@@ -3588,7 +3617,7 @@ that computes the componentwise products when we need them, the times are
    (make-separable-transform 1D-Haar-loop)))
 
 (let ((image
-       (array->specialized-array
+       (array-copy
         (make-array (make-interval '#(4 4))
                     (lambda (i j)
                       (case i
@@ -3609,7 +3638,7 @@ that computes the componentwise products when we need them, the times are
 
 
 (let ((image
-       (array->specialized-array
+       (array-copy
         (make-array (make-interval '#(4 4))
                     (lambda (i j)
                       (case i
@@ -3681,7 +3710,7 @@ that computes the componentwise products when we need them, the times are
 
 (define A
   ;; A Hilbert matrix
-  (array->specialized-array
+  (array-copy
    (make-array (make-interval '#(4 4))
                (lambda (i j)
                  (/ (+ 1 i j))))))
