@@ -1,4 +1,9 @@
 (include "generic-arrays.scm")
+;;; The following line is here for when we make SRFI 179
+;;; into an R7RS module.
+
+;;;(import (srfi 179))
+
 (declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (declare (inlining-limit 0))
 (define tests 100)

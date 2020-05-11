@@ -2058,9 +2058,9 @@
                            multi-index))))
                domain)
               "Destination not specialized array"))))
-  ;; remove this to have each %%move-array-elements return a
-  ;; string that designates the copying algorithm it used.
-  destination
+  ;; %%move-array-elements returns a string that designates
+  ;; the copying method it used.
+  ;; Calling functions should return something useful.
   )
 
 ;;;
@@ -3434,7 +3434,8 @@
                          (%%array-domain source)))
          (error "array-assign!: The arguments do not have the same domain: " destination source))
         (else
-         (%%move-array-elements destination source "array-assign!: "))))
+         (%%move-array-elements destination source "array-assign!: ")
+         destination)))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,
