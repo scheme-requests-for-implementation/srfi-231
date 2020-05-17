@@ -6,7 +6,7 @@
 
 (declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (declare (inlining-limit 0))
-(define tests 10000)
+(define tests 100)
 (set! tests tests)
 
 (define-macro (test expr value)
