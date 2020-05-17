@@ -1,7 +1,12 @@
 (include "generic-arrays.scm")
+;;; The following line is here for when we make SRFI 179
+;;; into an R7RS module.
+
+;;;(import (srfi 179))
+
 (declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (declare (inlining-limit 0))
-(define tests 10)
+(define tests 100)
 (set! tests tests)
 
 (define-macro (test expr value)
@@ -1129,7 +1134,7 @@
   (test (array-set! A 0 19)
         "array-set!: The first argument is not mutable array: ")
   (test (array-assign! A A)
-        "array-assign!: The first argument is not a mutable array: "))
+        "array-assign!: The destination is not a mutable array: "))
   
 
 (pp "array-copy result tests")
@@ -1825,10 +1830,10 @@
       "specialized-array-share: The third argument is not a procedure: ")
 
 
-(test (myarray= (list->specialized-array (reverse (local-iota 0 10))
-                                         (make-interval '#(0) '#(10)))
-                (specialized-array-share (list->specialized-array (local-iota 0 10)
-                                                                  (make-interval '#(0) '#(10)))
+(test (myarray= (list->array (reverse (local-iota 0 10))
+                             (make-interval '#(0) '#(10)))
+                (specialized-array-share (list->array (local-iota 0 10)
+                                                      (make-interval '#(0) '#(10)))
                                          (make-interval '#(0) '#(10))
                                          (lambda (i)
                                            (- 9 i))))
@@ -2801,18 +2806,41 @@
 (pp "array-assign! tests")
 
 (test (array-assign! 'a 'a)
-      "array-assign!: The first argument is not a mutable array: ")
+      "array-assign!: The destination is not a mutable array: ")
 
 (test (array-assign! (make-array (make-interval '#(0 0) '#(1 1)) values) 'a)
-      "array-assign!: The first argument is not a mutable array: ")
+      "array-assign!: The destination is not a mutable array: ")
 
 (test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
-      "array-assign!: The second argument is not an array: ")
+      "array-assign!: The source is not an array: ")
 
 (test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values))
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
-      "array-assign!: The arguments do not have the same domain: ")
+      ;; different volume
+      "array-assign!: The destination and source do not have the same number of elements: ")
 
+(test (array-assign! (make-array (make-interval '#(1 2)) list list) ;; not valid
+                     (make-array (make-interval '#(0 0) '#(2 1)) values))
+      ;; not a specialized-array
+      "array-assign!: The destination and source do not have the same domains, and the destination is not a specialized array: ")
+
+(test (array-assign! (array-rotate (array-copy (make-array (make-interval '#(2 3))
+                                                           list ))
+                                   1)
+                     (make-array (make-interval '#(2 3)) list))
+      ;; transpose the destination
+      "array-assign!: The destination and source do not have the same domains, and the elements of the destination are not stored adjacently and in order: ")
+
+(let ((destination (make-specialized-array (make-interval '#(3 2))))  ;; elements in order
+      (source (array-rotate (make-array (make-interval '#(3 2)) list) ;; not the same interval, but same volume
+                            1)))
+  (array-assign! destination source)
+  (test (equal? (array->list destination)
+                (array->list source))
+        #t))
+
+
+  
 (do ((d 1 (fx+ d 1)))
     ((= d 6))
   (let* ((unsafe-specialized-destination
@@ -2966,33 +2994,36 @@
             (test (apply setter 10 valid-args)
                   "array-setter: multi-index is not the correct dimension: "))))))
 
-(pp "array->list and list->specialized-array")
+(pp "array->list and list->array")
 
 (test (array->list 'a)
       "array->list: The argument is not an array: ")
 
-(test (list->specialized-array 'a 'b)
-      "list->specialized-array: The first argument is not a list: ")
+(test (list->array 'a 'b)
+      "list->array: The first argument is not a list: ")
 
-(test (list->specialized-array '(0) 'b)
-      "list->specialized-array: The second argument is not an interval: ")
+(test (list->array '(0) 'b)
+      "list->array: The second argument is not an interval: ")
 
-(test (list->specialized-array '(0) (make-interval '#(0) '#(1)) 'a)
-      "list->specialized-array: The third argument is not a storage-class: ")
+(test (list->array '(0) (make-interval '#(0) '#(1)) 'a)
+      "list->array: The third argument is not a storage-class: ")
 
-(test (list->specialized-array '(0) (make-interval '#(0) '#(1)) generic-storage-class 'a)
-      "list->specialized-array: The fourth argument is not a boolean: ")
+(test (list->array '(0) (make-interval '#(0) '#(1)) generic-storage-class 'a)
+      "list->array: The fourth argument is not a boolean: ")
 
-(test (list->specialized-array '(0) (make-interval '#(0) '#(1)) generic-storage-class #t 'a)
-      "list->specialized-array: The fifth argument is not a boolean: ")
+(test (list->array '(0) (make-interval '#(0) '#(1)) generic-storage-class #t 'a)
+      "list->array: The fifth argument is not a boolean: ")
 
-;; (list->specialized-array '(0) (make-interval '#(0) '#(10)))
+;; (list->array '(0) (make-interval '#(0) '#(10)))
 
-(test (list->specialized-array '(0) (make-interval '#(0) '#(10)))
-      "list->specialized-array: The length of the first argument does not equal the volume of the second: ")
+(test (list->array '(0) (make-interval '#(0) '#(10)))
+      "list->array: The length of the first argument does not equal the volume of the second: ")
 
-(test (list->specialized-array '(a) (make-interval '#(0) '#(1)) u1-storage-class)
-      "list->specialized-array: Not every element of the list can be stored in the body of the array: " )
+(test (list->array '(a) (make-interval '#(0) '#(1)) u1-storage-class)
+      "list->array: Not every element of the list can be stored in the body of the array: " )
+
+(test (list->array '(a) (make-interval '#(10)))
+      "list->array: The length of the first argument does not equal the volume of the second: ")
 
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random 0 (expt 2 1))))
@@ -3020,7 +3051,7 @@
                               #f
                               #t)) ; safe
            (l (array->list Array))
-           (new-array (list->specialized-array l domain storage-class (zero? (random-integer 2)))))
+           (new-array (list->array l domain storage-class (zero? (random-integer 2)))))
       (test (myarray= Array new-array)
             #t))))
 
@@ -3273,12 +3304,28 @@
             (else #f))))
 
   (call-with-input-file
-      file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
     (lambda (port)
+
+      ;; We're going to read text for a while,
+      ;; then switch to binary.
+      ;; So we need to turn off buffering until
+      ;; we switch to binary.
+
+      (port-settings-set! port '(buffering: #f))
+
       (let* ((header (read-pgm-object port))
              (columns (read-pgm-object port))
              (rows (read-pgm-object port))
              (greys (read-pgm-object port)))
+
+        ;; now we switch back to buffering
+        ;; to speed things up
+
+        (port-settings-set! port '(buffering: #t))
+
         (make-pgm greys
                   (array-copy
                    (make-array
@@ -3301,7 +3348,9 @@
 
 (define (write-pgm pgm-data file #!optional force-ascii)
   (call-with-output-file
-      file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
     (lambda (port)
       (let* ((greys
               (pgm-greys pgm-data))
@@ -3434,14 +3483,14 @@ that computes the componentwise products when we need them, the times are
                 )))
 
 (define sharpen-filter
-  (list->specialized-array
+  (list->array
    '(0 -1  0
     -1  5 -1
      0 -1  0)
    (make-interval '#(-1 -1) '#(2 2))))
 
 (define edge-filter
-  (list->specialized-array
+  (list->array
    '(0 -1  0
     -1  4 -1
      0 -1  0)
@@ -3781,14 +3830,14 @@ that computes the componentwise products when we need them, the times are
 ;; http://microapl.com/apl_help/ch_020_020_880.htm 
    
 (define TABLE1
-  (list->specialized-array
+  (list->array
    '(1 2
      5 4
      3 0)
    (make-interval '#(3 2))))
 
 (define TABLE2
-  (list->specialized-array
+  (list->array
    '(6 2 3 4
      7 0 1 8)
    (make-interval '#(2 4))))
@@ -3801,10 +3850,10 @@ that computes the componentwise products when we need them, the times are
 ;;; 18 6 9 12 
 
 (define X   ;; a "row vector"
-  (list->specialized-array '(1 3 5 7) (make-interval '#(1 4))))
+  (list->array '(1 3 5 7) (make-interval '#(1 4))))
 
 (define Y   ;; a "column vector"
-  (list->specialized-array '(2 3 6 7) (make-interval '#(4 1))))
+  (list->array '(2 3 6 7) (make-interval '#(4 1))))
 
 (array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 

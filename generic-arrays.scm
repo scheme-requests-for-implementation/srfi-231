@@ -294,7 +294,7 @@
          (error "interval-permute: The first argument is not an interval: " interval permutation))
         ((not (permutation? permutation))
          (error "interval-permute: The second argument is not a permutation: " interval permutation))
-        ((not (= (interval-dimension interval) (vector-length permutation)))
+        ((not (= (%%interval-dimension interval) (vector-length permutation)))
          (error "interval-permute: The dimension of the first argument (an interval) does not equal the length of the second (a permutation): " interval permutation))
         (else
          (%%interval-permute interval permutation))))
@@ -315,8 +315,8 @@
          (%%interval-translate interval translation))))
 
 (define (%%interval-translate Interval translation)
-  (make-%%interval (vector-map + (interval-lower-bounds->vector Interval) translation)
-                   (vector-map + (interval-upper-bounds->vector Interval) translation)))
+  (make-%%interval (vector-map + (%%interval-lower-bounds->vector Interval) translation)
+                   (vector-map + (%%interval-upper-bounds->vector Interval) translation)))
 
 (define (%%interval-scale interval scales)
   (let* ((uppers (%%interval-upper-bounds->vector interval))
@@ -328,13 +328,13 @@
 
 (define (interval-scale interval scales)
   (cond ((not (and (interval? interval)
-                   (%%vector-every zero? (interval-lower-bounds->vector interval))))
+                   (%%vector-every zero? (%%interval-lower-bounds->vector interval))))
          (error "interval-scale: The first argument is not an interval with all lower bounds zero: " interval scales))
         ((not (and (vector? scales)
                    (%%vector-every exact-integer? scales)
                    (%%vector-every positive? scales)))
          (error "interval-scale: The second argument is not a vector of positive, exact, integers: " interval scales))
-        ((not (= (vector-length scales) (interval-dimension interval)))
+        ((not (= (vector-length scales) (%%interval-dimension interval)))
          (error "interval-scale: The dimension of the first argument (an interval) is not equal to the length of the second (a vector): "
                 interval scales))
         (else
@@ -1620,8 +1620,8 @@
                     safe?))))
 
 (define (%%interval->basic-indexer interval)
-  (case (interval-dimension interval)
-    ((1) (let ((low-0 (interval-lower-bound interval 0))
+  (case (%%interval-dimension interval)
+    ((1) (let ((low-0 (%%interval-lower-bound interval 0))
                (increment-0 1))
            (%%indexer-1 0 low-0 increment-0)))
     ((2) (let* ((low-0 (%%interval-lower-bound interval 0))
@@ -2058,9 +2058,9 @@
                            multi-index))))
                domain)
               "Destination not specialized array"))))
-  ;; remove this to have each %%move-array-elements return a
-  ;; string that designates the copying algorithm it used.
-  destination
+  ;; %%move-array-elements returns a string that designates
+  ;; the copying method it used.
+  ;; Calling functions should return something useful.
   )
 
 ;;;
@@ -2592,7 +2592,7 @@
 (define (interval-rotate interval dim)
   (if (not (interval? interval))
       (error "interval-rotate: The first argument is not an interval: " interval dim)
-      (let ((d (interval-dimension interval)))
+      (let ((d (%%interval-dimension interval)))
         (if (not (and (fixnum? dim)
                       (fx< -1 dim d)))
             (error "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): " interval dim)
@@ -2683,20 +2683,19 @@
 
 (setup-reversed-getters-and-setters)
 
-(define (%%immutable-array-reverse array flip?)
-  (make-array (%%array-domain array)
-              (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))))
-
-(define (%%mutable-array-reverse array flip?)
-  (make-array (%%array-domain array)
-              (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))
-              (%%setter-reverse (%%array-setter array) flip? (%%array-domain array))))
-
-(define (%%specialized-array-reverse array flip?)
-  (%%specialized-array-share array
-                             (%%array-domain array)
-                             (%%getter-reverse values flip? (%%array-domain array))))
-
+(define (%%array-reverse array flip?)
+  (cond ((specialized-array? array)
+         (%%specialized-array-share array
+                                    (%%array-domain array)
+                                    (%%getter-reverse values flip? (%%array-domain array))))
+        ((mutable-array? array)
+         (make-array (%%array-domain array)
+                     (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))
+                     (%%setter-reverse (%%array-setter array) flip? (%%array-domain array))))
+        (else
+         (make-array (%%array-domain array)
+                     (%%getter-reverse (%%array-getter array) flip? (%%array-domain array))))))
+  
 (define (array-reverse array #!optional (flip? (macro-absent-obj)))
   (if  (not (array? array))
        (error "array-reverse: The first argument is not an array: " array flip?)
@@ -2709,12 +2708,8 @@
                ((not (fx= (%%array-dimension array)
                           (vector-length flip?)))
                 (error "array-reverse: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): " array flip?))
-               ((specialized-array? array)
-                (%%specialized-array-reverse array flip?))
-               ((mutable-array? array)
-                (%%mutable-array-reverse array flip?))
                (else
-                (%%immutable-array-reverse array flip?))))))
+                (%%array-reverse array flip?))))))
 
 
 
@@ -2828,7 +2823,7 @@
 
 (define (array-sample array scales)
   (cond ((not (and (array? array)
-                   (%%vector-every zero? (interval-lower-bounds->vector (%%array-domain array)))))
+                   (%%vector-every zero? (%%interval-lower-bounds->vector (%%array-domain array)))))
          (error "array-sample: The first argument is an array whose domain has nonzero lower bounds: " array scales))
         ((not (and (vector? scales)
                    (%%vector-every exact-integer? scales)
@@ -2850,9 +2845,9 @@
          (getter1 (%%array-getter array1))
          (getter2 (%%array-getter array2))
          (dimension1
-          (interval-dimension domain1))
+          (%%interval-dimension domain1))
          (dimension2
-          (interval-dimension domain2))
+          (%%interval-dimension domain2))
          (result-domain
           (%%interval-cartesian-product (list domain1 domain2)))
          (result-getter
@@ -2917,7 +2912,7 @@
 
 (define (%%immutable-array-curry array right-dimension)
   (call-with-values
-      (lambda () (interval-projections (%%array-domain array) right-dimension))
+      (lambda () (%%interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
       (let ((getter (%%array-getter array)))
         (make-array left-interval
@@ -2941,7 +2936,7 @@
 
 (define (%%mutable-array-curry array right-dimension)
   (call-with-values
-      (lambda () (interval-projections (%%array-domain array) right-dimension))
+      (lambda () (%%interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
       (let ((getter (%%array-getter array))
             (setter (%%array-setter   array)))
@@ -2984,7 +2979,7 @@
 
 (define (%%specialized-array-curry array right-dimension)
   (call-with-values
-      (lambda () (interval-projections (%%array-domain array) right-dimension))
+      (lambda () (%%interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
       (make-array
        left-interval
@@ -3236,7 +3231,7 @@
                                    ((fx= i dimensions) result)
                                  (vector-set! result i arg)))))
             (let loop ((dimension 0)
-                       (total-index (- (interval-volume interval) 1)))
+                       (total-index (- (%%interval-volume interval) 1)))
               (cond ((= (car (vector-ref tails dimension))
                         (vector-ref uppers dimension))
                      ;; We're done iterating in this dimension, set the arg index
@@ -3313,7 +3308,7 @@
         ((not (array? a))
          (error "array-fold-right: The third argument is not an array: " op id a))
         (else
-         (%%array-fold op id (array-reverse a (make-vector (%%array-dimension a) #t))))))
+         (%%array-fold op id (%%array-reverse a (make-vector (%%array-dimension a) #t))))))
 
 (define (array-reduce sum A)
   (cond ((not (array? A))
@@ -3379,22 +3374,22 @@
         (else
          (array-fold-right cons '() array))))
 
-(define (list->specialized-array l
-                                 interval
-                                 #!optional
-                                 (result-storage-class generic-storage-class)
-                                 (mutable? (specialized-array-default-mutable?))
-                                 (safe? (specialized-array-default-safe?)))
+(define (list->array l
+                     interval
+                     #!optional
+                     (result-storage-class generic-storage-class)
+                     (mutable? (specialized-array-default-mutable?))
+                     (safe? (specialized-array-default-safe?)))
   (cond ((not (list? l))
-         (error "list->specialized-array: The first argument is not a list: " l interval))
+         (error "list->array: The first argument is not a list: " l interval))
         ((not (interval? interval))
-         (error "list->specialized-array: The second argument is not an interval: " l interval))
+         (error "list->array: The second argument is not an interval: " l interval))
         ((not (storage-class? result-storage-class))
-         (error "list->specialized-array: The third argument is not a storage-class: " l interval result-storage-class))
+         (error "list->array: The third argument is not a storage-class: " l interval result-storage-class))
         ((not (boolean? mutable?))
-         (error "list->specialized-array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
+         (error "list->array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
         ((not (boolean? safe?))
-         (error "list->specialized-array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
+         (error "list->array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
         (else
          (let* ((checker
                  (storage-class-checker  result-storage-class))
@@ -3407,7 +3402,7 @@
                 (body
                  (%%array-body result))
                 (n
-                 (interval-volume interval)))
+                 (%%interval-volume interval)))
            (let loop ((i 0)
                       (local l))
              (if (or (= i n) (null? local))
@@ -3416,25 +3411,35 @@
                        (if (not mutable?)
                            (%%array-setter-set! result #f))
                        result)
-                     (error "list->specialized-array: The length of the first argument does not equal the volume of the second: " l interval))
+                     (error "list->array: The length of the first argument does not equal the volume of the second: " l interval))
                  (let ((item (car local)))
                    (if (checker item)
                        (begin
                          (setter body i item)
                          (loop (+ i 1)
                                (cdr local)))
-                       (error "list->specialized-array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
+                       (error "list->array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
 
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
-         (error "array-assign!: The first argument is not a mutable array: " destination source))
+         (error "array-assign!: The destination is not a mutable array: " destination source))
         ((not (array? source))
-         (error "array-assign!: The second argument is not an array: " destination source))
-        ((not (interval= (%%array-domain destination)
-                         (%%array-domain source)))
-         (error "array-assign!: The arguments do not have the same domain: " destination source))
+         (error "array-assign!: The source is not an array: " destination source))
+        ((interval= (%%array-domain destination)
+                    (%%array-domain source))
+         (%%move-array-elements destination source "array-assign!: ")
+         destination)
+        ((not (= (%%interval-volume (%%array-domain destination))
+                 (%%interval-volume (%%array-domain source))))
+         (error "array-assign!: The destination and source do not have the same number of elements: " destination source))
+        ((not (specialized-array? destination))
+         (error "array-assign!: The destination and source do not have the same domains, and the destination is not a specialized array: " destination source))
+        ((not (%%array-elements-in-order? destination))
+         (error "array-assign!: The destination and source do not have the same domains, and the elements of the destination are not stored adjacently and in order: "
+                destination source))
         (else
-         (%%move-array-elements destination source "array-assign!: "))))
+         (%%move-array-elements destination source "array-assign!: ")
+         destination)))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,

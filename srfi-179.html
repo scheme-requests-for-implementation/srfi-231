@@ -27,7 +27,8 @@
       <li>Draft #4 published: 2020-03-25</li>
       <li>Draft #5 published: 2020-04-30</li>
       <li>Draft #6 published: 2020-05-03</li>
-      <li>Draft #7 published: 2020-05-08</li></ul>
+      <li>Draft #7 published: 2020-05-08</li>
+      <li>Draft #8 published: 2020-05-17</li></ul>
     <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of nonempty intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
     <h2>Rationale</h2>
@@ -68,7 +69,7 @@
       <li><b>Currying an array: </b>Let's denote the cross product of two intervals $\text{Int}_1$ and $\text{Int}_2$ by $\text{Int}_1\times\text{Int}_2$; if $\vec j=(j_0,\ldots,j_{r-1})\in \text{Int}_1$ and $\vec i=(i_0,\ldots,i_{s-1})\in \text{Int}_2$, then $\vec j\times\vec i$, which we define to be $(j_0,\ldots,j_{r-1},i_0,\ldots,i_{s-1})$, is in $\text{Int}_1\times\text{Int}_2$. If $D_A=\text{Int}_1\times\text{Int}_2$ and $\vec j\in\text{Int}_1$, then $T_{BA}(\vec i)=\vec j\times\vec i$ is a one-to-one affine mapping from $D_B=\text{Int}_2$ into $D_A$.  For each vector $\vec j$ we can compute a new array in this way; we provide <code>array-curry</code> for this operation, which returns an array whose domain is $\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\text{Int}_2$. Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.</li>
       <li><b>Traversing some indices in a multi-index in reverse order: </b>Consider an array $A$ with domain $D_A=[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for &quot;flip?&quot;). Then define $T_{BA}:D_B\to D_A$ by $i_j\to i_j$ if $F_j$ is <code>#f</code> and $i_j\to u_j+l_j-1-i_j$ if  $F_j$ is <code>#t</code>. In other words,  we reverse the ordering of the $j$th coordinate of $\vec i$ if and only if $F_j$ is true. $T_{BA}$ is an affine mapping from $D_B\to D_A$, which defines a new array $B$, and we can provide <code>array-reverse</code> for this operation. Applying <code>array-reverse</code> to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).</li>
       <li><b>Uniformly sampling an array: </b>Assume that $A$ is an array with domain $[0,u_1)\times\cdots\times[0,u_{d-1})$ (i.e., an interval all of whose lower bounds are zero). We'll also assume the existence of vector $S$ of scale factors, which are positive exact integers. Let $D_B$ be a new interval with $j$th lower bound equal to zero and $j$th upper bound equal to $\operatorname{ceiling}(u_j/S_j)$ and let $T_{BA}(\vec i)_j=i_j\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.) Then $T_{BA}$ is an affine one-to-one mapping, and we provide <code>interval-scale</code> and <code>array-sample</code> for these operations.</li></ul>
-    <p>We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines are simply &quot;convenience&quot; procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. Examples are given below.</p>
+    <p>We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines are simply &quot;convenience&quot; procedures.  Second, because the composition of any number of affine mappings is again affine, accessing or changing the elements of a restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. Examples are given below.</p>
     <h3>Generalized arrays</h3>
     <p>Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\ldots,i_{d-1})$ of exact integers
       in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ (the <i>domain</i> of the array) to Scheme objects.
@@ -102,7 +103,7 @@
       <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
       <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li>
       <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would a compatible extension of this SRFI.</li>
-      <li><b>No low-level specialized-array constructor. </b>While the author of the SRFI uses mainly <code>(make-array ...)</code>, <code>array-map</code>, and <code>array-copy</code> to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple <code>(make-array ...)</code> mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.</li></ul>
+      <li><b>No low-level specialized array constructor. </b>While the author of the SRFI uses mainly <code>(make-array ...)</code>, <code>array-map</code>, and <code>array-copy</code> to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple <code>(make-array ...)</code> mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.</li></ul>
     <h2>Specification</h2>
     <dl>
       <dt>Miscellaneous Functions</dt>
@@ -193,7 +194,7 @@
         <a href="#array-any">array-any</a>,
         <a href="#array-every">array-every</a>,
         <a href="#array-&gt;list">array-&gt;list</a>,
-        <a href="#list-&gt;specialized-array">list-&gt;specialized-array</a>,
+        <a href="#list-&gt;array">list-&gt;array</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
@@ -387,7 +388,7 @@
                (list-&gt;vector (apply append (map array-upper-bounds-&gt;list (cons interval intervals)))))</code></pre>
     <p>It is an error if any argument is not an interval.</p>
     <h2>Storage classes</h2>
-    <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
+    <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a name="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var></code></p>
@@ -599,12 +600,12 @@
     <p><code>(array-body <var>array</var>)</code> is a linearly indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.</p>
     <p><code>(array-indexer <var>array</var>)</code> is assumed to be a one-to-one, but not necessarily onto,  affine mapping from <code>(array-domain <var>array</var>)</code> into  the indexing domain of <code>(array-body <var>array</var>)</code>.</p>
     <p>Please see <a href="#make-specialized-array"><code>make-specialized-array</code></a> for how <code>(array-body <var>array</var>)</code>, etc., are used.</p>
-    <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized-array.</p>
+    <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized array.</p>
     <p><b>Procedure: </b><code><a name="array-elements-in-order?">array-elements-in-order?</a> <var>A</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a specialized array, in which case it returns <code>#t</code> if the elements of <code><var>A</var></code> are in order and stored adjacently in <code>(array-body <var>A</var>)</code> and <code>#f</code> otherwise.</p>
     <p>It is an error if <code><var>A</var></code> is not a specialized array.</p>
     <p><b>Procedure: </b><code><a name="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
-    <p>Constructs a new specialized-array that shares the body of the specialized-array <code><var>array</var></code>.
+    <p>Constructs a new specialized array that shares the body of the specialized array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to a specialized array with the following fields:</p>
     <pre><code>
 domain:        new-domain
@@ -656,11 +657,11 @@ indexer:       (lambda multi-index
     <p>If <code><var>new-domain</var></code> is <code>#f</code>, then it is set to <code>(array-domain <var>array</var>)</code>. </p>
     <p>The specialized array returned by <code>array-copy</code> can be defined conceptually by:</p>
     <pre><code>
-(list-&gt;specialized-array (array-&gt;list array)
-                         new-domain
-                         result-storage-class
-                         mutable?
-                         safe?)
+(list-&gt;array (array-&gt;list array)
+             new-domain
+             result-storage-class
+             mutable?
+             safe?)
 </code></pre>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Note: </b>If <code><var>new-domain</var></code> is not the same as <code>(array-domain <var>array</var>)</code>, one can think of the resulting array as a <i>reshaped</i> version of <code><var>array</var></code>.</p>
@@ -846,7 +847,7 @@ indexer:       (lambda multi-index
 </code></pre>
     <p>So you see that if the first argument if the new getter is in $[0,16)$, then indeed the fourth argument of <code><var>old-getter</var></code> is also in $[0,16)$, as it should be. This is a subtlety that I don't see how to overcome.  It is the listing of the arguments of the new getter, the <code>lambda</code>, that must be permuted.</p>
     <p>Mathematically, we can define $\pi^{-1}$, the inverse of a permutation $\pi$, such that $\pi^{-1}$ composed with $\pi$ gives the identity permutation.  Then the getter of the new array is, in pseudo-code, <code>(lambda multi-index (apply <var>old-getter</var> (</code>$\pi^{-1}$<code> multi-index)))</code>.  We have assumed that $\pi^{-1}$ takes a list as an argument and returns a list as a result.</p>
-    <p>Employing this same pseudo-code, if <code><var>array</var></code> is a specialized-array and we denote the permutation by $\pi$, then <code>array-permute</code> returns the new specialized array</p>
+    <p>Employing this same pseudo-code, if <code><var>array</var></code> is a specialized array and we denote the permutation by $\pi$, then <code>array-permute</code> returns the new specialized array</p>
     <pre><code>
 (specialized-array-share <var>array</var>
                          (interval-permute (array-domain <var>array</var>) &pi;)
@@ -1141,15 +1142,17 @@ indexer:       (lambda multi-index
     <p><b>Procedure: </b><code><a name="array-&gt;list">array-&gt;list</a> <var>array</var></code></p>
     <p>Stores the elements of <code><var>array</var></code> into a newly allocated list in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
-    <p><b>Procedure: </b><code><a name="list-&gt;specialized-array">list-&gt;specialized-array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a name="list-&gt;array">list-&gt;array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>l</var></code> is an list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
-    <p>Returns a specialized-array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
+    <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Procedure: </b><code><a name="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
-    <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array, both with the same domains, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
-    <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in an unspecified order, and associates each value to the same multi-index in <code><var>destination</var></code>.</p>
+    <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
+    <p>The array <code><var>destination</var></code> must be compatible with <code><var>source</var></code>, in the sense that either <code><var>destination</var></code> and <code><var>source</var></code> have the same domain, or <code><var>destination</var></code> is a specialized array whose elements are stored adjacently and in order in its body and whose domain has the same volume as the domain of <code><var>source</var></code>.</p>
+    <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and assigns each value to the multi-index in <code><var>destination</var></code> in the same lexicographical order.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
+    <p><b>Note: </b>If the domains of <code><var>destination</var></code> and <code><var>source</var></code> are not the same, one can think of <code><var>destination</var></code> as a <i>reshaped</i> copy of <code><var>source</var></code>.</p>
     <p><b>Procedure: </b><code><a name="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>
@@ -1169,7 +1172,7 @@ indexer:       (lambda multi-index
     <h2>Relationship to other SRFIs</h2>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
-      specialized-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
+      specialized arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
       translate: </p>
     <dl>
       <dt><code>(array? obj)</code></dt>
@@ -1305,7 +1308,9 @@ indexer:       (lambda multi-index
 
 (define (write-pgm pgm-data file #!optional force-ascii)
   (call-with-output-file
-      file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
     (lambda (port)
       (let* ((greys
               (pgm-greys pgm-data))
@@ -1387,14 +1392,14 @@ indexer:       (lambda multi-index
     <p>together with some filters</p>
     <pre><code>
 (define sharpen-filter
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(0 -1  0
     -1  5 -1
      0 -1  0)
    (make-interval '#(-1 -1) '#(2 2))))
 
 (define edge-filter
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(0 -1  0
     -1  4 -1
      0 -1  0)
@@ -1917,14 +1922,14 @@ Reconstructed image:
 ;; http://microapl.com/apl_help/ch_020_020_880.htm 
    
 (define TABLE1
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(1 2
      5 4
      3 0)
    (make-interval '#(3 2))))
 
 (define TABLE2
-  (list-&gt;specialized-array
+  (list-&gt;array
    '(6 2 3 4
      7 0 1 8)
    (make-interval '#(2 4))))
@@ -1937,10 +1942,10 @@ Reconstructed image:
 ;;; 18      6       9       12
 
 (define X   ;; a &quot;row vector&quot;
-  (list-&gt;specialized-array '(1 3 5 7) (make-interval '#(1 4))))
+  (list-&gt;array '(1 3 5 7) (make-interval '#(1 4))))
 
 (define Y   ;; a &quot;column vector&quot;
-  (list-&gt;specialized-array '(2 3 6 7) (make-interval '#(4 1))))
+  (list-&gt;array '(2 3 6 7) (make-interval '#(4 1))))
 
 (array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 
