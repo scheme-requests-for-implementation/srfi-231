@@ -190,7 +190,7 @@ MathJax.Hub.Config({
                "Then $T_{BA}$ is an affine one-to-one mapping, and we provide "(<code>'interval-scale)" and "(<code>'array-sample)" for these operations.")
          )
         (<p> "We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines are simply "
-             "\"convenience\" procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a "
+             "\"convenience\" procedures.  Second, because the composition of any number of affine mappings is again affine, accessing or changing the elements of a "
              "restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. "
              "Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending "
              "one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
@@ -1525,11 +1525,13 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
 
 (format-lambda-list '(array-assign! destination source))
-(<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array, both with the same domains, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
-(<p> "Evaluates "(<code>"(array-getter "(<var>'source)")")" on the multi-indices in "(<code>"(array-domain "(<var>'source)")")" in an unspecified order, "
-     "and associates each value to the same multi-index in "(<code>(<var>'destination))".")
+(<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
+(<p> "The array "(<code>(<var>'destination))" must be compatible with "(<code>(<var>'source))", in the sense that either "(<code>(<var>'destination))" and "(<code>(<var>'source))" have the same domain, or "(<code>(<var>'destination))" is a specialized array whose elements are stored adjacently and in order in its body and whose domain has the same volume as the domain of "(<code>(<var>'source))".")
+(<p> "Evaluates "(<code>"(array-getter "(<var>'source)")")" on the multi-indices in "(<code>"(array-domain "(<var>'source)")")" in lexicographical order, "
+     "and assigns each value to the multi-index in "(<code>(<var>'destination))" in the same lexicographical order.")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
+(<p> (<b>"Note: ")"If the domains of "(<code>(<var>'destination))" and "(<code>(<var>'source))" are not the same, one can think of "(<code>(<var>'destination))" as a "(<i>'reshaped)" copy of "(<code>(<var>'source))".")
 
 (format-lambda-list '(array-ref A i0 #\. i-tail))
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
@@ -1703,7 +1705,9 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
 
 (define (write-pgm pgm-data file #!optional force-ascii)
   (call-with-output-file
-      file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
     (lambda (port)
       (let* ((greys
               (pgm-greys pgm-data))

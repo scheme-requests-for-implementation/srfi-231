@@ -6,7 +6,7 @@
 
 (declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
 (declare (inlining-limit 0))
-(define tests 100)
+(define tests 10000)
 (set! tests tests)
 
 (define-macro (test expr value)
@@ -1134,7 +1134,7 @@
   (test (array-set! A 0 19)
         "array-set!: The first argument is not mutable array: ")
   (test (array-assign! A A)
-        "array-assign!: The first argument is not a mutable array: "))
+        "array-assign!: The destination is not a mutable array: "))
   
 
 (pp "array-copy result tests")
@@ -2806,18 +2806,41 @@
 (pp "array-assign! tests")
 
 (test (array-assign! 'a 'a)
-      "array-assign!: The first argument is not a mutable array: ")
+      "array-assign!: The destination is not a mutable array: ")
 
 (test (array-assign! (make-array (make-interval '#(0 0) '#(1 1)) values) 'a)
-      "array-assign!: The first argument is not a mutable array: ")
+      "array-assign!: The destination is not a mutable array: ")
 
 (test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values)) 'a)
-      "array-assign!: The second argument is not an array: ")
+      "array-assign!: The source is not an array: ")
 
 (test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values))
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
-      "array-assign!: The arguments do not have the same domain: ")
+      ;; different volume
+      "array-assign!: The destination and source do not have the same number of elements: ")
 
+(test (array-assign! (make-array (make-interval '#(1 2)) list list) ;; not valid
+                     (make-array (make-interval '#(0 0) '#(2 1)) values))
+      ;; not a specialized-array
+      "array-assign!: The destination and source do not have the same domains, and the destination is not a specialized array: ")
+
+(test (array-assign! (array-rotate (array-copy (make-array (make-interval '#(2 3))
+                                                           list ))
+                                   1)
+                     (make-array (make-interval '#(2 3)) list))
+      ;; transpose the destination
+      "array-assign!: The destination and source do not have the same domains, and the elements of the destination are not stored adjacently and in order: ")
+
+(let ((destination (make-specialized-array (make-interval '#(3 2))))  ;; elements in order
+      (source (array-rotate (make-array (make-interval '#(3 2)) list) ;; not the same interval, but same volume
+                            1)))
+  (array-assign! destination source)
+  (test (equal? (array->list destination)
+                (array->list source))
+        #t))
+
+
+  
 (do ((d 1 (fx+ d 1)))
     ((= d 6))
   (let* ((unsafe-specialized-destination
@@ -3281,12 +3304,28 @@
             (else #f))))
 
   (call-with-input-file
-      file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
     (lambda (port)
+
+      ;; We're going to read text for a while,
+      ;; then switch to binary.
+      ;; So we need to turn off buffering until
+      ;; we switch to binary.
+
+      (port-settings-set! port '(buffering: #f))
+
       (let* ((header (read-pgm-object port))
              (columns (read-pgm-object port))
              (rows (read-pgm-object port))
              (greys (read-pgm-object port)))
+
+        ;; now we switch back to buffering
+        ;; to speed things up
+
+        (port-settings-set! port '(buffering: #t))
+
         (make-pgm greys
                   (array-copy
                    (make-array
@@ -3309,7 +3348,9 @@
 
 (define (write-pgm pgm-data file #!optional force-ascii)
   (call-with-output-file
-      file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
     (lambda (port)
       (let* ((greys
               (pgm-greys pgm-data))
