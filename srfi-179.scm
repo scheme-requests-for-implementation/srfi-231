@@ -168,7 +168,7 @@ MathJax.Hub.Config({
                "If $\\pi$ "(<a> href: "https://en.wikipedia.org/wiki/Permutation" 'permutes)" the coordinates of a multi-index $\\vec i$, and $\\pi^{-1}$ is the inverse of $\\pi$, then "
                "$T_{BA}(\\vec i)=\\pi (\\vec i)$ is a one-to-one affine map from $D_B=\\{\\pi^{-1}(\\vec i)\\mid \\vec i\\in D_A\\}$ onto $D_A$.  We provide "(<code>'array-permute)" for this operation. "
                "(The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.) "
-               "We also provide "(<code>'array-rotate)" for the special permutations that rotate the axes. For example, in three dimensions we have the following three rotations: $i\\ j\\ k\\to j\\ k\\ i$; $i\\ j\\ k\\to k\\ i\\ j$; and the trivial (identity) rotation $i\\ j\\ k\\to i\\ j\\ k$.")
+               "We also provide "(<code>'array-rotate)" for the special permutations that rotate the axes. For example, in three dimensions we have the following three rotations: $i\\ j\\ k\\to j\\ k\\ i$; $i\\ j\\ k\\to k\\ i\\ j$; and the trivial (identity) rotation $i\\ j\\ k\\to i\\ j\\ k$.  The three-dimensional permutations that are not rotations are $i\\ j\\ k\\to i\\ k\\ j$; $i\\ j\\ k\\to j\\ i\\ k$; and $i\\ j\\ k\\to k\\ j\\ i$.")
          (<li> (<b> "Currying an array: ")
                "Let's denote the cross product of two intervals $\\text{Int}_1$ and $\\text{Int}_2$ by $\\text{Int}_1\\times\\text{Int}_2$; "
                "if $\\vec j=(j_0,\\ldots,j_{r-1})\\in \\text{Int}_1$ and $\\vec i=(i_0,\\ldots,i_{s-1})\\in \\text{Int}_2$, then "
@@ -515,13 +515,13 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
 
 (format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
 (<p> "If "(<code>(<var> 'interval))" is an interval with
-lower bounds l"(<sub>"0")", ..., l"(<sub>"d-1")" and
-upper bounds u"(<sub>"0")", ..., u"(<sub>"d-1")", and "
-(<code>(<var> "lower-diffs"))" is a vector of exact integers L"(<sub>"0")", ..., L"(<sub>"d-1")" and "
-(<code>(<var> "upper-diffs"))" is a vector of exact integers U"(<sub>"0")", ..., U"(<sub>"d-1")", then "
+lower bounds $\\ell_0,\\dots,\\ell_{d-1}$ and
+upper bounds $u_0,\\dots,u_{d-1}$, and "
+(<code>(<var> "lower-diffs"))" is a vector of exact integers $L_0,\\dots,L_{d-1}$ and "
+(<code>(<var> "upper-diffs"))" is a vector of exact integers $U_0,\\dots,U_{d-1}$, then "
 (<code>"interval-dilate")" returns a new interval with
-lower bounds l"(<sub>"0")"+L"(<sub>"0")", ..., l"(<sub>"d-1")"+L"(<sub>"d-1")" and
-upper bounds u"(<sub>"0")"+U"(<sub>"0")", ..., u"(<sub>"d-1")"+U"(<sub>"d-1")", as long as this is a
+lower bounds $\\ell_0+L_0,\\dots,\\ell_{d-1}+L_{d-1}$ and
+upper bounds $u_0+U_0,\\dots,u_{d-1}+U_{d-1}$, as long as this is a
 nonempty interval.  It is an error if the arguments do not satisfy these conditions.")
 (<p> "Examples:")
 (<pre>(<code>"
@@ -549,13 +549,13 @@ the "(<code> 'interval-intersect)" returns that intersection; otherwise it retur
 
 (format-lambda-list '(interval-translate interval translation))
 (<p> "If "(<code>(<var> 'interval))" is an interval with
-lower bounds l"(<sub>"0")", ..., l"(<sub>"d-1")" and
-upper bounds u"(<sub>"0")", ..., u"(<sub>"d-1")", and "
-(<code>(<var> "translation"))" is a translation with entries T"(<sub>"0")", ..., T"(<sub>"d-1")
-", then "
+lower bounds $\\ell_0,\\dots,\\ell_{d-1}$ and
+upper bounds $u_0,\\dots,u_{d-1}$, and "
+(<code>(<var> "translation"))" is a translation with entries $T_0,\\dots,T_{d-1}$
+, then "
 (<code>"interval-translate")" returns a new interval with
-lower bounds l"(<sub>"0")"+T"(<sub>"0")", ..., l"(<sub>"d-1")"+T"(<sub>"d-1")" and
-upper bounds u"(<sub>"0")"+T"(<sub>"0")", ..., u"(<sub>"d-1")"+T"(<sub>"d-1")".
+lower bounds $\\ell_0+T_0,\\dots,\\ell_{d-1}+T_{d-1}$ and
+upper bounds $u_0+T_0,\\dots,u_{d-1}+T_{d-1}$.
 It is an error if the arguments do not satisfy these conditions.")
 (<p> "One could define "(<code> "(interval-translate interval translation)")" by "(<code> "(interval-dilate interval translation translation)")".")
 
@@ -1340,7 +1340,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 
 (format-lambda-list '(array-map f array #\. arrays))
 (<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain and "(<code>(<var> 'f))" is a procedure, then "(<code> 'array-map)"
-returns a new array with the same domain and getter")
+returns a new immutable array with the same domain and getter")
 (<pre>
  (<code>"
 (lambda multi-index
@@ -1850,7 +1850,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
    \"edge-test.pgm\"))
 "))
 
-(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".")
+(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".  Note that the first permutation is not a rotation---you want to have the head up in both the median and frontal views.")
 
 
 (<p> (<b> "Calculating second differences of images. ")"For another example, if a real-valued function is defined
