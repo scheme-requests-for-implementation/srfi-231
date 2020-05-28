@@ -285,11 +285,11 @@
        "&#255;"
        ))
   (let ((port (if (null? possible-port)
-		  (current-output-port)
-		  (car possible-port)))
-	(indentation 0)
-	(indentation-whitespace (make-string 100 #\space))
-	(old-indentation 0))   ; used with <pre>
+                  (current-output-port)
+                  (car possible-port)))
+        (indentation 0)
+        (indentation-whitespace (make-string 100 #\space))
+        (old-indentation 0))   ; used with <pre>
 
     (define (go-to-new-line)
       (newline port)
@@ -297,118 +297,118 @@
 
     (define (display-html-form x)
       (if (html-form-start-newline? x)
-	  (begin
-	    (go-to-new-line)
-	    (set! indentation (+ indentation 2))))
+          (begin
+            (go-to-new-line)
+            (set! indentation (+ indentation 2))))
       (##write-substring "<" 0 1 port)
       (let ((name (html-form-name x)))
-	(##write-substring name 0 (string-length name) port))
+        (##write-substring name 0 (string-length name) port))
       (for-each (lambda (attribute)
-		  (##write-substring " " 0 1 port)
-		  (let ((name (attribute-name attribute)))
-		    (##write-substring name 0 (string-length name) port))
-		  (if (attribute-takes-value? attribute)
-		      (begin
-			(##write-substring "=\"" 0 2 port)
-			(protect (attribute-value attribute))
-			(##write-substring "\"" 0 1 port))))
-		(html-form-attributes x))
+                  (##write-substring " " 0 1 port)
+                  (let ((name (attribute-name attribute)))
+                    (##write-substring name 0 (string-length name) port))
+                  (if (attribute-takes-value? attribute)
+                      (begin
+                        (##write-substring "=\"" 0 2 port)
+                        (protect (attribute-value attribute))
+                        (##write-substring "\"" 0 1 port))))
+                (html-form-attributes x))
       (##write-substring ">" 0 1 port)
       (if (equal? (html-form-name x) "pre")
-	  (begin
-	    (set! old-indentation indentation)
-	    (set! indentation 0)))
+          (begin
+            (set! old-indentation indentation)
+            (set! indentation 0)))
       (cond ((html-form-body x)
-	     =>
-	     protect))
+             =>
+             protect))
       (if (equal? (html-form-name x) "pre")
-	  (set! indentation old-indentation))
+          (set! indentation old-indentation))
       (if (html-form-start-newline? x)
-	  (set! indentation (- indentation 2)))
+          (set! indentation (- indentation 2)))
       (if (html-form-end-tag? x)
-	  (begin
-	    (if (html-form-end-tag-start-newline? x)
-		(go-to-new-line))
-	    (##write-substring "</" 0 2 port)
-	    (let ((name (html-form-name x)))
-	      (##write-substring name 0 (string-length name) port))
-	    (##write-substring ">" 0 1 port))))
+          (begin
+            (if (html-form-end-tag-start-newline? x)
+                (go-to-new-line))
+            (##write-substring "</" 0 2 port)
+            (let ((name (html-form-name x)))
+              (##write-substring name 0 (string-length name) port))
+            (##write-substring ">" 0 1 port))))
 
     (define (display-protected-string x)
       (let ((n (string-length x)))
-	(let loop ((start 0) (end 0))
-	  (if (= end n)
-	      (##write-substring x start end port)
-	      (let* ((ch (string-ref x end))
-		     (index (char->integer ch)))
-		(cond ((and (< index 256)
-			    (vector-ref character-entity-table index))
-		       =>
-		       (lambda (character-value)
-			 (if (char? character-value)
-			     (if (eq? character-value #\newline)
-				 (begin
-				   (##write-substring x start end port)
-				   (go-to-new-line)
-				   (loop (+ end 1) (+ end 1)))
-				 (loop start (+ end 1)))
-			     (begin  ; it's a string
-			       (##write-substring x start end port)
-			       (##write-substring character-value 0 (string-length character-value) port)
-			       (loop (+ end 1) (+ end 1))))))
-		      (else
-		       (display (string-append "Warning: Character (integer->char "
-					       index
-					       ") is not a valid HTML 4.0 character entity\n")
-				##stderr)
-		       (loop start (+ end 1)))))))))
+        (let loop ((start 0) (end 0))
+          (if (= end n)
+              (##write-substring x start end port)
+              (let* ((ch (string-ref x end))
+                     (index (char->integer ch)))
+                (cond ((and (< index 256)
+                            (vector-ref character-entity-table index))
+                       =>
+                       (lambda (character-value)
+                         (if (char? character-value)
+                             (if (eq? character-value #\newline)
+                                 (begin
+                                   (##write-substring x start end port)
+                                   (go-to-new-line)
+                                   (loop (+ end 1) (+ end 1)))
+                                 (loop start (+ end 1)))
+                             (begin  ; it's a string
+                               (##write-substring x start end port)
+                               (##write-substring character-value 0 (string-length character-value) port)
+                               (loop (+ end 1) (+ end 1))))))
+                      (else
+                       (display (string-append "Warning: Character (integer->char "
+                                               index
+                                               ") is not a valid HTML 4.0 character entity\n")
+                                ##stderr)
+                       (loop start (+ end 1)))))))))
 
     (define (display-protected-char x)
       (let ((index (char->integer x)))
-	(cond ((and (< index 256)
-		    (vector-ref character-entity-table index))
-	       =>
-	       (lambda (character-value)
-		 (if (char? character-value)
-		     (if (eq? character-value #\newline)
-			 (go-to-new-line)
-			 (display character-value port))
-		     (##write-substring character-value 0 (string-length character-value) port))))
-	      (else
-	       (display (string-append "Warning: Character (integer->char "
-				       index
-				       ") is not a valid HTML 4.0 character entity\n")
-			##stderr)
-	       (display x port)))))
+        (cond ((and (< index 256)
+                    (vector-ref character-entity-table index))
+               =>
+               (lambda (character-value)
+                 (if (char? character-value)
+                     (if (eq? character-value #\newline)
+                         (go-to-new-line)
+                         (display character-value port))
+                     (##write-substring character-value 0 (string-length character-value) port))))
+              (else
+               (display (string-append "Warning: Character (integer->char "
+                                       index
+                                       ") is not a valid HTML 4.0 character entity\n")
+                        ##stderr)
+               (display x port)))))
 
     (define (display-attribute-value x)
       (protect x #f))
 
     (define (unprotect x)
       (cond ((pair? x) (for-each unprotect x))
-	    ((null? x) (void))
-	    ((string? x) (##write-substring x 0 (string-length x) port))
-	    ((char? x) (write-char x port))
-	    ((html-form? x)
-	     (error "html-display: There shouldn't be a form here" x))
-	    ((html-raw? x)
-	     (error "html-display: There shouldn't be a form here" x))
-	    (else
-	     (display x port))))
+            ((null? x) (void))
+            ((string? x) (##write-substring x 0 (string-length x) port))
+            ((char? x) (write-char x port))
+            ((html-form? x)
+             (error "html-display: There shouldn't be a form here" x))
+            ((html-raw? x)
+             (error "html-display: There shouldn't be a form here" x))
+            (else
+             (display x port))))
 
     (define (protect x #!optional (allow-forms? #t))
       (cond ((pair? x) (for-each protect x))
-	    ((html-form? x)
-	     (if allow-forms?
-		 (display-html-form x)
-		 (error "html-display: There shouldn't be a form here" x)))
-	    ((null? x) (void))
-	    ((string? x) (display-protected-string x))
-	    ((char? x) (display-protected-char x))
-	    ((html-raw? x)
-	     (unprotect (html-raw-value x)))
-	    (else
-	     (display-protected-string (with-output-to-string '() (lambda () (display x)))))))
+            ((html-form? x)
+             (if allow-forms?
+                 (display-html-form x)
+                 (error "html-display: There shouldn't be a form here" x)))
+            ((null? x) (void))
+            ((string? x) (display-protected-string x))
+            ((char? x) (display-protected-char x))
+            ((html-raw? x)
+             (unprotect (html-raw-value x)))
+            (else
+             (display-protected-string (with-output-to-string '() (lambda () (display x)))))))
 
     (protect x)))
 
@@ -420,58 +420,58 @@
 (define (html-parse-args form-name end-tag? attribute-alist single-attribute-alist args)
   (let loop ((args args))
     (cond ((and (not (null? args)) (keyword? (car args)))
-	   (let ((key (car args))
-		 (args (cdr args)))
-	     (cond ((assq key attribute-alist)
-		    => (lambda (entry)
-			 (let ((attribute (cdr entry)))
-			   (cond ((attribute-value attribute)
-				  (error "Keyword used more than once" form-name key))
-				 ((null? args)
-				  (error "Keyword must take an argument" form-name key))
-				 (else
-				  (attribute-value-set! attribute (car args))
-				  (loop (cdr args)))))))
-		   ((assq key single-attribute-alist)
-		    => (lambda (entry)
-			 (let ((attribute (cdr entry)))
-			   (cond ((attribute-value attribute)
-				  (error "Keyword used more than once" form-name key))
-				 (else
-				  (attribute-value-set! attribute #t)
-				  (loop args))))))
-		   (else
-		    (error "Unrecognized keyword" form-name key)))))
-	  ((and (not end-tag?) (not (null? args)))
-	   (error "Body found in tag without end-tag" form-name args))
-	  (else
-	   args)))) ; return
+           (let ((key (car args))
+                 (args (cdr args)))
+             (cond ((assq key attribute-alist)
+                    => (lambda (entry)
+                         (let ((attribute (cdr entry)))
+                           (cond ((attribute-value attribute)
+                                  (error "Keyword used more than once" form-name key))
+                                 ((null? args)
+                                  (error "Keyword must take an argument" form-name key))
+                                 (else
+                                  (attribute-value-set! attribute (car args))
+                                  (loop (cdr args)))))))
+                   ((assq key single-attribute-alist)
+                    => (lambda (entry)
+                         (let ((attribute (cdr entry)))
+                           (cond ((attribute-value attribute)
+                                  (error "Keyword used more than once" form-name key))
+                                 (else
+                                  (attribute-value-set! attribute #t)
+                                  (loop args))))))
+                   (else
+                    (error "Unrecognized keyword" form-name key)))))
+          ((and (not end-tag?) (not (null? args)))
+           (error "Body found in tag without end-tag" form-name args))
+          (else
+           args)))) ; return
 
 
 ;;; this function builds the form
 
 (define (html-build-form tag-name attribute-alist single-attribute-alist args start-newline? end-tag-start-newline? end-tag?)
   (let ((attributes
-	 (let loop ((alist attribute-alist)
-		    (out '()))
-	   (if (not (null? alist))
-	       (let ((attribute (cdar alist)))
-		 (if (attribute-value attribute)
-		     (loop (cdr alist)
-			   (cons attribute out))
-		     (loop (cdr alist)
-			   out)))
-	       (let loop ((alist single-attribute-alist)
-			  (out out))
-		 (if (not (null? alist))
-		     (let ((attribute (cdar alist)))
-		       (if (attribute-value attribute)
-			   (loop (cdr alist)
-				 (cons attribute
-				       out))
-			   (loop (cdr alist)
-				 out)))
-		     out))))))
+         (let loop ((alist attribute-alist)
+                    (out '()))
+           (if (not (null? alist))
+               (let ((attribute (cdar alist)))
+                 (if (attribute-value attribute)
+                     (loop (cdr alist)
+                           (cons attribute out))
+                     (loop (cdr alist)
+                           out)))
+               (let loop ((alist single-attribute-alist)
+                          (out out))
+                 (if (not (null? alist))
+                     (let ((attribute (cdar alist)))
+                       (if (attribute-value attribute)
+                           (loop (cdr alist)
+                                 (cons attribute
+                                       out))
+                           (loop (cdr alist)
+                                 out)))
+                     out))))))
     (make-html-form tag-name attributes args start-newline? end-tag-start-newline? end-tag?)))
 
 ;;; tags are defined with this macro.  It takes a required tag-name as the first argument, and
@@ -486,63 +486,63 @@
 
 (##define-macro (define-tag . args)
   (let ((internal-define-tag
-	 (lambda (tag-name
-		  #!key
-		  (allow-core-attributes? #t)
-		  (end-tag? #t)
-		  (start-newline? #f)
-		  (end-tag-start-newline? #f)
-		  (attributes '())
-		  (single-attributes '()))
-	   (let ((core-attributes '(class
-				    dir
-				    id
-				    lang
-				    onclick
-				    ondblclick
-				    onkeydown
-				    onkeypress
-				    onkeyup
-				    onmousedown
-				    onmousemove
-				    onmouseout
-				    onmouseover
-				    onmouseup
-				    style
-				    title)))
-	     ;; the maps here are done at compile time, so they are the system map.
+         (lambda (tag-name
+                  #!key
+                  (allow-core-attributes? #t)
+                  (end-tag? #t)
+                  (start-newline? #f)
+                  (end-tag-start-newline? #f)
+                  (attributes '())
+                  (single-attributes '()))
+           (let ((core-attributes '(class
+                                    dir
+                                    id
+                                    lang
+                                    onclick
+                                    ondblclick
+                                    onkeydown
+                                    onkeypress
+                                    onkeyup
+                                    onmousedown
+                                    onmousemove
+                                    onmouseout
+                                    onmouseover
+                                    onmouseup
+                                    style
+                                    title)))
+             ;; the maps here are done at compile time, so they are the system map.
 
-	     (let* ((attributes (if allow-core-attributes? (append attributes core-attributes) attributes))
-		    (attribute-strings (map (lambda (x) (symbol->string x)) attributes))
-		    (attribute-keywords (map (lambda (x) (string->keyword x)) attribute-strings))
-		    (attribute-alist (cons 'list (map (lambda (keyword name)
-							`(cons ,keyword (make-attribute ,name #t #f)))
-						      attribute-keywords
-						      attribute-strings)))
-		    (single-attribute-strings (map (lambda (x) (symbol->string x)) single-attributes))
-		    (single-attribute-keywords (map (lambda (x) (string->keyword x)) single-attribute-strings))
-		    (single-attribute-alist (cons 'list (map (lambda (keyword name)
-							       `(cons ,keyword (make-attribute ,name #f #f)))
-							     single-attribute-keywords
-							     single-attribute-strings)))
-		    (form-name (string->symbol (string-append "<" (symbol->string tag-name) ">"))))
-	       `(define (,form-name . args)
-		  (let ((attribute-alist
-			 ,(if (null? attribute-keywords)
-			      ''()
-			      attribute-alist))
-			(single-attribute-alist
-			 ,(if (null? single-attribute-keywords)
-			      ''()
-			      single-attribute-alist)))
-		    (let ((args (html-parse-args ,(list 'quote form-name) ,end-tag? attribute-alist single-attribute-alist args)))
-		      (html-build-form ,(symbol->string tag-name)
-				       attribute-alist
-				       single-attribute-alist
-				       args
-				       ,start-newline?
-				       ,end-tag-start-newline?
-				       ,end-tag?)))))))))
+             (let* ((attributes (if allow-core-attributes? (append attributes core-attributes) attributes))
+                    (attribute-strings (map (lambda (x) (symbol->string x)) attributes))
+                    (attribute-keywords (map (lambda (x) (string->keyword x)) attribute-strings))
+                    (attribute-alist (cons 'list (map (lambda (keyword name)
+                                                        `(cons ,keyword (make-attribute ,name #t #f)))
+                                                      attribute-keywords
+                                                      attribute-strings)))
+                    (single-attribute-strings (map (lambda (x) (symbol->string x)) single-attributes))
+                    (single-attribute-keywords (map (lambda (x) (string->keyword x)) single-attribute-strings))
+                    (single-attribute-alist (cons 'list (map (lambda (keyword name)
+                                                               `(cons ,keyword (make-attribute ,name #f #f)))
+                                                             single-attribute-keywords
+                                                             single-attribute-strings)))
+                    (form-name (string->symbol (string-append "<" (symbol->string tag-name) ">"))))
+               `(define (,form-name . args)
+                  (let ((attribute-alist
+                         ,(if (null? attribute-keywords)
+                              ''()
+                              attribute-alist))
+                        (single-attribute-alist
+                         ,(if (null? single-attribute-keywords)
+                              ''()
+                              single-attribute-alist)))
+                    (let ((args (html-parse-args ,(list 'quote form-name) ,end-tag? attribute-alist single-attribute-alist args)))
+                      (html-build-form ,(symbol->string tag-name)
+                                       attribute-alist
+                                       single-attribute-alist
+                                       args
+                                       ,start-newline?
+                                       ,end-tag-start-newline?
+                                       ,end-tag?)))))))))
 
     (apply internal-define-tag args)))
 
@@ -736,276 +736,276 @@
 
 (##define-macro (define-input-tag)
   (let ((button-attributes '(type:
-			     accesskey:
-			     name:
-			     onblur:
-			     onfocus:
-			     tabindex:
-			     value:
-			     class:
-			     dir:
-			     id:
-			     lang:
-			     onclick:
-			     ondblclick:
-			     onkeydown:
-			     onkeypress:
-			     onkeyup:
-			     onmousedown:
-			     onmousemove:
-			     onmouseout:
-			     onmouseover:
-			     onmouseup:
-			     style:
-			     title:))
-	(button-single-attributes '(disabled:))
-	(checkbox-attributes '(type:
-			       accesskey:
-			       name:
-			       tabindex:
-			       value:
-			       class:
-			       dir:
-			       id:
-			       lang:
-			       onclick:
-			       ondblclick:
-			       onkeydown:
-			       onkeypress:
-			       onkeyup:
-			       onmousedown:
-			       onmousemove:
-			       onmouseout:
-			       onmouseover:
-			       onmouseup:
-			       style:
-			       title:))
-	(checkbox-single-attributes '(checked: disabled: readonly:))
-	(file-attributes '(type:
-			   accesskey:
-			   maxlength:
-			   name:
-			   onblur:
-			   onchange:
-			   onfocus:
-			   size:
-			   tabindex:
-			   value:
-			   class:
-			   dir:
-			   id:
-			   lang:
-			   onclick:
-			   ondblclick:
-			   onkeydown:
-			   onkeypress:
-			   onkeyup:
-			   onmousedown:
-			   onmousemove:
-			   onmouseout:
-			   onmouseover:
-			   onmouseup:
-			   style:
-			   title:))
-	(file-single-attributes '(disabled: readonly:))
-	(hidden-attributes '(type:
-			     name:
-			     value:
-			     class:
-			     dir:
-			     id:
-			     lang:
-			     onclick:
-			     ondblclick:
-			     onkeydown:
-			     onkeypress:
-			     onkeyup:
-			     onmousedown:
-			     onmousemove:
-			     onmouseout:
-			     onmouseover:
-			     onmouseup:
-			     style:
-			     title:))
-	(hidden-single-attributes '())
-	(image-attributes '(type:
-			    accesskey:
-			    align:
-			    alt:
-			    border:
-			    name:
-			    src:
-			    tabindex:
-			    usemap:
-			    class:
-			    dir:
-			    id:
-			    lang:
-			    onclick:
-			    ondblclick:
-			    onkeydown:
-			    onkeypress:
-			    onkeyup:
-			    onmousedown:
-			    onmousemove:
-			    onmouseout:
-			    onmouseover:
-			    onmouseup:
-			    style:
-			    title:))
-	(image-single-attributes '(disabled:))
-	(password-attributes '(type:
-			       acccesskey:
-			       maxlength:
-			       name:
-			       onblur:
-			       onchange:
-			       onfocus:
-			       onselect:
-			       size:
-			       tabindex:
-			       value:
-			       class:
-			       dir:
-			       id:
-			       lang:
-			       onclick:
-			       ondblclick:
-			       onkeydown:
-			       onkeypress:
-			       onkeyup:
-			       onmousedown:
-			       onmousemove:
-			       onmouseout:
-			       onmouseover:
-			       onmouseup:
-			       style:
-			       title:))
-	(password-single-attributes '(disabled: readonly:))
-	(radio-attributes '(type:
-			    accesskey:
-			    name:
-			    tabindex:
-			    value:
-			    class:
-			    dir:
-			    id:
-			    lang:
-			    onclick:
-			    ondblclick:
-			    onkeydown:
-			    onkeypress:
-			    onkeyup:
-			    onmousedown:
-			    onmousemove:
-			    onmouseout:
-			    onmouseover:
-			    onmouseup:
-			    style:
-			    title:))
-	(radio-single-attributes '(checked: disabled: readonly:))
-	(reset-attributes '(type:
-			    accesskey:
-			    tabindex:
-			    value:
-			    class:
-			    dir:
-			    id:
-			    lang:
-			    onclick:
-			    ondblclick:
-			    onkeydown:
-			    onkeypress:
-			    onkeyup:
-			    onmousedown:
-			    onmousemove:
-			    onmouseout:
-			    onmouseover:
-			    onmouseup:
-			    style:
-			    title:))
-	(reset-single-attributes '(disabled:))
-	(submit-attributes '(type:
-			     accesskey:
-			     name:
-			     tabindex:
-			     value:
-			     class:
-			     dir:
-			     id:
-			     lang:
-			     onclick:
-			     ondblclick:
-			     onkeydown:
-			     onkeypress:
-			     onkeyup:
-			     onmousedown:
-			     onmousemove:
-			     onmouseout:
-			     onmouseover:
-			     onmouseup:
-			     style:
-			     title:))
-	(submit-single-attributes '(disabled:))
-	(text-attributes '(type:
-			   accesskey:
-			   maxlength:
-			   name:
-			   onblur:
-			   onchange:
-			   onfocus:
-			   onselect:
-			   size:
-			   tabindex:
-			   value:
-			   class:
-			   dir:
-			   id:
-			   lang:
-			   onclick:
-			   ondblclick:
-			   onkeydown:
-			   onkeypress:
-			   onkeyup:
-			   onmousedown:
-			   onmousemove:
-			   onmouseout:
-			   onmouseover:
-			   onmouseup:
-			   style:
-			   title:))
-	(text-single-attributes '(disabled: readonly:)))
+                             accesskey:
+                             name:
+                             onblur:
+                             onfocus:
+                             tabindex:
+                             value:
+                             class:
+                             dir:
+                             id:
+                             lang:
+                             onclick:
+                             ondblclick:
+                             onkeydown:
+                             onkeypress:
+                             onkeyup:
+                             onmousedown:
+                             onmousemove:
+                             onmouseout:
+                             onmouseover:
+                             onmouseup:
+                             style:
+                             title:))
+        (button-single-attributes '(disabled:))
+        (checkbox-attributes '(type:
+                               accesskey:
+                               name:
+                               tabindex:
+                               value:
+                               class:
+                               dir:
+                               id:
+                               lang:
+                               onclick:
+                               ondblclick:
+                               onkeydown:
+                               onkeypress:
+                               onkeyup:
+                               onmousedown:
+                               onmousemove:
+                               onmouseout:
+                               onmouseover:
+                               onmouseup:
+                               style:
+                               title:))
+        (checkbox-single-attributes '(checked: disabled: readonly:))
+        (file-attributes '(type:
+                           accesskey:
+                           maxlength:
+                           name:
+                           onblur:
+                           onchange:
+                           onfocus:
+                           size:
+                           tabindex:
+                           value:
+                           class:
+                           dir:
+                           id:
+                           lang:
+                           onclick:
+                           ondblclick:
+                           onkeydown:
+                           onkeypress:
+                           onkeyup:
+                           onmousedown:
+                           onmousemove:
+                           onmouseout:
+                           onmouseover:
+                           onmouseup:
+                           style:
+                           title:))
+        (file-single-attributes '(disabled: readonly:))
+        (hidden-attributes '(type:
+                             name:
+                             value:
+                             class:
+                             dir:
+                             id:
+                             lang:
+                             onclick:
+                             ondblclick:
+                             onkeydown:
+                             onkeypress:
+                             onkeyup:
+                             onmousedown:
+                             onmousemove:
+                             onmouseout:
+                             onmouseover:
+                             onmouseup:
+                             style:
+                             title:))
+        (hidden-single-attributes '())
+        (image-attributes '(type:
+                            accesskey:
+                            align:
+                            alt:
+                            border:
+                            name:
+                            src:
+                            tabindex:
+                            usemap:
+                            class:
+                            dir:
+                            id:
+                            lang:
+                            onclick:
+                            ondblclick:
+                            onkeydown:
+                            onkeypress:
+                            onkeyup:
+                            onmousedown:
+                            onmousemove:
+                            onmouseout:
+                            onmouseover:
+                            onmouseup:
+                            style:
+                            title:))
+        (image-single-attributes '(disabled:))
+        (password-attributes '(type:
+                               acccesskey:
+                               maxlength:
+                               name:
+                               onblur:
+                               onchange:
+                               onfocus:
+                               onselect:
+                               size:
+                               tabindex:
+                               value:
+                               class:
+                               dir:
+                               id:
+                               lang:
+                               onclick:
+                               ondblclick:
+                               onkeydown:
+                               onkeypress:
+                               onkeyup:
+                               onmousedown:
+                               onmousemove:
+                               onmouseout:
+                               onmouseover:
+                               onmouseup:
+                               style:
+                               title:))
+        (password-single-attributes '(disabled: readonly:))
+        (radio-attributes '(type:
+                            accesskey:
+                            name:
+                            tabindex:
+                            value:
+                            class:
+                            dir:
+                            id:
+                            lang:
+                            onclick:
+                            ondblclick:
+                            onkeydown:
+                            onkeypress:
+                            onkeyup:
+                            onmousedown:
+                            onmousemove:
+                            onmouseout:
+                            onmouseover:
+                            onmouseup:
+                            style:
+                            title:))
+        (radio-single-attributes '(checked: disabled: readonly:))
+        (reset-attributes '(type:
+                            accesskey:
+                            tabindex:
+                            value:
+                            class:
+                            dir:
+                            id:
+                            lang:
+                            onclick:
+                            ondblclick:
+                            onkeydown:
+                            onkeypress:
+                            onkeyup:
+                            onmousedown:
+                            onmousemove:
+                            onmouseout:
+                            onmouseover:
+                            onmouseup:
+                            style:
+                            title:))
+        (reset-single-attributes '(disabled:))
+        (submit-attributes '(type:
+                             accesskey:
+                             name:
+                             tabindex:
+                             value:
+                             class:
+                             dir:
+                             id:
+                             lang:
+                             onclick:
+                             ondblclick:
+                             onkeydown:
+                             onkeypress:
+                             onkeyup:
+                             onmousedown:
+                             onmousemove:
+                             onmouseout:
+                             onmouseover:
+                             onmouseup:
+                             style:
+                             title:))
+        (submit-single-attributes '(disabled:))
+        (text-attributes '(type:
+                           accesskey:
+                           maxlength:
+                           name:
+                           onblur:
+                           onchange:
+                           onfocus:
+                           onselect:
+                           size:
+                           tabindex:
+                           value:
+                           class:
+                           dir:
+                           id:
+                           lang:
+                           onclick:
+                           ondblclick:
+                           onkeydown:
+                           onkeypress:
+                           onkeyup:
+                           onmousedown:
+                           onmousemove:
+                           onmouseout:
+                           onmouseover:
+                           onmouseup:
+                           style:
+                           title:))
+        (text-single-attributes '(disabled: readonly:)))
     `(define (<input> . args)
        (let ((type-tag (memq type: args)))
-	 (if (or (not type-tag)
-		 (null? (cdr type-tag))
-		 (not (symbol? (cadr type-tag))))
-	     (error "The input type tag must be present and its value must be a symbol" args))
-	 (let* ((input-type (cadr type-tag))
-		(attribute-alist (case input-type
-				   ,@(map (lambda (input-type input-attributes)
-					    `((,input-type) ,(if (null? input-attributes)
-								 ''()
-								 (cons 'list (map (lambda (x) `(cons ,x (make-attribute ,(keyword->string x) #t #f))) input-attributes)))))
-					  '(button checkbox file hidden image password radio submit text)
-					  (list button-attributes checkbox-attributes file-attributes hidden-attributes image-attributes password-attributes radio-attributes submit-attributes text-attributes))
-				   (else (error "The input type tag is not valid" args))))
-		(single-attribute-alist (case input-type
-					  ,@(map (lambda (input-type input-single-attributes)
-						   `((,input-type) ,(if (null? input-single-attributes)
-									''()
-									(cons 'list (map (lambda (x) `(cons ,x (make-attribute ,(keyword->string x) #f #f))) input-single-attributes)))))
-						 '(button checkbox file hidden image password radio submit text)
-						 (list button-single-attributes checkbox-single-attributes file-single-attributes hidden-single-attributes image-single-attributes password-single-attributes radio-single-attributes submit-single-attributes text-single-attributes))
-					  (else (error "The input type tag is not valid" args)))))
-	   (let ((args (html-parse-args <input> #t attribute-alist single-attribute-alist args)))
-	     (html-build-form "input"
-			      attribute-alist
-			      single-attribute-alist
-			      args
-			      #t
-			      #f
-			      #f)))))))
+         (if (or (not type-tag)
+                 (null? (cdr type-tag))
+                 (not (symbol? (cadr type-tag))))
+             (error "The input type tag must be present and its value must be a symbol" args))
+         (let* ((input-type (cadr type-tag))
+                (attribute-alist (case input-type
+                                   ,@(map (lambda (input-type input-attributes)
+                                            `((,input-type) ,(if (null? input-attributes)
+                                                                 ''()
+                                                                 (cons 'list (map (lambda (x) `(cons ,x (make-attribute ,(keyword->string x) #t #f))) input-attributes)))))
+                                          '(button checkbox file hidden image password radio submit text)
+                                          (list button-attributes checkbox-attributes file-attributes hidden-attributes image-attributes password-attributes radio-attributes submit-attributes text-attributes))
+                                   (else (error "The input type tag is not valid" args))))
+                (single-attribute-alist (case input-type
+                                          ,@(map (lambda (input-type input-single-attributes)
+                                                   `((,input-type) ,(if (null? input-single-attributes)
+                                                                        ''()
+                                                                        (cons 'list (map (lambda (x) `(cons ,x (make-attribute ,(keyword->string x) #f #f))) input-single-attributes)))))
+                                                 '(button checkbox file hidden image password radio submit text)
+                                                 (list button-single-attributes checkbox-single-attributes file-single-attributes hidden-single-attributes image-single-attributes password-single-attributes radio-single-attributes submit-single-attributes text-single-attributes))
+                                          (else (error "The input type tag is not valid" args)))))
+           (let ((args (html-parse-args <input> #t attribute-alist single-attribute-alist args)))
+             (html-build-form "input"
+                              attribute-alist
+                              single-attribute-alist
+                              args
+                              #t
+                              #f
+                              #f)))))))
 
 (define-input-tag)
 
