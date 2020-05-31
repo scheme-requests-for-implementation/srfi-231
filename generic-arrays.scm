@@ -3488,5 +3488,217 @@
          ((%%array-setter A) v i0 i1 i2 i3))
         (else
          (apply (%%array-setter A) v i0 i1 i2 i3 i-tail))))
+#|
+
+The code for specialized-array-reshape is derived from _attempt_nocopy_reshape in
+
+https://github.com/numpy/numpy/blob/7f836a9aca57de7fcae188b66ee1d8b60c6fc7b1/numpy/core/src/multiarray/shape.c
+
+which is distributed under the following license:
+
+Copyright (c) 2005-2020, NumPy Developers.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+       copyright notice, this list of conditions and the following
+       disclaimer in the documentation and/or other materials provided
+       with the distribution.
+
+    * Neither the name of the NumPy Developers nor the names of any
+       contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+|#
+
+(define (specialized-array-reshape array new-domain)
+
+  (define (vector-filter p v)
+
+    ;; Decides whether to include v(k) in the result vector
+    ;; by testing p(k), not p(v(k)).
+  
+    (let ((n (vector-length v)))
+      (define (helper k i)
+        (cond ((= k n)
+               (make-vector i))
+              ((p k)
+               (let ((result (helper (+ k 1) (+ i 1))))
+                 (vector-set! result i (vector-ref v k))
+                 result))
+              (else
+               (helper (+ k 1) i))))
+      (helper 0 0)))
+  
+  (cond ((not (specialized-array? array))
+         (error "specialized-array-reshape: The first argument is not a specialized array: " array new-domain))
+        ((not (interval? new-domain))
+         (error "specialized-array-reshape: The second argument is not an interval " array new-domain))
+        ((not (= (%%interval-volume (%%array-domain array))
+                 (%%interval-volume new-domain)))
+         (error "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: " array new-domain))
+        (else
+         (let* ((indexer
+                 (%%array-indexer array))
+                (domain
+                 (%%array-domain array))
+                (lowers
+                 (%%interval-lower-bounds domain))
+                (uppers
+                 (%%interval-upper-bounds domain))
+                (dims
+                 (vector-length lowers))
+                (sides
+                 (vector-map - uppers lowers))
+                (args
+                 (vector->list lowers))
+                (base
+                 (apply indexer args))
+                (strides
+                 (let ((result   (make-vector dims))
+                       (vec-args (let ((result (make-vector dims)))
+                                   (do ((i 0 (+ i 1))
+                                        (args-tail args (cdr args-tail)))
+                                       ((= i dims) result)
+                                     (vector-set! result i args-tail)))))
+                   (do ((i 0 (+ i 1)))
+                       ((= i dims) result)
+                     (let ((arg (vector-ref vec-args i)))
+                       ;; gives a nonsense result if (vector-ref sides i) is 1,
+                       ;; but doesn't matter.
+                       (set-car! arg (+ 1 (car arg)))
+                       (vector-set! result i (- (apply indexer args) base))
+                       (set-car! arg (+ -1 (car arg)))))))
+                (filtered-strides
+                 (vector-filter (lambda (i)
+                                  (not (= 1 (vector-ref sides i))))
+                                strides))
+                (filtered-sides
+                 (vector-filter (lambda (i)
+                                  (not (= 1 (vector-ref sides i))))
+                                sides))
+                (new-sides
+                 (vector-map -
+                             (%%interval-upper-bounds new-domain)
+                             (%%interval-lower-bounds new-domain)))
+                ;; Notation from the NumPy code
+                (newdims
+                 new-sides)
+                (olddims
+                 filtered-sides)
+                (oldstrides
+                 filtered-strides)
+                (newnd
+                 (vector-length new-sides))
+                (newstrides
+                 (make-vector newnd 0))
+                (oldnd
+                 (vector-length filtered-sides)))
+           ;; In the following loops, the error call is in tail position
+           ;; so it can be continued.
+           ;; From this point on we're going to closely follow NumPy's code
+           (let loop-1 ((oi 0)
+                        (oj 1)
+                        (ni 0)
+                        (nj 1))
+             (if (and (< ni newnd)
+                      (< oi oldnd))
+                 ;; We find a minimal group of adjacent dimensions from left to right
+                 ;; on the old and new intervals with the same volume.
+                 ;; We then check to see that the elements in the old array of these
+                 ;; dimensions are evenly spaced, so an affine map can
+                 ;; cover them.
+                 (let loop-2 ((nj nj)
+                              (oj oj)
+                              (np (vector-ref newdims ni))
+                              (op (vector-ref olddims oi)))
+                   (if (not (= np op))
+                       (if (< np op)
+                           (loop-2 (+ nj 1)
+                                   oj
+                                   (* np (vector-ref newdims nj))
+                                   op)
+                           (loop-2 nj
+                                   (+ oj 1)
+                                   np
+                                   (* op (vector-ref olddims oj))))
+                       (let loop-3 ((ok oi))
+                         (if (< ok (- oj 1))
+                             (if (not (= (vector-ref oldstrides ok)
+                                         (* (vector-ref olddims    (+ ok 1))
+                                            (vector-ref oldstrides (+ ok 1)))))
+                                 (error "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: "
+                                        array new-domain)
+                                 (loop-3 (+ ok 1)))
+                             (begin
+                               (vector-set! newstrides (- nj 1) (vector-ref oldstrides (- oj 1)))
+                               (let loop-4 ((nk (- nj 1)))
+                                 (if (< ni nk)
+                                     (begin
+                                       (vector-set! newstrides (- nk 1) (* (vector-ref newstrides nk)
+                                                                           (vector-ref newdims nk)))
+                                       (loop-4 (- nk 1)))
+                                     (loop-1 oj
+                                             (+ oj 1)
+                                             nj
+                                             (+ nj 1)))))))))
+                 ;; The NumPy code then sets the strides of the last
+                 ;; dimensions with side-length 1 to a value, we leave it zero.
+                 (let* ((new-lowers
+                         (%%interval-lower-bounds new-domain))
+                        (indexer
+                         (case newnd
+                           ((1) (%%indexer-1 base
+                                             (vector-ref new-lowers 0)
+                                             (vector-ref newstrides 0)))
+                           ((2) (%%indexer-2 base
+                                             (vector-ref new-lowers 0)
+                                             (vector-ref new-lowers 1)
+                                             (vector-ref newstrides 0)
+                                             (vector-ref newstrides 1)))
+                           ((3) (%%indexer-3 base
+                                             (vector-ref new-lowers 0)
+                                             (vector-ref new-lowers 1)
+                                             (vector-ref new-lowers 2)
+                                             (vector-ref newstrides 0)
+                                             (vector-ref newstrides 1)
+                                             (vector-ref newstrides 2)))
+                           ((4) (%%indexer-4 base
+                                             (vector-ref new-lowers 0)
+                                             (vector-ref new-lowers 1)
+                                             (vector-ref new-lowers 2)
+                                             (vector-ref new-lowers 3)
+                                             (vector-ref newstrides 0)
+                                             (vector-ref newstrides 1)
+                                             (vector-ref newstrides 2)
+                                             (vector-ref newstrides 3)))
+                           (else
+                            (%%indexer-generic base
+                                               (vector->list new-lowers)
+                                               (vector->list newstrides))))))
+                   (%%finish-specialized-array new-domain
+                                               (%%array-storage-class array)
+                                               (%%array-body array)
+                                               indexer
+                                               (mutable-array? array)
+                                               (%%array-safe? array)))))))))
 
 (declare (inline))

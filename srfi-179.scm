@@ -70,7 +70,8 @@ MathJax.Hub.Config({
               (<li> "Draft #5 published: 2020-04-30")
               (<li> "Draft #6 published: 2020-05-03")
               (<li> "Draft #7 published: 2020-05-08")
-              (<li> "Draft #8 published: 2020-05-17"))
+              (<li> "Draft #8 published: 2020-05-17")
+              (<li> "Draft #9 published: 2020-05-31"))
 
         (<h2> "Abstract")
         (<p>
@@ -102,8 +103,11 @@ MathJax.Hub.Config({
                (<code>'array-outer-product)", "
                (<code>'array-tile)", "
                (<code>'array-rotate)", "
-               (<code>'array-reduce)", and "
-               (<code>'array-assign!)" "
+               (<code>'array-reduce)", " 
+               (<code>'array-assign!)", "
+               (<code>'array-ref)", "
+               (<code>'array-set!)", and "
+               (<code>'specialized-array-reshape)
                " have been added together with some examples.")
          (<li> "Global variables "
                (<code>'f8-storage-class)" and "
@@ -350,6 +354,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
+                 (<a> href: "#specialized-array-reshape" "specialized-array-reshape")
                  "."
                  )))
         (<h2> "Miscellaneous Functions")
@@ -1546,8 +1551,114 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these functions, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
 
-(<p>(<b> "Note: ")"In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.")
+(<p>(<b> "Note: ")"In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.")
 
+(format-lambda-list '(specialized-array-reshape array new-domain))
+(<p> "Assumes that "(<code>(<var>'array))" is a specialized array and "(<code>(<var>'new-domain))" is an interval.")
+(<p> "Furthermore, there must be an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells storing the elements of "(<code>(<var>'array))" in lexicographical order.")
+(<p> "Returns a new specialized array, with the same body and elements as "(<code>(<var>'array))" and domain "(<code>(<var>'new-domain))".  The result inherits its mutability and safety from "(<code>(<var>'array))".")
+(<p> "It is an error if these conditions on the arguments are not met.")
+(<p>(<b>"Note: ")"The code in the sample implementation to determine whether there exists an affine map from "(<code>(<var>'new-domain))" to the multi-indices of the elements of "(<code>(<var>'array))" in lexicographical order is modeled on the corresponding code in the Python library NumPy.  When no such affine map exists, an error is raised in tail position.  An implementation could raise an exception at the same place, which could be caught and handled appropriately, by, e.g., copying the elements of "(<code>(<var>'array))" to new specialized array with domain "(<code>(<var>'new-domain))".")
+(<p>(<b>"Examples: ")"Reshaping an array is not a Bawden-type array transform.  For example, we use "(<code>'array-display)" defined below to see:")
+(<pre>
+ (<code>"
+;;; The entries of A are the multi-indices of the locations
+
+(define A (array-copy (make-array (make-interval '#(3 4)) list)))
+
+(array-display A)
+
+;;; Displays
+
+;;; (0 0)   (0 1)   (0 2)   (0 3)
+;;; (1 0)   (1 1)   (1 2)   (1 3)
+;;; (2 0)   (2 1)   (2 2)   (2 3)
+
+(array-display (array-rotate A 1))
+
+;;; Displays
+
+;;; (0 0)   (1 0)   (2 0)
+;;; (0 1)   (1 1)   (2 1)
+;;; (0 2)   (1 2)   (2 2)
+;;; (0 3)   (1 3)   (2 3)
+
+(array-display (specialized-array-reshape A (make-interval '#(4 3))))
+
+;;; Displays
+
+;;; (0 0)   (0 1)   (0 2)
+;;; (0 3)   (1 0)   (1 1)
+;;; (1 2)   (1 3)   (2 0)
+;;; (2 1)   (2 2)   (2 3)
+
+(define B (array-sample A '#(2 1)))
+
+(array-display B)
+
+;;; Displays
+
+;;; (0 0)   (0 1)   (0 2)   (0 3)
+;;; (2 0)   (2 1)   (2 2)   (2 3)
+
+(specialized-array-reshape B (make-interval '#(8))) => fails
+
+(array-display (array-copy B generic-storage-class (make-interval '#(8))))
+
+;;; Displays
+
+;;; (0 0)   (0 1)   (0 2)   (0 3)   (2 0)   (2 1)   (2 2)   (2 3)
+"))
+(<p>"The following examples succeed:")
+(<code>
+ (<pre>"
+(specialized-array-reshape
+ (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+ (make-interval '#(6)))
+(specialized-array-reshape
+ (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+ (make-interval '#(3 2)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)))
+ (make-interval '#(6)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)))
+ (make-interval '#(3 2)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))
+ (make-interval '#(3 2)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))
+ (make-interval '#(3 1 2 1)))
+(specialized-array-reshape
+ (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))
+ (make-interval '#(4)))
+(specialized-array-reshape
+ (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#t #f #t #t)) '#(1 1 2 1))
+ (make-interval '#(4)))
+"))
+(<p>"The following examples raise an exception: ")
+(<code>
+ (<pre>"
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f))
+ (make-interval '#(6)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f))
+ (make-interval '#(3 2)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #f))
+ (make-interval '#(6)))
+(specialized-array-reshape
+ (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t))
+ (make-interval '#(3 2)))
+(specialized-array-reshape
+ (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))
+ (make-interval '#(4)) )
+(specialized-array-reshape
+ (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1))
+ (make-interval '#(4)))
+"))
 
 (<h2> "Implementation")
 (<p> "We provide an implementation in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
@@ -2218,14 +2329,19 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-  (array-for-each
-   (lambda (row)
-     (array-for-each (lambda (x)
-                       (display x)
-                       (display \"\\t\"))
-                     row)
-     (newline))
-   (array-curry A 1)))
+  
+  (define (display-item x)
+    (display x) (display \"\\t\"))
+  
+  (newline)
+  (case (array-dimension A)
+    ((1) (array-for-each display-item A) (newline))
+    ((2) (array-for-each (lambda (row)
+                           (array-for-each display-item row)
+                           (newline))
+                         (array-curry A 1)))
+    (else
+     (error \"array-display can't handle > 2 dimensions: \" A))))
 
 (display \"\\nHilbert matrix:\\n\\n\")
 
