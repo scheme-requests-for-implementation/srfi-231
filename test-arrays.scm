@@ -4,7 +4,7 @@
 
 ;;;(import (srfi 179))
 
-(declare (standard-bindings)(extended-bindings)(block)(safe) (mostly-fixnum))
+(declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))
 (declare (inlining-limit 0))
 (define tests 100)
 (set! tests tests)
@@ -509,14 +509,19 @@
   (zero? (random 2)))
 
 (define (array-display A)
-  ;; Displays a two-dimensional array row by row.
-  (array-for-each (lambda (row)
-                    (array-for-each (lambda (x)
-                                      (display x)
-                                      (display "\t"))
-                                    row)
-                    (newline))
-                  (array-curry A 1)))
+  
+  (define (display-item x)
+    (display x) (display "\t"))
+  
+  (newline)
+  (case (array-dimension A)
+    ((1) (array-for-each display-item A) (newline))
+    ((2) (array-for-each (lambda (row)
+                           (array-for-each display-item row)
+                           (newline))
+                         (array-curry A 1)))
+    (else
+     (error "array-display can't handle > 2 dimensions: " A))))
 
 (pp "array error tests")
 
@@ -3147,7 +3152,84 @@
 (array-set! B-set! 1 1 2)
 (array-set! B-set! 0 2 2)
 (array-display B-set!)
-  
+
+(pp "specialized-array-reshape tests")
+
+(test (specialized-array-reshape 'a 1)
+      "specialized-array-reshape: The first argument is not a specialized array: ")
+
+(test (specialized-array-reshape A-ref 'a)
+      "specialized-array-reshape: The second argument is not an interval ")
+
+(test (specialized-array-reshape A-ref (make-interval '#(5)))
+      "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: ")
+
+(let ((array (array-copy (make-array (make-interval '#(2 1 3 1)) list))))
+  (test (array->list array)
+        (array->list (specialized-array-reshape array (make-interval '#(6))))))
+
+(let ((array (array-copy (make-array (make-interval '#(2 1 3 1)) list))))
+  (test (array->list array)
+        (array->list (specialized-array-reshape array (make-interval '#(3 2))))))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)))))
+  (test (array->list array)
+        (array->list (specialized-array-reshape array (make-interval '#(6))))))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(3 2))))
+        (array->list array)))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(3 2))))
+        (array->list array)))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(3 1 2))))
+        (array->list array)))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(1 1 1 3 2))))
+        (array->list array)))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(3 2 1 1 1))))
+        (array->list array)))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(3 1 1 2))))
+        (array->list array)))
+
+(let ((array (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(3 1 2 1))))
+        (array->list array)))
+
+(let ((array (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(4))))
+        (array->list array)))
+
+(let ((array (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#t #f #t #t)) '#(1 1 2 1))))
+  (test (array->list (specialized-array-reshape array (make-interval '#(4))))
+        (array->list array)))
+
+(test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f)) (make-interval '#(6)))
+      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+
+(test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f)) (make-interval '#(3 2)))
+      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+
+(test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #f)) (make-interval '#(6)))
+      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+
+(test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t)) (make-interval '#(3 2)))
+      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+
+(test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1)) (make-interval '#(4)) )
+      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+
+(test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1)) (make-interval '#(4)))
+      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+
 (pp "Test code from the SRFI document")
 
 (test (interval= (interval-dilate (make-interval '#(100 100)) '#(1 1) '#(1 1))
@@ -3859,3 +3941,20 @@ that computes the componentwise products when we need them, the times are
 
 ;;; Displays
 ;;; 2
+
+(define A (array-copy (make-array (make-interval '#(3 4)) list)))
+
+(array-display A)
+
+(array-display (array-rotate A 1))
+
+(array-display (specialized-array-reshape A (make-interval '#(4 3))))
+
+(define B (array-sample A '#(2 1)))
+
+(array-display B)
+
+;;; (specialized-array-reshape B (make-interval '#(8))) => fails
+
+(array-display (array-copy B generic-storage-class (make-interval '#(8))))
+
