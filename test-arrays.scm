@@ -3213,22 +3213,22 @@
         (array->list array)))
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f)) (make-interval '#(6)))
-      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f)) (make-interval '#(3 2)))
-      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #f)) (make-interval '#(6)))
-      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t)) (make-interval '#(3 2)))
-      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1)) (make-interval '#(4)) )
-      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1)) (make-interval '#(4)))
-      "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: ")
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (pp "Test code from the SRFI document")
 
@@ -3954,7 +3954,8 @@ that computes the componentwise products when we need them, the times are
 
 (array-display B)
 
-;;; (specialized-array-reshape B (make-interval '#(8))) => fails
+(test (array-display (specialized-array-reshape B (make-interval '#(8))))
+      "specialized-array-reshape: Requested reshaping is impossible: ")
 
-(array-display (array-copy B generic-storage-class (make-interval '#(8))))
+(array-display (specialized-array-reshape B (make-interval '#(8)) #t))
 
