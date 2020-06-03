@@ -71,7 +71,8 @@ MathJax.Hub.Config({
               (<li> "Draft #6 published: 2020-05-03")
               (<li> "Draft #7 published: 2020-05-08")
               (<li> "Draft #8 published: 2020-05-17")
-              (<li> "Draft #9 published: 2020-05-31"))
+              (<li> "Draft #9 published: 2020-05-31")
+              (<li> "Draft #10 published: 2020-06-02"))
 
         (<h2> "Abstract")
         (<p>
@@ -1553,12 +1554,12 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (<p>(<b> "Note: ")"In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.")
 
-(format-lambda-list '(specialized-array-reshape array new-domain))
-(<p> "Assumes that "(<code>(<var>'array))" is a specialized array and "(<code>(<var>'new-domain))" is an interval.")
-(<p> "Furthermore, there must be an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells storing the elements of "(<code>(<var>'array))" in lexicographical order.")
-(<p> "Returns a new specialized array, with the same body and elements as "(<code>(<var>'array))" and domain "(<code>(<var>'new-domain))".  The result inherits its mutability and safety from "(<code>(<var>'array))".")
+(format-lambda-list '(specialized-array-reshape array new-domain #\[ copy-on-failure? #f #\]))
+(<p> "Assumes that "(<code>(<var>'array))" is a specialized array, "(<code>(<var>'new-domain))" is an interval with the same volume as "(<code>"(array-domain "(<var>'array)")")", and "(<code>(<var>'copy-on-failure?))", if given, is a boolean.")
+(<p> "If there is an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells in "(<code>"(array-body "(<var>'array)")")" storing the elements of "(<code>(<var>'array))" in lexicographical order, returns a new specialized array, with the same body and elements as "(<code>(<var>'array))" and domain "(<code>(<var>'new-domain))".  The result inherits its mutability and safety from "(<code>(<var>'array))".")
+(<p> "If there is not an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells storing the elements of "(<code>(<var>'array))" in lexicographical order and "(<code>(<var>'copy-on-failure?))" is "(<code>'#t)", then returns a specialized array copy of "(<code>(<var>'array))" with domain "(<code>(<var>'new-domain))", storage class "(<code>"(array-storage-class "(<var>'array)")")", mutability "(<code>"(mutable-array? "(<var>'array)")")", and safety "(<code>"(array-safe? "(<var>'array)")")".")
 (<p> "It is an error if these conditions on the arguments are not met.")
-(<p>(<b>"Note: ")"The code in the sample implementation to determine whether there exists an affine map from "(<code>(<var>'new-domain))" to the multi-indices of the elements of "(<code>(<var>'array))" in lexicographical order is modeled on the corresponding code in the Python library NumPy.  When no such affine map exists, an error is raised in tail position.  An implementation could raise an exception at the same place, which could be caught and handled appropriately, by, e.g., copying the elements of "(<code>(<var>'array))" to new specialized array with domain "(<code>(<var>'new-domain))".")
+(<p>(<b>"Note: ")"The code in the sample implementation to determine whether there exists an affine map from "(<code>(<var>'new-domain))" to the multi-indices of the elements of "(<code>(<var>'array))" in lexicographical order is modeled on the corresponding code in the Python library NumPy.")
 (<p>(<b>"Examples: ")"Reshaping an array is not a Bawden-type array transform.  For example, we use "(<code>'array-display)" defined below to see:")
 (<pre>
  (<code>"
@@ -1601,9 +1602,9 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 ;;; (0 0)   (0 1)   (0 2)   (0 3)
 ;;; (2 0)   (2 1)   (2 2)   (2 3)
 
-(specialized-array-reshape B (make-interval '#(8))) => fails
+(array-display (specialized-array-reshape B (make-interval '#(8)))) => fails
 
-(array-display (array-copy B generic-storage-class (make-interval '#(8))))
+(array-display (specialized-array-reshape B (make-interval '#(8)) #t))
 
 ;;; Displays
 

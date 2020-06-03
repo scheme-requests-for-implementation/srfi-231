@@ -2069,6 +2069,18 @@
 ;;; Builds a new specialized-array and populates the body of the result with
 ;;; (array-getter array) applied to the elements of (array-domain array)
 
+(define (%%array-copy array
+                      result-storage-class
+                      domain
+                      mutable?
+                      safe?)
+  (let ((result (%%make-specialized-array domain
+                                          result-storage-class
+                                          safe?)))
+    (%%move-array-elements result array "array-copy: ")
+    (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
+        (%%array-setter-set! result #f))
+    result))
 
 (define (array-copy array
                     #!optional
@@ -2093,14 +2105,11 @@
         ((not (boolean? safe?))
          (error "array-copy: The fifth argument is not a boolean: " safe?))
         (else
-         (let* ((new-domain (if new-domain new-domain (%%array-domain array)))
-                (result (%%make-specialized-array new-domain
-                                                  result-storage-class
-                                                  safe?)))
-           (%%move-array-elements result array "array-copy: ")
-           (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
-               (%%array-setter-set! result #f))
-           result))))
+         (%%array-copy array
+                       result-storage-class
+                       (if new-domain new-domain (%%array-domain array))
+                       mutable?
+                       safe?))))
 
 ;;;
 ;;; In the next function, old-indexer is an affine 1-1 mapping from an interval to [0,N), for some N.
@@ -3529,7 +3538,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 |#
 
-(define (specialized-array-reshape array new-domain)
+(define (specialized-array-reshape array new-domain #!optional (copy-on-failure? #f))
 
   (define (vector-filter p v)
 
@@ -3555,6 +3564,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         ((not (= (%%interval-volume (%%array-domain array))
                  (%%interval-volume new-domain)))
          (error "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: " array new-domain))
+        ((not (boolean? copy-on-failure?))
+         (error "specialized-array-reshape: The third argument is not a boolean: " array new-domain copy-on-failure?))
         (else
          (let* ((indexer
                  (%%array-indexer array))
@@ -3645,8 +3656,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (if (not (= (vector-ref oldstrides ok)
                                          (* (vector-ref olddims    (+ ok 1))
                                             (vector-ref oldstrides (+ ok 1)))))
-                                 (error "specialized-array-reshape: No affine map exists from the second argument to the locations of elements of the first argument in lexicographical order: "
-                                        array new-domain)
+                                 (if copy-on-failure?
+                                     (%%array-copy array
+                                                   (%%array-storage-class array)
+                                                   new-domain
+                                                   (mutable-array? array)
+                                                   (array-safe? array))
+                                     (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
                                  (loop-3 (+ ok 1)))
                              (begin
                                (vector-set! newstrides (- nj 1) (vector-ref oldstrides (- oj 1)))
