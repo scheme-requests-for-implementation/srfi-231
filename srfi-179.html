@@ -1,5 +1,5 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
       MathJax.Hub.Config({
         tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
       });</script>
-    <script integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" crossorigin="anonymous" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </head>
   <body>
     <h1>Title</h1>
@@ -117,10 +117,10 @@
         <a href="#interval-dimension">interval-dimension</a>,
         <a href="#interval-lower-bound">interval-lower-bound</a>,
         <a href="#interval-upper-bound">interval-upper-bound</a>,
-        <a href="#interval-lower-bounds-&gt;list">interval-lower-bounds-&gt;list</a>,
-        <a href="#interval-upper-bounds-&gt;list">interval-upper-bounds-&gt;list</a>,
-        <a href="#interval-lower-bounds-&gt;vector">interval-lower-bounds-&gt;vector</a>,
-        <a href="#interval-upper-bounds-&gt;vector">interval-upper-bounds-&gt;vector</a>,
+        <a href="#interval-lower-bounds-rarrow-list">interval-lower-bounds-&gt;list</a>,
+        <a href="#interval-upper-bounds-rarrow-list">interval-upper-bounds-&gt;list</a>,
+        <a href="#interval-lower-bounds-rarrow-vector">interval-lower-bounds-&gt;vector</a>,
+        <a href="#interval-upper-bounds-rarrow-vector">interval-upper-bounds-&gt;vector</a>,
         <a href="#interval=">interval=</a>,
         <a href="#interval-volume">interval-volume</a>,
         <a href="#interval-subset?">interval-subset?</a>,
@@ -195,8 +195,8 @@
         <a href="#array-reduce">array-reduce</a>,
         <a href="#array-any">array-any</a>,
         <a href="#array-every">array-every</a>,
-        <a href="#array-&gt;list">array-&gt;list</a>,
-        <a href="#list-&gt;array">list-&gt;array</a>,
+        <a href="#array-rarrow-list">array-&gt;list</a>,
+        <a href="#list-rarrow-array">list-&gt;array</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
@@ -206,9 +206,9 @@
        A translation is a vector of exact integers.  A permutation of dimension $n$
       is a vector whose entries are the exact integers $0,1,\ldots,n-1$, each occurring once, in any order.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="translation?">translation?</a> <var>object</var></code></p>
+    <p><b>Procedure: </b><code><a id="translation?">translation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a translation, and <code>#f</code> otherwise.</p>
-    <p><b>Procedure: </b><code><a name="permutation?">permutation?</a> <var>object</var></code></p>
+    <p><b>Procedure: </b><code><a id="permutation?">permutation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a permutation, and <code>#f</code> otherwise.</p>
     <h2>Intervals</h2>
     <p>An interval represents the set of all multi-indices of exact integers
@@ -224,7 +224,7 @@
       $l_0&lt;u_0,\ldots,l_{d-1}&lt;u_{d-1}$.</p>
     <p>Intervals are a data type distinct from other Scheme data types.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-interval">make-interval</a> <var>arg1</var> #!optional <var>arg2</var></code></p>
+    <p><b>Procedure: </b><code><a id="make-interval">make-interval</a> <var>arg1</var> #!optional <var>arg2</var></code></p>
     <p>Create a new interval. <code><var>arg1</var></code> and <code><var>arg2</var></code> (if given) are nonempty vectors (of the same length) of exact integers.</p>
     <p>If <code><var>arg2</var></code> is not given, then the entries of <code><var>arg1</var></code> must be positive, and they are taken as the <code><var>upper-bounds</var></code> of the interval, and  <code><var>lower-bounds</var></code> is set to a vector of the same length with exact zero entries.</p>
     <p>If <code><var>arg2</var></code> is given, then <code><var>arg1</var></code> is taken to be <code><var>lower-bounds</var></code> and <code><var>arg2</var></code> is taken to be <code><var>upper-bounds</var></code>, which must satisfy</p>
@@ -232,15 +232,15 @@
     <p> for
       $0\leq i&lt;{}$<code>(vector-length <var>lower-bounds</var>)</code>.  It is an error if
       <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code> do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval?">interval?</a> <var>obj</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval?">interval?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is an interval, and <code>#f</code> otherwise.</p>
-    <p><b>Procedure: </b><code><a name="interval-dimension">interval-dimension</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-dimension">interval-dimension</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p>then <code>interval-dimension</code> returns <code>(vector-length <var>lower-bounds</var>)</code>.  It is an error to call <code>interval-dimension</code>
       if <code><var>interval</var></code> is not an interval.</p>
-    <p><b>Procedure: </b><code><a name="interval-lower-bound">interval-lower-bound</a> <var>interval</var> <var>i</var></code></p>
-    <p><b>Procedure: </b><code><a name="interval-upper-bound">interval-upper-bound</a> <var>interval</var> <var>i</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-lower-bound">interval-lower-bound</a> <var>interval</var> <var>i</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-upper-bound">interval-upper-bound</a> <var>interval</var> <var>i</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <blockquote><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
@@ -251,25 +251,25 @@
       <code>(vector-ref <var>lower-bounds</var> <var>i</var>)</code> and <code>interval-upper-bound</code> returns
       <code>(vector-ref <var>upper-bounds</var> <var>i</var>)</code>.  It is an error to call <code>interval-lower-bound</code> or <code>interval-upper-bound</code>
       if <code><var>interval</var></code> and <code><var>i</var></code> do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-lower-bounds-&gt;list">interval-lower-bounds-&gt;list</a> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="interval-upper-bounds-&gt;list">interval-upper-bounds-&gt;list</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-lower-bounds-rarrow-list">interval-lower-bounds-&gt;list</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-upper-bounds-rarrow-list">interval-upper-bounds-&gt;list</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p> then <code>interval-lower-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>lower-bounds</var>)</code> and  <code>interval-upper-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>upper-bounds</var>)</code>. It is an error to call
        <code>interval-lower-bounds-&gt;list</code> or <code>interval-upper-bounds-&gt;list</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-lower-bounds-&gt;vector">interval-lower-bounds-&gt;vector</a> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="interval-upper-bounds-&gt;vector">interval-upper-bounds-&gt;vector</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-lower-bounds-rarrow-vector">interval-lower-bounds-&gt;vector</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-upper-bounds-rarrow-vector">interval-upper-bounds-&gt;vector</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p> then <code>interval-lower-bounds-&gt;vector</code> returns a copy of <code><var>lower-bounds</var></code>  and <code>interval-upper-bounds-&gt;vector</code> returns a copy of <code><var>upper-bounds</var></code>. It is an error to call
       <code>interval-lower-bounds-&gt;vector</code> or <code>interval-upper-bounds-&gt;vector</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-volume">interval-volume</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-volume">interval-volume</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p>then, assuming the existence of <code>vector-map</code>, <code>interval-volume</code> returns </p>
     <pre><code>(apply * (vector-&gt;list (vector-map - <var>upper-bounds</var> <var>lower-bounds</var>)))</code></pre>
     <p>It is an error to call <code>interval-volume</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="interval=">interval=</a> <var>interval1</var> <var>interval2</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval=">interval=</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals built with </p>
     <pre><code>(make-interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code></pre>
     <p>and</p>
@@ -277,20 +277,20 @@
     <p>respectively, then <code>interval=</code> returns</p>
     <pre><code>(and (equal? <var>lower-bounds1</var> <var>lower-bounds2</var>) (equal? <var>upper-bounds1</var> <var>upper-bounds2</var>))</code></pre>
     <p>It is an error to call <code>interval=</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="interval-subset?">interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-subset?">interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals of the same dimension $d$, then <code>interval-subset?</code> returns <code>#t</code> if </p>
     <pre><code>(&lt;= (interval-lower-bound <var>interval1</var> j) (interval-lower-bound <var>interval2</var> j))</code></pre>
     <p>and</p>
     <pre><code>(&lt;= (interval-upper-bound <var>interval1</var> j) (interval-upper-bound <var>interval2</var> j))</code></pre>
     <p>for all $0\leq j&lt;d$, otherwise it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>index-1</var> <var>...</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>index-1</var> <var>...</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>index-0</var></code>, <code><var>index-1</var></code>, ..., is a multi-index of length $d$,
       then <code>interval-contains-multi-index?</code> returns <code>#t</code> if </p>
     <blockquote><code>(interval-lower-bound <var>interval</var> j)</code> $\leq$ <code><var>index-j</var></code> $&lt;$ <code>(interval-upper-bound <var>interval</var> j)</code>
     </blockquote>
     <p>for $0\leq j &lt; d$, and <code>#f</code> otherwise.</p>
     <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
     <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval
       $[l_0,u_0)\times [l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$
       and splits it into two parts</p>
@@ -324,11 +324,11 @@
           (interval-upper-bound <var>interval</var>
                                 (- <var>d</var> 1)))))</code></pre>
     <p>It is an error to call <code>interval-projections</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-for-each">interval-for-each</a> <var>f</var> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-for-each">interval-for-each</a> <var>f</var> <var>interval</var></code></p>
     <p>This routine assumes that <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>.  It is an error to call
       <code>interval-for-each</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
     <p><code>interval-for-each</code> calls <code><var>f</var></code> with each multi-index of <code><var>interval</var></code> as arguments, all in lexicographical order.</p>
-    <p><b>Procedure: </b><code><a name="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
       lower bounds $\ell_0,\dots,\ell_{d-1}$ and
       upper bounds $u_0,\dots,u_{d-1}$, and <code><var>lower-diffs</var></code> is a vector of exact integers $L_0,\dots,L_{d-1}$ and <code><var>upper-diffs</var></code> is a vector of exact integers $U_0,\dots,U_{d-1}$, then <code>interval-dilate</code> returns a new interval with
@@ -353,11 +353,11 @@
  (make-interval '#(100 100))
  '#(0 0) '#(-500 -50)) =&gt; error
 </code></pre>
-    <p><b>Procedure: </b><code><a name="interval-intersect">interval-intersect</a> <var>interval-1</var> <var>interval-2</var> <var>...</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-intersect">interval-intersect</a> <var>interval-1</var> <var>interval-2</var> <var>...</var></code></p>
     <p>If all the arguments are intervals of the same dimension and they have a nonempty intersection,
       the <code>interval-intersect</code> returns that intersection; otherwise it returns <code>#f</code>.</p>
     <p>It is an error if the arguments are not all intervals with the same dimension.</p>
-    <p><b>Procedure: </b><code><a name="interval-translate">interval-translate</a> <var>interval</var> <var>translation</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-translate">interval-translate</a> <var>interval</var> <var>translation</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
       lower bounds $\ell_0,\dots,\ell_{d-1}$ and
       upper bounds $u_0,\dots,u_{d-1}$, and <code><var>translation</var></code> is a translation with entries $T_0,\dots,T_{d-1}$
@@ -366,7 +366,7 @@
       upper bounds $u_0+T_0,\dots,u_{d-1}+T_{d-1}$.
       It is an error if the arguments do not satisfy these conditions.</p>
     <p>One could define <code>(interval-translate interval translation)</code> by <code>(interval-dilate interval translation translation)</code>.</p>
-    <p><b>Procedure: </b><code><a name="interval-permute">interval-permute</a> <var>interval</var> <var>permutation</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-permute">interval-permute</a> <var>interval</var> <var>permutation</var></code></p>
     <p>The argument <code><var>interval</var></code> must be an interval, and the argument <code><var>permutation</var></code> must be a valid permutation with the same dimension as <code><var>interval</var></code>.  It is an error if the arguments do not satisfy these conditions.</p>
     <p>Heuristically, this function returns a new interval whose axes have been permuted in a way consistent with <code><var>permutation</var></code>.
       But we have to say how the entries of <code><var>permutation</var></code> are associated with the new interval.</p>
@@ -378,13 +378,13 @@
     <p>For example, if the argument interval represents $[0,4)\times[0,8)\times[0,21)\times [0,16)$ and the
       permutation is <code>#(3 0 1 2)</code>, then the result of <code>(interval-permute <var>interval</var> <var>permutation</var>)</code> will be
       the representation of $[0,16)\times [0,4)\times[0,8)\times[0,21)$.</p>
-    <p><b>Procedure: </b><code><a name="interval-rotate">interval-rotate</a> <var>interval</var> <var>dim</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-rotate">interval-rotate</a> <var>interval</var> <var>dim</var></code></p>
     <p>Informally, <code>(interval-rotate <var>interval</var> <var>dim</var>)</code> rotates the axes of <code><var>interval</var></code> <code><var>dim</var></code> places to the left.</p>
     <p>More precisely, <code>(interval-rotate <var>interval</var> <var>dim</var>)</code> assumes that <code><var>interval</var></code> is an interval and <code><var>dim</var></code> is an exact integer between 0 (inclusive) and <code>(interval-dimension <var>interval</var>)</code> (exclusive).  It computes the permutation <code>(vector <var>dim</var> ... (- (interval-dimension <var>interval</var>) 1) 0 ... (- <var>dim</var> 1))</code> (unless <code><var>dim</var></code> is zero, in which case it constructs the identity permutation) and returns <code>(interval-permute <var>interval</var> <var>permutation</var>)</code>. It is an error if the arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-scale">interval-scale</a> <var>interval</var> <var>scales</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-scale">interval-scale</a> <var>interval</var> <var>scales</var></code></p>
     <p>If <code><var>interval</var></code> is a $d$-dimensional interval $[0,u_1)\times\cdots\times[0,u_{d-1})$ with all lower bounds zero, and <code><var>scales</var></code> is a length-$d$ vector of positive exact integers, which we'll denote by $\vec s$, then <code>interval-scale</code> returns the interval $[0,\operatorname{ceiling}(u_1/s_1))\times\cdots\times[0,\operatorname{ceiling}(u_{d-1}/s_{d-1})$.</p>
     <p>It is an error if  <code><var>interval</var></code> and <code><var>scales</var></code> do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="interval-cartesian-product">interval-cartesian-product</a> <var>interval</var> . <var>intervals</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-cartesian-product">interval-cartesian-product</a> <var>interval</var> . <var>intervals</var></code></p>
     <p>Implements the Cartesian product of the intervals in <code>(cons <var>interval</var> <var>intervals</var>)</code>. Returns</p>
     <pre><code>
 (make-interval (list-&gt;vector (apply append (map array-lower-bounds-&gt;list (cons interval intervals))))
@@ -394,7 +394,7 @@
     <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var></code></p>
+    <p><b>Procedure: </b><code><a id="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var></code></p>
     <p>Here we assume the following relationships between the arguments of <code>make-storage-class</code>.  Assume that the &quot;elements&quot; of
       the backing store are of some &quot;type&quot;, either heterogeneous (all Scheme types) or homogeneous (of some restricted type).</p>
     <ul>
@@ -405,36 +405,36 @@
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li></ul>
     <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-storage-class</code>.</p>
     <p>Note that we assume that <code><var>getter</var></code> and <code><var>setter</var></code> generally take <i>O</i>(1) time to execute.</p>
-    <p><b>Procedure: </b><code><a name="storage-class?">storage-class?</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class?">storage-class?</a> <var>m</var></code></p>
     <p>Returns <code>#t</code> if <code><var>m</var></code> is a storage class, and <code>#f</code> otherwise.</p>
-    <p><b>Procedure: </b><code><a name="storage-class-getter">storage-class-getter</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="storage-class-setter">storage-class-setter</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="storage-class-checker">storage-class-checker</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="storage-class-maker">storage-class-maker</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="storage-class-copier">storage-class-copier</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="storage-class-length">storage-class-length</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="storage-class-default">storage-class-default</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-getter">storage-class-getter</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-setter">storage-class-setter</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-checker">storage-class-checker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-maker">storage-class-maker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-copier">storage-class-copier</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-length">storage-class-length</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-default">storage-class-default</a> <var>m</var></code></p>
     <p>If <code><var>m</var></code> is an object created by</p>
     <blockquote><code>(make-storage-class <var>getter setter checker maker copier length default</var>)</code>
     </blockquote>
     <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, <code>storage-class-copier</code> returns <code><var>copier</var></code>, <code>storage-class-length</code> returns <code><var>length</var></code>, and <code>storage-class-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
     <h3>Global Variables</h3>
-    <p><b>Variable: </b><code><a name="generic-storage-class">generic-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="s8-storage-class">s8-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="s16-storage-class">s16-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="s32-storage-class">s32-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="s64-storage-class">s64-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="u1-storage-class">u1-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="u8-storage-class">u8-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="u16-storage-class">u16-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="u32-storage-class">u32-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="u64-storage-class">u64-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="f8-storage-class">f8-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="f16-storage-class">f16-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="f32-storage-class">f32-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="f64-storage-class">f64-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="c64-storage-class">c64-storage-class</a></code></p>
-    <p><b>Variable: </b><code><a name="c128-storage-class">c128-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="generic-storage-class">generic-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="s8-storage-class">s8-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="s16-storage-class">s16-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="s32-storage-class">s32-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="s64-storage-class">s64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="u1-storage-class">u1-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="u8-storage-class">u8-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="u16-storage-class">u16-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="u32-storage-class">u32-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="u64-storage-class">u64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="f8-storage-class">f8-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="f16-storage-class">f16-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="f32-storage-class">f32-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="f64-storage-class">f64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="c64-storage-class">c64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="c128-storage-class">c128-storage-class</a></code></p>
     <p><code>generic-storage-class</code> is defined as if by</p>
     <pre><code>
 (define generic-storage-class
@@ -456,7 +456,7 @@
     <h2>Arrays</h2>
     <p>Arrays are a data type distinct from other Scheme data types.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-array">make-array</a> <var>interval</var> <var>getter</var> [ <var>setter</var> ]</code></p>
+    <p><b>Procedure: </b><code><a id="make-array">make-array</a> <var>interval</var> <var>getter</var> [ <var>setter</var> ]</code></p>
     <p>Assume first that the optional argument <code>setter</code> is not given.</p>
     <p>If <code><var>interval</var></code> is an interval and <code><var>getter</var></code> is a function from
       <code><var>interval</var></code> to Scheme objects, then <code>make-array</code> returns an array with domain <code><var>interval</var></code>
@@ -521,10 +521,10 @@
 (a! 1.0 0 0) =&gt; undefined
 (a_ 12345 6789)  =&gt; 0.
 (a_ 0 0) =&gt; 1.</code></pre>
-    <p><b>Procedure: </b><code><a name="array?">array?</a> <var>obj</var></code></p>
+    <p><b>Procedure: </b><code><a id="array?">array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if  <code><var>obj</var></code> is an array and <code>#f</code> otherwise.</p>
-    <p><b>Procedure: </b><code><a name="array-domain">array-domain</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-getter">array-getter</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-domain">array-domain</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-getter">array-getter</a> <var>array</var></code></p>
     <p>If <code><var>array</var></code> is an array built by</p>
     <pre><code>(make-array <var>interval</var> <var>getter</var> [<var>setter</var>])</code></pre>
     <p>(with or without the optional <code><var>setter</var></code> argument) then <code>array-domain</code> returns <code><var>interval</var></code> and <code>array-getter</code> returns  <code><var>getter</var></code>.
@@ -541,26 +541,26 @@
 (a_ 3 3) =&gt; 1
 (a_ 2 3) =&gt; 0
 (a_ 11 0) =&gt; is an error</code></pre>
-    <p><b>Procedure: </b><code><a name="array-dimension">array-dimension</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-dimension">array-dimension</a> <var>array</var></code></p>
     <p>Shorthand for <code>(interval-dimension (array-domain <var>array</var>))</code>.  It is an error to call this function if <code><var>array</var></code> is not an array.</p>
-    <p><b>Procedure: </b><code><a name="mutable-array?">mutable-array?</a> <var>obj</var></code></p>
+    <p><b>Procedure: </b><code><a id="mutable-array?">mutable-array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is a mutable array and <code>#f</code> otherwise.</p>
-    <p><b>Procedure: </b><code><a name="array-setter">array-setter</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-setter">array-setter</a> <var>array</var></code></p>
     <p>If <code><var>array</var></code> is an array built by</p>
     <pre><code>(make-array <var>interval</var> <var>getter</var> <var>setter</var>)</code></pre>
     <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
       if <code><var>array</var></code> is not a mutable array.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array-default-safe?">specialized-array-default-safe?</a> [ <var>bool</var> ]</code></p>
+    <p><b>Procedure: </b><code><a id="specialized-array-default-safe?">specialized-array-default-safe?</a> [ <var>bool</var> ]</code></p>
     <p>With no argument, returns <code>#t</code> if newly constructed specialized arrays check the arguments of setters and getters by default, and <code>#f</code> otherwise.</p>
     <p>If <code><var>bool</var></code> is <code>#t</code> then the next call to <code>specialized-array-default-safe?</code> will return <code>#t</code>;
       if <code><var>bool</var></code> is <code>#f</code> then the next call to <code>specialized-array-default-safe?</code> will return <code>#f</code>;
       otherwise it is an error.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array-default-mutable?">specialized-array-default-mutable?</a> [ <var>bool</var> ]</code></p>
+    <p><b>Procedure: </b><code><a id="specialized-array-default-mutable?">specialized-array-default-mutable?</a> [ <var>bool</var> ]</code></p>
     <p>With no argument, returns <code>#t</code> if newly constructed specialized arrays are mutable by default, and <code>#f</code> otherwise.</p>
     <p>If <code><var>bool</var></code> is <code>#t</code> then the next call to <code>specialized-array-default-mutable?</code> will return <code>#t</code>;
       if <code><var>bool</var></code> is <code>#f</code> then the next call to <code>specialized-array-default-mutable?</code> will return <code>#f</code>;
       otherwise it is an error.</p>
-    <p><b>Procedure: </b><code><a name="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Constructs a mutable specialized array from its arguments.</p>
     <p><code><var>interval</var></code> must be given as a nonempty interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>
     <p>The body of the result is constructed as </p>
@@ -593,21 +593,21 @@
     (make-specialized-array interval u16-storage-class #f))
 </code></pre>
     <p>and then simply call, e.g., <code>(make-u16-array (make-interval '#(3 3)))</code>.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array?">specialized-array?</a> <var>obj</var></code></p>
+    <p><b>Procedure: </b><code><a id="specialized-array?">specialized-array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is a specialized-array, and <code>#f</code> otherwise. A specialized-array is an array.</p>
-    <p><b>Procedure: </b><code><a name="array-storage-class">array-storage-class</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-indexer">array-indexer</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-body">array-body</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-safe?">array-safe?</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-storage-class">array-storage-class</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-indexer">array-indexer</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-body">array-body</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-safe?">array-safe?</a> <var>array</var></code></p>
     <p><code>array-storage-class</code> returns the storage-class of <code><var>array</var></code>. <code>array-safe?</code> is true if and only if the arguments of <code>(array-getter <var>array</var>)</code> and <code>(array-setter <var>array</var>)</code> (including the value to be stored in the array) are checked for correctness.</p>
     <p><code>(array-body <var>array</var>)</code> is a linearly indexed, vector-like object (e.g., a vector, string, u8vector, etc.) indexed from 0.</p>
     <p><code>(array-indexer <var>array</var>)</code> is assumed to be a one-to-one, but not necessarily onto,  affine mapping from <code>(array-domain <var>array</var>)</code> into  the indexing domain of <code>(array-body <var>array</var>)</code>.</p>
     <p>Please see <a href="#make-specialized-array"><code>make-specialized-array</code></a> for how <code>(array-body <var>array</var>)</code>, etc., are used.</p>
     <p>It is an error to call any of these routines if <code><var>array</var></code> is not a specialized array.</p>
-    <p><b>Procedure: </b><code><a name="array-elements-in-order?">array-elements-in-order?</a> <var>A</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-elements-in-order?">array-elements-in-order?</a> <var>A</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a specialized array, in which case it returns <code>#t</code> if the elements of <code><var>A</var></code> are in order and stored adjacently in <code>(array-body <var>A</var>)</code> and <code>#f</code> otherwise.</p>
     <p>It is an error if <code><var>A</var></code> is not a specialized array.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
+    <p><b>Procedure: </b><code><a id="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
     <p>Constructs a new specialized array that shares the body of the specialized array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to a specialized array with the following fields:</p>
     <pre><code>
@@ -655,7 +655,7 @@ indexer:       (lambda multi-index
 ;; ((4 4) (4 5) (4 6) (4 7) (4 8))
 </code></pre>
     <p>This &quot;shearing&quot; operation cannot be achieved by combining the procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-translate</code>, <code>array-curry</code>, <code>array-reverse</code>, and <code>array-sample</code>.</p>
-    <p><b>Procedure: </b><code><a name="array-copy">array-copy</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>new-domain</var> #f ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-copy">array-copy</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>new-domain</var> #f ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>array</var></code> is an array, <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>array</var></code>, <code><var>new-domain</var></code> is either <code>#f</code> or an interval with the same volume as <code>(array-domain <var>array</var>)</code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>If <code><var>new-domain</var></code> is <code>#f</code>, then it is set to <code>(array-domain <var>array</var>)</code>. </p>
     <p>The specialized array returned by <code>array-copy</code> can be defined conceptually by:</p>
@@ -668,7 +668,7 @@ indexer:       (lambda multi-index
 </code></pre>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Note: </b>If <code><var>new-domain</var></code> is not the same as <code>(array-domain <var>array</var>)</code>, one can think of the resulting array as a <i>reshaped</i> version of <code><var>array</var></code>.</p>
-    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>inner-dimension</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-curry">array-curry</a> <var>array</var> <var>inner-dimension</var></code></p>
     <p>If <code><var>array</var></code> is an array whose domain is an interval  $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$, and <code><var>inner-dimension</var></code> is an exact integer strictly between $0$ and $d$, then <code>array-curry</code> returns an immutable array with domain $[l_0,u_0)\times\cdots\times[l_{d-\text{inner-dimension}-1},u_{d-\text{inner-dimension}-1})$, each of whose entries is in itself an array with domain $[l_{d-\text{inner-dimension}},u_{d-\text{inner-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$.</p>
     <p>For example, if <code>A</code> and <code>B</code> are defined by </p>
     <pre><code>
@@ -758,7 +758,7 @@ indexer:       (lambda multi-index
 (define curried-a_ (array-getter curried-a))
 ((array-getter (curried-a_ 3)) 4)
                     =&gt; (3 4)</code></pre>
-    <p><b>Procedure: </b><code><a name="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
     <p>Returns a new array with the same getter (and setter, if appropriate) of the first argument, defined on the second argument.</p>
     <p>Assumes that <code><var>array</var></code> is an array and <code><var>new-domain</var></code> is an interval that is a sub-interval of <code>(array-domain <var>array</var>)</code>.  If <code><var>array</var></code> is a specialized array, then returns </p>
     <pre><code>
@@ -780,7 +780,7 @@ indexer:       (lambda multi-index
 </code></pre>
     <p>It is an error if the arguments of <code>array-extract</code> do not satisfy these conditions.</p>
     <p>If <code><var>array</var></code> is a specialized array, the resulting array inherits its mutability and safety from <code><var>array</var></code>.</p>
-    <p><b>Procedure: </b><code><a name="array-tile">array-tile</a> <var>A</var> <var>S</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-tile">array-tile</a> <var>A</var> <var>S</var></code></p>
     <p>Assume that <code><var>A</var></code> is an array and <code><var>S</var></code> is a vector of positive, exact integers.  The routine <code>array-tile</code> returns a new immutable array $T$, each entry of which is a subarray of <code>A</code> whose domain has sidelengths given (mostly) by the entries of <code><var>S</var></code>.  These subarrays completely &quot;tile&quot; <code><var>A</var></code>, in the sense that every entry in <code><var>A</var></code> is an entry of precisely one entry of the result $T$.</p>
     <p>More formally, if <code><var>S</var></code> is the vector $(s_0,\ldots,s_{d-1})$, and the domain of <code><var>A</var></code> is the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero and upper bounds given by
       $$
@@ -794,7 +794,7 @@ indexer:       (lambda multi-index
     <p>It is an error if the arguments of <code>array-tile</code> do not satisfy these conditions.</p>
     <p>If <code><var>A</var></code> is a specialized array, the subarrays of the result inherit safety and mutability from <code><var>A</var></code>.</p>
     <p><b>Note: </b>The routines <code>array-tile</code> and <code>array-curry</code> both decompose an array into subarrays, but in different ways.  For example, if <code><var>A</var></code> is defined as <code>(make-array (make-interval '#(10 10)) list)</code>, then <code>(array-tile <var>A</var> '#(1 10))</code> returns an array with domain <code>(make-interval '#(10 1))</code>, each element of which is an array with domain <code>(make-interval '#(1 10))</code> (i.e., a two-dimensional array whose elements are two-dimensional arrays), while <code>(array-curry <var>A</var> 1)</code> returns an array with domain <code>(make-interval '#(10))</code>, each element of which has domain <code>(make-interval '#(10))</code> (i.e., a one-dimensional array whose elements are one-dimensional arrays).</p>
-    <p><b>Procedure: </b><code><a name="array-translate">array-translate</a> <var>array</var> <var>translation</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-translate">array-translate</a> <var>array</var> <var>translation</var></code></p>
     <p>Assumes that <code><var>array</var></code> is a valid array, <code><var>translation</var></code> is a valid translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain <code>(interval-translate (array-domain array) translation)</code>.</p>
     <p>If <code><var>array</var></code> is a specialized array, returns a new specialized array</p>
     <pre><code>
@@ -838,7 +838,7 @@ indexer:       (lambda multi-index
 </code></pre>
     <p>that employs the same getter as the original array.</p>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-permute">array-permute</a> <var>array</var> <var>permutation</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-permute">array-permute</a> <var>array</var> <var>permutation</var></code></p>
     <p>Assumes that <code><var>array</var></code> is a valid array, <code><var>permutation</var></code> is a valid permutation, and that the dimensions of the array and the permutation are the same. The resulting array will have domain <code>(interval-permute (array-domain array) permutation)</code>.</p>
     <p>We begin with an example.  Assume that the domain of <code><var>array</var></code> is represented by the interval  $[0,4)\times[0,8)\times[0,21)\times [0,16)$, as in the example for <code>interval-permute</code>, and the permutation is <code>#(3 0 1 2)</code>.  Then the domain of the new array is the interval $[0,16)\times [0,4)\times[0,8)\times[0,21)$.</p>
     <p>So the multi-index argument of the <code>getter</code> of the result of <code>array-permute</code> must lie in the new domain of the array, the interval  $[0,16)\times [0,4)\times[0,8)\times[0,21)$.  So if we define <code><var>old-getter</var></code> as <code>(array-getter <var>array</var>)</code>, the definition of the new array must be in fact</p>
@@ -876,10 +876,10 @@ indexer:       (lambda multi-index
               (apply (array-getter <var>array</var>)
                      (&pi;<sup>-1</sup> multi-index))))</code></pre>
     <p>It is an error to call <code>array-permute</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-rotate">array-rotate</a> <var>array</var> <var>dim</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-rotate">array-rotate</a> <var>array</var> <var>dim</var></code></p>
     <p>Informally, <code>(array-rotate <var>array</var> <var>dim</var>)</code> rotates the axes of <code><var>array</var></code> <code><var>dim</var></code> places to the left.</p>
     <p>More precisely, <code>(array-rotate <var>array</var> <var>dim</var>)</code> assumes that <code><var>array</var></code> is an array and <code><var>dim</var></code> is an exact integer between 0 (inclusive) and <code>(array-dimension <var>array</var>)</code> (exclusive).  It computes the permutation <code>(vector <var>dim</var> ... (- (array-dimension <var>array</var>) 1) 0 ... (- <var>dim</var> 1))</code> (unless <code><var>dim</var></code> is zero, in which case it constructs the identity permutation) and returns <code>(array-permute <var>array</var> <var>permutation</var>)</code>. It is an error if the arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-reverse">array-reverse</a> <var>array</var> #!optional <var>flip?</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-reverse">array-reverse</a> <var>array</var> #!optional <var>flip?</var></code></p>
     <p>We assume that <code><var>array</var></code> is an array and <code><var>flip?</var></code>, if given, is a vector of booleans whose length is the same as the dimension of <code><var>array</var></code>.  If <code><var>flip?</var></code> is not given, it is set to a vector with length the same as the dimension of <code><var>array</var></code>, all of whose elements are <code>#t</code>.</p>
     <p><code>array-reverse</code> returns a new array  that is specialized,  mutable, or immutable according to whether <code><var>array</var></code> is specialized, mutable, or immutable, respectively.  Informally, if <code>(vector-ref <var>flip?</var> k)</code> is true, then the ordering of multi-indices in the k'th coordinate direction is reversed, and is left undisturbed otherwise.</p>
     <p>More formally, we introduce the function </p>
@@ -957,7 +957,7 @@ indexer:       (lambda multi-index
 (palindrome? &quot;abca&quot;) =&gt; #f
 (palindrome? &quot;abbc&quot;) =&gt; #f
 </code></pre>
-    <p><b>Procedure: </b><code><a name="array-sample">array-sample</a> <var>array</var> <var>scales</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-sample">array-sample</a> <var>array</var> <var>scales</var></code></p>
     <p>We assume that <code><var>array</var></code> is an array all of whose lower bounds are zero, and <code><var>scales</var></code> is a vector of positive exact integers whose length is the same as the dimension of <code><var>array</var></code>.</p>
     <p>Informally, if we construct a new matrix $S$ with the entries of <code><var>scales</var></code> on the main diagonal, then the $\vec i$th element of <code>(array-sample <var>array</var> <var>scales</var>)</code> is the $S\vec i$th element of <code><var>array</var></code>.</p>
     <p>More formally, if <code><var>array</var></code> is specialized, then <code>array-sample</code> returns </p>
@@ -991,7 +991,7 @@ indexer:       (lambda multi-index
    (apply (array-getter <code><var>array</var></code>)
           (map * multi-index (vector-&gt;list <code><var>scales</var></code>)))))</code></pre>
     <p>It is an error if <code><var>array</var></code> and <code><var>scales</var></code> don't satisfy these requirements.</p>
-    <p><b>Procedure: </b><code><a name="array-outer-product">array-outer-product</a> <var>op</var> <var>array1</var> <var>array2</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-outer-product">array-outer-product</a> <var>op</var> <var>array1</var> <var>array2</var></code></p>
     <p>Implements the outer product of <code><var>array1</var></code> and <code><var>array2</var></code> with the operator <code><var>op</var></code>, similar to the APL function with the same name.</p>
     <p>Assume that <code><var>array1</var></code> and <code><var>array2</var></code> are arrays and that <code><var>op</var></code> is a function of two arguments. Assume that <code>(list-tail l n)</code> returns the list remaining after the first <code><var>n</var></code> items of the list <code><var>l</var></code> have been removed, and <code>(list-take l n)</code> returns a new list consisting of the first <code><var>n</var></code> items of the list <code><var>l</var></code>. Then <code><var>array-outer-product</var></code> returns the immutable array</p>
     <pre><code>
@@ -1001,7 +1001,7 @@ indexer:       (lambda multi-index
               (op (apply (array-getter array1) (list-take args (array-dimension array1)))
                   (apply (array-getter array2) (list-tail args (array-dimension array1))))))</code></pre>
     <p>This operation can be considered a partial inverse to <code>array-curry</code>.  It is an error if the arguments do not satisfy these assumptions.</p>
-    <p><b>Procedure: </b><code><a name="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain and <code><var>f</var></code> is a procedure, then <code>array-map</code>
       returns a new immutable array with the same domain and getter</p>
     <pre><code>
@@ -1034,7 +1034,7 @@ indexer:       (lambda multi-index
             (let ((a_ (array-getter a)))
               (lambda (i)
                 (+ (a_ i) i))))</code></pre>
-    <p><b>Procedure: </b><code><a name="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain  and <code><var>f</var></code> is an appropriate procedure, then <code>array-for-each</code>
       calls</p>
     <pre><code>
@@ -1058,7 +1058,7 @@ indexer:       (lambda multi-index
                    (cons <var>array</var>
                          <var>arrays</var>)))))</code></pre>
     <p>It is an error to call <code>array-for-each</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-fold">array-fold</a> <var>kons</var> <var>knil</var> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-fold">array-fold</a> <var>kons</var> <var>knil</var> <var>array</var></code></p>
     <p>If we use the defining relations for fold over lists from SRFI 1:</p>
     <pre><code>
 (fold kons knil lis)
@@ -1070,7 +1070,7 @@ indexer:       (lambda multi-index
     <pre><code>
 (fold <var>kons</var> <var>knil</var> (array-&gt;list <var>array</var>))</code></pre>
     <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>kons</var></code> is not a procedure.</p>
-    <p><b>Procedure: </b><code><a name="array-fold-right">array-fold-right</a> <var>kons</var> <var>knil</var> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-fold-right">array-fold-right</a> <var>kons</var> <var>knil</var> <var>array</var></code></p>
     <p>If we use the defining relations for fold-right over lists from SRFI 1:</p>
     <pre><code>
 (fold-right kons knil lis)
@@ -1082,7 +1082,7 @@ indexer:       (lambda multi-index
     <pre><code>
 (fold-right <var>kons</var> <var>knil</var> (array-&gt;list <var>array</var>))</code></pre>
     <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>kons</var></code> is not a procedure.</p>
-    <p><b>Procedure: </b><code><a name="array-reduce">array-reduce</a> <var>op</var> <var>A</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-reduce">array-reduce</a> <var>op</var> <var>A</var></code></p>
     <p>We assume that <code><var>A</var></code> is an array and <code><var>op</var></code> is a procedure of two arguments that is associative, i.e., <code>(<var>op</var> (<var>op</var> <var>x</var> <var>y</var>) <var>z</var>)</code> is the same as <code>(<var>op</var> <var>x</var> (<var>op</var>  <var>y</var> <var>z</var>))</code>.</p>
     <p>Then <code>(array-reduce <var>op</var> <var>A</var>)</code> returns</p>
     <pre><code>
@@ -1126,7 +1126,7 @@ indexer:       (lambda multi-index
 (block-sum A)        =&gt; 1.6449340658482325
 </code></pre>
     <p>Since $\pi^2/6\approx{}$<code>1.6449340668482264</code>, we see  using the first method that the difference $\pi^2/6-{}$<code>1.644934057834575</code>${}\approx{}$<code>9.013651380840315e-9</code> and with the second we have $\pi^2/6-{}$<code>1.6449340658482325</code>${}\approx{}$<code>9.99993865491433e-10</code>.  The true difference should be between $\frac 1{1{,}000{,}000{,}001}\approx{}$<code>9.99999999e-10</code> and $\frac 1{1{,}000{,}000{,}000}={}$<code>1e-9</code>. The difference for the first method is about 10 times too big, and, in fact, will not change further because any futher terms, when added to the partial sum, are too small to increase the sum after rounding-to-nearest in double-precision IEEE-754 floating-point arithmetic.</p>
-    <p><b>Procedure: </b><code><a name="array-any">array-any</a> <var>pred</var> <var>array1</var> <var>array2</var> ...</code></p>
+    <p><b>Procedure: </b><code><a id="array-any">array-any</a> <var>pred</var> <var>array1</var> <var>array2</var> ...</code></p>
     <p>Assumes that <code><var>array1</var></code>, <code><var>array2</var></code>, etc., are arrays, all with the same domain, which we'll call <code>interval</code>.  Also assumes that <code><var>pred</var></code> is a procedure that takes as many arguments as there are arrays and returns a single value.</p>
     <p><code>array-any</code> first applies <code>(array-getter <var>array1</var>)</code>, etc., to the first element of <code>interval</code> in lexicographical order, to which values it then applies <code><var>pred</var></code>.</p>
     <p>If the result of <code><var>pred</var></code> is not <code>#f</code>, then that result is returned by <code>array-any</code>.  If the result of <code><var>pred</var></code> is <code>#f</code>, then <code>array-any</code> continues with the second element of <code>interval</code>, etc., returning the first nonfalse value of  <code><var>pred</var></code>.</p>
@@ -1134,7 +1134,7 @@ indexer:       (lambda multi-index
     <p>If it happens that <code><var>pred</var></code> is applied to the results of applying <code>(array-getter <var>array1</var>)</code>, etc., to the last element of <code>interval</code>, then this last call to <code><var>pred</var></code> is in tail position.</p>
     <p>The functions <code>(array-getter <var>array1</var>)</code>, etc., are applied only to those values of <code>interval</code> necessary to determine the result of <code>array-any</code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
-    <p><b>Procedure: </b><code><a name="array-every">array-every</a> <var>pred</var> <var>array1</var> <var>array2</var> ...</code></p>
+    <p><b>Procedure: </b><code><a id="array-every">array-every</a> <var>pred</var> <var>array1</var> <var>array2</var> ...</code></p>
     <p>Assumes that <code><var>array1</var></code>, <code><var>array2</var></code>, etc., are arrays, all with the same domain, which we'll call <code>interval</code>.  Also assumes that <code><var>pred</var></code> is a procedure that takes as many arguments as there are arrays and returns a single value.</p>
     <p><code>array-every</code> first applies <code>(array-getter <var>array1</var>)</code>, etc., to the first element of <code>interval</code> in lexicographical order, to which values it then applies <code><var>pred</var></code>.</p>
     <p>If the result of <code><var>pred</var></code> is <code>#f</code>, then that result is returned by <code>array-every</code>.  If the result of <code><var>pred</var></code> is nonfalse, then <code>array-every</code> continues with the second element of <code>interval</code>, etc., returning the first  value of  <code><var>pred</var></code> that is <code>#f</code>.</p>
@@ -1142,31 +1142,31 @@ indexer:       (lambda multi-index
     <p>If it happens that <code><var>pred</var></code> is applied to the results of applying <code>(array-getter <var>array1</var>)</code>, etc., to the last element of <code>interval</code>, then this last call to <code><var>pred</var></code> is in tail position.</p>
     <p>The functions <code>(array-getter <var>array1</var>)</code>, etc., are applied only to those values of <code>interval</code> necessary to determine the result of <code>array-every</code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
-    <p><b>Procedure: </b><code><a name="array-&gt;list">array-&gt;list</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-rarrow-list">array-&gt;list</a> <var>array</var></code></p>
     <p>Stores the elements of <code><var>array</var></code> into a newly allocated list in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
-    <p><b>Procedure: </b><code><a name="list-&gt;array">list-&gt;array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a id="list-rarrow-array">list-&gt;array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>l</var></code> is an list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
-    <p><b>Procedure: </b><code><a name="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
     <p>The array <code><var>destination</var></code> must be compatible with <code><var>source</var></code>, in the sense that either <code><var>destination</var></code> and <code><var>source</var></code> have the same domain, or <code><var>destination</var></code> is a specialized array whose elements are stored adjacently and in order in its body and whose domain has the same volume as the domain of <code><var>source</var></code>.</p>
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and assigns each value to the multi-index in <code><var>destination</var></code> in the same lexicographical order.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
     <p><b>Note: </b>If the domains of <code><var>destination</var></code> and <code><var>source</var></code> are not the same, one can think of <code><var>destination</var></code> as a <i>reshaped</i> copy of <code><var>source</var></code>.</p>
-    <p><b>Procedure: </b><code><a name="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>
     <p>It is an error if <code><var>A</var></code> is not an array, or if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>.</p>
-    <p><b>Procedure: </b><code><a name="array-set!">array-set!</a> <var>A</var> <var>v</var> <var>i0</var> . <var>i-tail</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-set!">array-set!</a> <var>A</var> <var>v</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-setter <var>A</var>) <var>v i0 i-tail</var>)</code>.</p>
     <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array, or if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>.</p>
     <p><b>Note: </b>In the sample implementation, because <code>array-ref</code> and <code>array-set!</code> take a variable number of arguments and they must check that <code><var>A</var></code> is an array of the appropriate type, programs written in a style using these functions, rather than the style in which <code>1D-Haar-loop</code> is coded below, can take up to three times as long runtime.</p>
     <p><b>Note: </b>In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array-reshape">specialized-array-reshape</a> <var>array</var> <var>new-domain</var> [ <var>copy-on-failure?</var> #f ]</code></p>
+    <p><b>Procedure: </b><code><a id="specialized-array-reshape">specialized-array-reshape</a> <var>array</var> <var>new-domain</var> [ <var>copy-on-failure?</var> #f ]</code></p>
     <p>Assumes that <code><var>array</var></code> is a specialized array, <code><var>new-domain</var></code> is an interval with the same volume as <code>(array-domain <var>array</var>)</code>, and <code><var>copy-on-failure?</var></code>, if given, is a boolean.</p>
     <p>If there is an affine map that takes the multi-indices in <code><var>new-domain</var></code> to the cells in <code>(array-body <var>array</var>)</code> storing the elements of <code><var>array</var></code> in lexicographical order, returns a new specialized array, with the same body and elements as <code><var>array</var></code> and domain <code><var>new-domain</var></code>.  The result inherits its mutability and safety from <code><var>array</var></code>.</p>
     <p>If there is not an affine map that takes the multi-indices in <code><var>new-domain</var></code> to the cells storing the elements of <code><var>array</var></code> in lexicographical order and <code><var>copy-on-failure?</var></code> is <code>#t</code>, then returns a specialized array copy of <code><var>array</var></code> with domain <code><var>new-domain</var></code>, storage class <code>(array-storage-class <var>array</var>)</code>, mutability <code>(mutable-array? <var>array</var>)</code>, and safety <code>(array-safe? <var>array</var>)</code>.</p>
@@ -1221,7 +1221,7 @@ indexer:       (lambda multi-index
 
 ;;; (0 0)   (0 1)   (0 2)   (0 3)   (2 0)   (2 1)   (2 2)   (2 3)
 </code></pre>
-    <p>The following examples succeed:</p><code>
+    <p>The following examples succeed:</p>
     <pre>
 (specialized-array-reshape
  (array-copy (make-array (make-interval '#(2 1 3 1)) list))
@@ -1247,8 +1247,8 @@ indexer:       (lambda multi-index
 (specialized-array-reshape
  (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#t #f #t #t)) '#(1 1 2 1))
  (make-interval '#(4)))
-</pre></code>
-    <p>The following examples raise an exception: </p><code>
+</pre>
+    <p>The following examples raise an exception: </p>
     <pre>
 (specialized-array-reshape
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f))
@@ -1268,7 +1268,7 @@ indexer:       (lambda multi-index
 (specialized-array-reshape
  (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1))
  (make-interval '#(4)))
-</pre></code>
+</pre>
     <h2>Implementation</h2>
     <p>We provide an implementation in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
@@ -1516,7 +1516,7 @@ indexer:       (lambda multi-index
 (define (round-and-clip pixel max-grey)
   (max 0 (min (exact (round pixel)) max-grey)))
 </code></pre>
-    <p>We can then compute edges and sharpen a test image as follows: </p><code>
+    <p>We can then compute edges and sharpen a test image as follows: </p>
     <pre>
 (define test-pgm (read-pgm &quot;girl.pgm&quot;))
 
@@ -1551,7 +1551,7 @@ indexer:       (lambda multi-index
                     (round-and-clip (* p normalizer) greys)))
                edge-array))
    &quot;edge-test.pgm&quot;))
-</pre></code>
+</pre>
     <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.  Note that the first permutation is not a rotation---you want to have the head up in both the median and frontal views.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
@@ -1702,7 +1702,7 @@ Second-differences in the direction $k\times (1,-1)$:
               (transform a))))
       (helper a))))
 </code></pre>
-    <p>By adding a single loop that calculates scaled sums and differences of adjacent elements in a one-dimensional array, we can define various <a name="Haar">Haar wavelet transforms</a> as follows:</p>
+    <p>By adding a single loop that calculates scaled sums and differences of adjacent elements in a one-dimensional array, we can define various <a id="Haar">Haar wavelet transforms</a> as follows:</p>
     <pre><code>
 (define (1D-Haar-loop a)
   (let ((a_ (array-getter a))
@@ -2067,13 +2067,13 @@ Reconstructed image:
     <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.</p>
     <h2>References</h2>
     <ol>
-      <li><a name="bawden" href="https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&amp;">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
-      <li><a name="SRFI-4" href="https://srfi.schemers.org/srfi-4/">SRFI 4:  Homogeneous Numeric Vector Datatypes</a>, by Marc Feeley.</li>
-      <li><a name="SRFI-25" href="https://srfi.schemers.org/srfi-25/">SRFI 25: Multi-dimensional Array Primitives</a>, by Jussi Piitulainen.</li>
-      <li><a name="SRFI-47" href="https://srfi.schemers.org/srfi-47/">SRFI 47: Array</a>, by Aubrey Jaffer.</li>
-      <li><a name="SRFI-58" href="https://srfi.schemers.org/srfi-58/">SRFI 58: Array Notation</a>, by Aubrey Jaffer.</li>
-      <li><a name="SRFI-63" href="https://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li>
-      <li><a name="SRFI-164" href="https://srfi.schemers.org/srfi-164/">SRFI 164: Enhanced multi-dimensional Arrays</a>, by Per Bothner.</li></ol>
+      <li><a id="bawden" href="https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&amp;">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
+      <li><a id="SRFI-4" href="https://srfi.schemers.org/srfi-4/">SRFI 4:  Homogeneous Numeric Vector Datatypes</a>, by Marc Feeley.</li>
+      <li><a id="SRFI-25" href="https://srfi.schemers.org/srfi-25/">SRFI 25: Multi-dimensional Array Primitives</a>, by Jussi Piitulainen.</li>
+      <li><a id="SRFI-47" href="https://srfi.schemers.org/srfi-47/">SRFI 47: Array</a>, by Aubrey Jaffer.</li>
+      <li><a id="SRFI-58" href="https://srfi.schemers.org/srfi-58/">SRFI 58: Array Notation</a>, by Aubrey Jaffer.</li>
+      <li><a id="SRFI-63" href="https://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li>
+      <li><a id="SRFI-164" href="https://srfi.schemers.org/srfi-164/">SRFI 164: Enhanced multi-dimensional Arrays</a>, by Per Bothner.</li></ol>
     <h2>Copyright</h2>
     <p>&copy; 2016, 2018, 2020 Bradley J Lucier. All Rights Reserved.</p>
     <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: </p>
