@@ -3959,3 +3959,95 @@ that computes the componentwise products when we need them, the times are
 
 (array-display (specialized-array-reshape B (make-interval '#(8)) #t))
 
+(define interval-flat (make-interval '#(100 100 4)))
+
+(define interval-2x2  (make-interval '#(100 100 2 2)))
+
+(define A (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define B (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define C (array-copy (make-array interval-flat (lambda args 0))))
+
+(define (2x2-matrix-multiply-into! A B C)
+  (let ((C! (array-setter C))
+        (A_ (array-getter A))
+        (B_ (array-getter B)))
+    (C! (+ (* (A_ 0 0) (B_ 0 0))
+           (* (A_ 0 1) (B_ 1 0)))
+        0 0)
+    (C! (+ (* (A_ 0 0) (B_ 0 1))
+           (* (A_ 0 1) (B_ 1 1)))
+        0 1)
+    (C! (+ (* (A_ 1 0) (B_ 0 0))
+           (* (A_ 1 1) (B_ 1 0)))
+        1 0)
+    (C! (+ (* (A_ 1 0) (B_ 0 1))
+           (* (A_ 1 1) (B_ 1 1)))
+        1 1)))
+
+(time
+ (array-for-each 2x2-matrix-multiply-into!
+                 (array-curry (specialized-array-reshape A interval-2x2) 2)
+                 (array-curry (specialized-array-reshape B interval-2x2) 2)
+                 (array-curry (specialized-array-reshape C interval-2x2) 2)))
+
+(time
+ (array-for-each (lambda (A B C)
+                   (array-assign! C (matrix-multiply A B)))
+                 (array-curry (specialized-array-reshape A interval-2x2) 2)
+                 (array-curry (specialized-array-reshape B interval-2x2) 2)
+                 (array-curry (specialized-array-reshape C interval-2x2) 2)))
+
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape A interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape B interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape C interval-2x2)
+                  2))
+                0 0))
+
+(time
+ (array-for-each (lambda (A B C)
+                   (2x2-matrix-multiply-into!
+                    (specialized-array-reshape A (make-interval '#(2 2)))
+                    (specialized-array-reshape B (make-interval '#(2 2)))
+                    (specialized-array-reshape C (make-interval '#(2 2)))))
+                 (array-curry A 1)
+                 (array-curry B 1)
+                 (array-curry C 1)))
+
+(time
+ (array-for-each (lambda (A B C)
+                   (array-assign!
+                    (specialized-array-reshape C (make-interval '#(2 2)))
+                    (matrix-multiply
+                     (specialized-array-reshape A (make-interval '#(2 2)))
+                     (specialized-array-reshape B (make-interval '#(2 2))))))
+                 (array-curry A 1)
+                 (array-curry B 1)
+                 (array-curry C 1)))
+
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape A interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape B interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape C interval-2x2)
+                  2))
+                0 0))

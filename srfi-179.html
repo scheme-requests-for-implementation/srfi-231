@@ -1222,7 +1222,7 @@ indexer:       (lambda multi-index
 ;;; (0 0)   (0 1)   (0 2)   (0 3)   (2 0)   (2 1)   (2 2)   (2 3)
 </code></pre>
     <p>The following examples succeed:</p>
-    <pre>
+    <pre><code>
 (specialized-array-reshape
  (array-copy (make-array (make-interval '#(2 1 3 1)) list))
  (make-interval '#(6)))
@@ -1247,9 +1247,9 @@ indexer:       (lambda multi-index
 (specialized-array-reshape
  (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#t #f #t #t)) '#(1 1 2 1))
  (make-interval '#(4)))
-</pre>
+</code></pre>
     <p>The following examples raise an exception: </p>
-    <pre>
+    <pre><code>
 (specialized-array-reshape
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f))
  (make-interval '#(6)))
@@ -1268,7 +1268,73 @@ indexer:       (lambda multi-index
 (specialized-array-reshape
  (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1))
  (make-interval '#(4)))
-</pre>
+</code></pre>
+    <p>In the next examples, we start with vector fields, $100\times 100$ arrays of 4-vectors.  In one example, we reshape each large array to $100\times 100\times2\times2$ vector fields (so we consider each 4-vector as a $2\times 2$ matrix), and multiply the $2\times 2$ matrices together.  In the second example, we reshape each 4-vector to a $2\times 2$ matrix individually, and compare the times.</p>
+    <pre><code>
+(define interval-flat (make-interval '#(100 100 4)))
+
+(define interval-2x2  (make-interval '#(100 100 2 2)))
+
+(define A (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define B (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define C (array-copy (make-array interval-flat (lambda args 0))))
+
+(define (2x2-matrix-multiply-into! A B C)
+  (let ((C! (array-setter C))
+        (A_ (array-getter A))
+        (B_ (array-getter B)))
+    (C! (+ (* (A_ 0 0) (B_ 0 0))
+           (* (A_ 0 1) (B_ 1 0)))
+        0 0)
+    (C! (+ (* (A_ 0 0) (B_ 0 1))
+           (* (A_ 0 1) (B_ 1 1)))
+        0 1)
+    (C! (+ (* (A_ 1 0) (B_ 0 0))
+           (* (A_ 1 1) (B_ 1 0)))
+        1 0)
+    (C! (+ (* (A_ 1 0) (B_ 0 1))
+           (* (A_ 1 1) (B_ 1 1)))
+        1 1)))
+
+;;; Reshape A, B, and C to change all the 4-vectors to 2x2 matrices
+
+(time
+ (array-for-each 2x2-matrix-multiply-into!
+                 (array-curry (specialized-array-reshape A interval-2x2) 2)
+                 (array-curry (specialized-array-reshape B interval-2x2) 2)
+                 (array-curry (specialized-array-reshape C interval-2x2) 2)))
+;;; Displays
+
+;;;    0.015186 secs real time
+;;;    0.015186 secs cpu time (0.015186 user, 0.000000 system)
+;;;    4 collections accounting for 0.004735 secs real time (0.004732 user, 0.000000 system)
+;;;    46089024 bytes allocated
+;;;    no minor faults
+;;;    no major faults
+
+;;; Reshape each 4-vector to a 2x2 matrix individually
+
+(time
+ (array-for-each (lambda (A B C)
+                   (2x2-matrix-multiply-into!
+                    (specialized-array-reshape A (make-interval '#(2 2)))
+                    (specialized-array-reshape B (make-interval '#(2 2)))
+                    (specialized-array-reshape C (make-interval '#(2 2)))))
+                 (array-curry A 1)
+                 (array-curry B 1)
+                 (array-curry C 1)))
+
+;;; Displays
+
+;;;    0.039193 secs real time
+;;;    0.039193 secs cpu time (0.039191 user, 0.000002 system)
+;;;    6 collections accounting for 0.006855 secs real time (0.006851 user, 0.000001 system)
+;;;    71043024 bytes allocated
+;;;    no minor faults
+;;;    no major faults
+</code></pre>
     <h2>Implementation</h2>
     <p>We provide an implementation in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
@@ -1517,7 +1583,7 @@ indexer:       (lambda multi-index
   (max 0 (min (exact (round pixel)) max-grey)))
 </code></pre>
     <p>We can then compute edges and sharpen a test image as follows: </p>
-    <pre>
+    <pre><code>
 (define test-pgm (read-pgm &quot;girl.pgm&quot;))
 
 (let ((greys (pgm-greys test-pgm)))
@@ -1551,7 +1617,7 @@ indexer:       (lambda multi-index
                     (round-and-clip (* p normalizer) greys)))
                edge-array))
    &quot;edge-test.pgm&quot;))
-</pre>
+</code></pre>
     <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.  Note that the first permutation is not a rotation---you want to have the head up in both the median and frontal views.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,

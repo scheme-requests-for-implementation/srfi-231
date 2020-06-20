@@ -344,9 +344,7 @@
   (make-%%interval (append-vectors (map %%interval-lower-bounds intervals))
                    (append-vectors (map %%interval-upper-bounds intervals))))
 
-(define (interval-cartesian-product interval . intervals)
-  ;; compare-code-and-srfi.scm doesn't recognize this function definition
-  ;; because the call form is not a proper list
+(define (interval-cartesian-product interval #!rest intervals)
   (let ((intervals (cons interval intervals)))
     (cond ((not (%%every interval? intervals))
            (apply error "interval-cartesian-product: Not all arguments are intervals: " intervals))
