@@ -2275,7 +2275,7 @@ Reconstructed image:
 (<p> "In perfect arithmetic, this hyperbolic Haar transform is "(<i>'orthonormal)", in that the sum of the squares of the elements of the image is the same as the sum of the squares of the hyperbolic Haar coefficients of the image.  We can see that this is approximately true here.")
 
 (<p> "We can apply the (nonhyperbolic) Haar transform to the same image as follows: ")
-(<pre>"
+(<pre>(<code>"
  (let ((image
        (array-copy
         (make-array (make-interval '#(4 4))
@@ -2295,7 +2295,7 @@ Reconstructed image:
   (display \"\\nReconstructed image: \\n\")
   (pretty-print (list (array-domain image)
                       (array->list image))))
-")
+"))
 (<p> "This yields: ")
 (<pre>"
 Initial image:

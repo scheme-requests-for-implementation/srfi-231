@@ -1,8 +1,21 @@
-(include "generic-arrays.scm")
-;;; The following line is here for when we make SRFI 179
-;;; into an R7RS module.
+(begin
+  ;; Uncomment this line to run test-arrays.scm in Gambit.
+  (include "generic-arrays.scm"))
 
-;;;(import (srfi 179))
+'(begin
+  ;; To run test-arrays.scm as an R7RS module in Gambit,
+  ;; take the following steps:
+  ;; 1. Put generic-arrays.scm and 179.sld in new directory ./srfi/179.
+  ;; 2. Uncomment this "begin".
+  ;; 3. Run "gsi . test-arrays".
+  
+  (import (srfi 179))
+  
+  (##namespace
+   ("srfi/179#"
+    ;; Internal SRFI 179 procedures that are either tested or called here. 
+    %%compose-indexers make-%%array %%every %%interval->basic-indexer %%interval-lower-bounds %%interval-upper-bounds %%move-array-elements %%permutation-invert %%vector-every %%vector-permute %%vector-permute->list ))
+  )
 
 (declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))
 (declare (inlining-limit 0))
@@ -2707,8 +2720,8 @@
 (define (myarray-reverse array flip?)
   (let* ((flips (vector->list flip?))
          (domain (array-domain array))
-         (lowers (%%interval-lower-bounds->list domain))
-         (uppers (%%interval-upper-bounds->list domain))
+         (lowers (interval-lower-bounds->list domain))
+         (uppers (interval-upper-bounds->list domain))
          (transform
           (lambda (multi-index)
             (map (lambda (i_k l_k u_k f_k?)
