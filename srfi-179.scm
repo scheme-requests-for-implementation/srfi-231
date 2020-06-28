@@ -72,7 +72,8 @@ MathJax.Hub.Config({
               (<li> "Draft #7 published: 2020-05-08")
               (<li> "Draft #8 published: 2020-05-17")
               (<li> "Draft #9 published: 2020-05-31")
-              (<li> "Draft #10 published: 2020-06-02"))
+              (<li> "Draft #10 published: 2020-06-02")
+              (<li> "Draft #11 published: 2020-06-28"))
 
         (<h2> "Abstract")
         (<p>
@@ -1560,6 +1561,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "If there is not an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells storing the elements of "(<code>(<var>'array))" in lexicographical order and "(<code>(<var>'copy-on-failure?))" is "(<code>'#t)", then returns a specialized array copy of "(<code>(<var>'array))" with domain "(<code>(<var>'new-domain))", storage class "(<code>"(array-storage-class "(<var>'array)")")", mutability "(<code>"(mutable-array? "(<var>'array)")")", and safety "(<code>"(array-safe? "(<var>'array)")")".")
 (<p> "It is an error if these conditions on the arguments are not met.")
 (<p>(<b>"Note: ")"The code in the sample implementation to determine whether there exists an affine map from "(<code>(<var>'new-domain))" to the multi-indices of the elements of "(<code>(<var>'array))" in lexicographical order is modeled on the corresponding code in the Python library NumPy.")
+(<p>(<b> "Note: ")"In the sample implementation, if an array cannot be reshaped and "(<code>(<var>'copy-on-failure?))" is "(<code>'#f)", an error is raised in tail position.  An implementation might want to replace this error call with a continuable exception to give the programmer more flexibility.")
 (<p>(<b>"Examples: ")"Reshaping an array is not a Bawden-type array transform.  For example, we use "(<code>'array-display)" defined below to see:")
 (<pre>
  (<code>"

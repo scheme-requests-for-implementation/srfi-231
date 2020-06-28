@@ -30,7 +30,8 @@
       <li>Draft #7 published: 2020-05-08</li>
       <li>Draft #8 published: 2020-05-17</li>
       <li>Draft #9 published: 2020-05-31</li>
-      <li>Draft #10 published: 2020-06-02</li></ul>
+      <li>Draft #10 published: 2020-06-02</li>
+      <li>Draft #11 published: 2020-06-28</li></ul>
     <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of nonempty intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
     <h2>Rationale</h2>
@@ -1172,6 +1173,7 @@ indexer:       (lambda multi-index
     <p>If there is not an affine map that takes the multi-indices in <code><var>new-domain</var></code> to the cells storing the elements of <code><var>array</var></code> in lexicographical order and <code><var>copy-on-failure?</var></code> is <code>#t</code>, then returns a specialized array copy of <code><var>array</var></code> with domain <code><var>new-domain</var></code>, storage class <code>(array-storage-class <var>array</var>)</code>, mutability <code>(mutable-array? <var>array</var>)</code>, and safety <code>(array-safe? <var>array</var>)</code>.</p>
     <p>It is an error if these conditions on the arguments are not met.</p>
     <p><b>Note: </b>The code in the sample implementation to determine whether there exists an affine map from <code><var>new-domain</var></code> to the multi-indices of the elements of <code><var>array</var></code> in lexicographical order is modeled on the corresponding code in the Python library NumPy.</p>
+    <p><b>Note: </b>In the sample implementation, if an array cannot be reshaped and <code><var>copy-on-failure?</var></code> is <code>#f</code>, an error is raised in tail position.  An implementation might want to replace this error call with a continuable exception to give the programmer more flexibility.</p>
     <p><b>Examples: </b>Reshaping an array is not a Bawden-type array transform.  For example, we use <code>array-display</code> defined below to see:</p>
     <pre><code>
 ;;; The entries of A are the multi-indices of the locations
