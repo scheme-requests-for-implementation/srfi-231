@@ -1,6 +1,11 @@
 (declare (fixnum) (not safe))
 
-;;; This is an attempt at a complete implementation of HTML 4.0 transitional in Scheme.
+;;; This file started as an attempt at a complete and accurate implementation of HTML 4.0
+;;; transitional in Scheme.
+;;; It was used to prepare HTML documents for SRFI 122 and SRFI 179, which were gradually
+;;; changed to HTML 5.
+;;; Rather than take the time to convert this framework completely to HTML 5, it's now a
+;;; bastardized framework, mainly for HTML 4.0 transitional, but with some HTML 5 elements.
 
 ;;; All html tags are translated to scheme functions with name <tagname> that takes keyword
 ;;; arguments for the attributes and an optional rest parameter if the tag has an end-tag.
@@ -546,7 +551,7 @@
 
     (apply internal-define-tag args)))
 
-(define-tag a attributes: (accesskey charset coords href hreflang name rel rev shape tabindex target type))
+(define-tag a attributes: (accesskey charset coords href hreflang  rel rev shape tabindex target type))
 
 (define-tag abbr)
 

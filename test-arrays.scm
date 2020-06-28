@@ -1,8 +1,21 @@
-(include "generic-arrays.scm")
-;;; The following line is here for when we make SRFI 179
-;;; into an R7RS module.
+(begin
+  ;; Uncomment this line to run test-arrays.scm in Gambit.
+  (include "generic-arrays.scm"))
 
-;;;(import (srfi 179))
+'(begin
+  ;; To run test-arrays.scm as an R7RS module in Gambit,
+  ;; take the following steps:
+  ;; 1. Put generic-arrays.scm and 179.sld in new directory ./srfi/179.
+  ;; 2. Uncomment this "begin".
+  ;; 3. Run "gsi . test-arrays".
+  
+  (import (srfi 179))
+  
+  (##namespace
+   ("srfi/179#"
+    ;; Internal SRFI 179 procedures that are either tested or called here. 
+    %%compose-indexers make-%%array %%every %%interval->basic-indexer %%interval-lower-bounds %%interval-upper-bounds %%move-array-elements %%permutation-invert %%vector-every %%vector-permute %%vector-permute->list ))
+  )
 
 (declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))
 (declare (inlining-limit 0))
@@ -2707,8 +2720,8 @@
 (define (myarray-reverse array flip?)
   (let* ((flips (vector->list flip?))
          (domain (array-domain array))
-         (lowers (%%interval-lower-bounds->list domain))
-         (uppers (%%interval-upper-bounds->list domain))
+         (lowers (interval-lower-bounds->list domain))
+         (uppers (interval-upper-bounds->list domain))
          (transform
           (lambda (multi-index)
             (map (lambda (i_k l_k u_k f_k?)
@@ -3959,3 +3972,95 @@ that computes the componentwise products when we need them, the times are
 
 (array-display (specialized-array-reshape B (make-interval '#(8)) #t))
 
+(define interval-flat (make-interval '#(100 100 4)))
+
+(define interval-2x2  (make-interval '#(100 100 2 2)))
+
+(define A (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define B (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define C (array-copy (make-array interval-flat (lambda args 0))))
+
+(define (2x2-matrix-multiply-into! A B C)
+  (let ((C! (array-setter C))
+        (A_ (array-getter A))
+        (B_ (array-getter B)))
+    (C! (+ (* (A_ 0 0) (B_ 0 0))
+           (* (A_ 0 1) (B_ 1 0)))
+        0 0)
+    (C! (+ (* (A_ 0 0) (B_ 0 1))
+           (* (A_ 0 1) (B_ 1 1)))
+        0 1)
+    (C! (+ (* (A_ 1 0) (B_ 0 0))
+           (* (A_ 1 1) (B_ 1 0)))
+        1 0)
+    (C! (+ (* (A_ 1 0) (B_ 0 1))
+           (* (A_ 1 1) (B_ 1 1)))
+        1 1)))
+
+(time
+ (array-for-each 2x2-matrix-multiply-into!
+                 (array-curry (specialized-array-reshape A interval-2x2) 2)
+                 (array-curry (specialized-array-reshape B interval-2x2) 2)
+                 (array-curry (specialized-array-reshape C interval-2x2) 2)))
+
+(time
+ (array-for-each (lambda (A B C)
+                   (array-assign! C (matrix-multiply A B)))
+                 (array-curry (specialized-array-reshape A interval-2x2) 2)
+                 (array-curry (specialized-array-reshape B interval-2x2) 2)
+                 (array-curry (specialized-array-reshape C interval-2x2) 2)))
+
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape A interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape B interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape C interval-2x2)
+                  2))
+                0 0))
+
+(time
+ (array-for-each (lambda (A B C)
+                   (2x2-matrix-multiply-into!
+                    (specialized-array-reshape A (make-interval '#(2 2)))
+                    (specialized-array-reshape B (make-interval '#(2 2)))
+                    (specialized-array-reshape C (make-interval '#(2 2)))))
+                 (array-curry A 1)
+                 (array-curry B 1)
+                 (array-curry C 1)))
+
+(time
+ (array-for-each (lambda (A B C)
+                   (array-assign!
+                    (specialized-array-reshape C (make-interval '#(2 2)))
+                    (matrix-multiply
+                     (specialized-array-reshape A (make-interval '#(2 2)))
+                     (specialized-array-reshape B (make-interval '#(2 2))))))
+                 (array-curry A 1)
+                 (array-curry B 1)
+                 (array-curry C 1)))
+
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape A interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape B interval-2x2)
+                  2))
+                0 0))
+(array-display ((array-getter
+                 (array-curry
+                  (specialized-array-reshape C interval-2x2)
+                  2))
+                0 0))

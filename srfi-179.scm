@@ -1,10 +1,10 @@
 (include "html-lib.scm")
 
-(define (format-lambda-list lst)
+(define (format-lambda-list lst #!optional id)
   (let ((name (car lst))
         (arguments (cdr lst)))
     (<p> (<b> "Procedure: ")
-         (<code> (<a> name: name name)
+         (<code> (<a> id: (if id id name) name)
                  (map (lambda (arg)
                         (list " " (cond ((symbol? arg)
                                          (<var> arg))
@@ -16,15 +16,16 @@
 
 (define (format-global-variable name)
   (<p> (<b> "Variable: ")
-       (<code> (<a> name: name name))))
+       (<code> (<a> id: name name))))
 
 (with-output-to-file
     "srfi-179.html"
   (lambda()
     (html-display
      (list
-      (<unprotected> "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
+      (<unprotected> "<!DOCTYPE html>")
       (<html>
+       lang: 'en
        (<head>
         (<meta> charset: "utf-8")
         (<meta> name: 'viewport
@@ -39,7 +40,6 @@ MathJax.Hub.Config({
 });")
         (<script> crossorigin: "anonymous"
                   integrity:"sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv"
-                  type: "text/javascript"
                   src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
         )
        (<body>
@@ -72,7 +72,8 @@ MathJax.Hub.Config({
               (<li> "Draft #7 published: 2020-05-08")
               (<li> "Draft #8 published: 2020-05-17")
               (<li> "Draft #9 published: 2020-05-31")
-              (<li> "Draft #10 published: 2020-06-02"))
+              (<li> "Draft #10 published: 2020-06-02")
+              (<li> "Draft #11 published: 2020-06-28"))
 
         (<h2> "Abstract")
         (<p>
@@ -270,10 +271,10 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#interval-dimension" "interval-dimension")END
                  (<a> href: "#interval-lower-bound" "interval-lower-bound")END
                  (<a> href: "#interval-upper-bound" "interval-upper-bound")END
-                 (<a> href: "#interval-lower-bounds->list" "interval-lower-bounds->list")END
-                 (<a> href: "#interval-upper-bounds->list" "interval-upper-bounds->list")END
-                 (<a> href: "#interval-lower-bounds->vector" "interval-lower-bounds->vector")END
-                 (<a> href: "#interval-upper-bounds->vector" "interval-upper-bounds->vector")END
+                 (<a> href: "#interval-lower-bounds-rarrow-list" "interval-lower-bounds->list")END
+                 (<a> href: "#interval-upper-bounds-rarrow-list" "interval-upper-bounds->list")END
+                 (<a> href: "#interval-lower-bounds-rarrow-vector" "interval-lower-bounds->vector")END
+                 (<a> href: "#interval-upper-bounds-rarrow-vector" "interval-upper-bounds->vector")END
                  (<a> href: "#interval=" "interval=")END
                  (<a> href: "#interval-volume" "interval-volume")END
                  (<a> href: "#interval-subset?" "interval-subset?")END
@@ -350,8 +351,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-reduce" "array-reduce") END
                  (<a> href: "#array-any" "array-any")END
                  (<a> href: "#array-every" "array-every")END
-                 (<a> href: "#array->list" "array->list") END
-                 (<a> href: "#list->array" "list->array") END
+                 (<a> href: "#array-rarrow-list" "array->list") END
+                 (<a> href: "#list-rarrow-array" "list->array") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
@@ -416,8 +417,8 @@ if "(<code>(<var>"interval"))" is not an interval.")
 if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these conditions.")
 
 
- (format-lambda-list '(interval-lower-bounds->list interval))
- (format-lambda-list '(interval-upper-bounds->list interval))
+ (format-lambda-list '(interval-lower-bounds->list interval) 'interval-lower-bounds-rarrow-list)
+ (format-lambda-list '(interval-upper-bounds->list interval) 'interval-upper-bounds-rarrow-list)
  (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
  (<pre>
   (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
@@ -425,8 +426,8 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
       " and  "(<code> 'interval-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")". It is an error to call
  "(<code> 'interval-lower-bounds->list)" or "(<code> 'interval-upper-bounds->list)" if "(<code>(<var>"interval"))" does not satisfy these conditions.")
 
-        (format-lambda-list '(interval-lower-bounds->vector interval))
-        (format-lambda-list '(interval-upper-bounds->vector interval))
+        (format-lambda-list '(interval-lower-bounds->vector interval) 'interval-lower-bounds-rarrow-vector)
+        (format-lambda-list '(interval-upper-bounds->vector interval) 'interval-upper-bounds-rarrow-vector)
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
         (<pre>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
@@ -1517,11 +1518,11 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 
-(format-lambda-list '(array->list array))
+(format-lambda-list '(array->list array) 'array-rarrow-list)
 (<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated list in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
 
-(format-lambda-list '(list->array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
+(format-lambda-list '(list->array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list-rarrow-array)
 (<p> "Assumes that "
      (<code>(<var> 'l))" is an list, "
      (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
@@ -1560,6 +1561,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "If there is not an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells storing the elements of "(<code>(<var>'array))" in lexicographical order and "(<code>(<var>'copy-on-failure?))" is "(<code>'#t)", then returns a specialized array copy of "(<code>(<var>'array))" with domain "(<code>(<var>'new-domain))", storage class "(<code>"(array-storage-class "(<var>'array)")")", mutability "(<code>"(mutable-array? "(<var>'array)")")", and safety "(<code>"(array-safe? "(<var>'array)")")".")
 (<p> "It is an error if these conditions on the arguments are not met.")
 (<p>(<b>"Note: ")"The code in the sample implementation to determine whether there exists an affine map from "(<code>(<var>'new-domain))" to the multi-indices of the elements of "(<code>(<var>'array))" in lexicographical order is modeled on the corresponding code in the Python library NumPy.")
+(<p>(<b> "Note: ")"In the sample implementation, if an array cannot be reshaped and "(<code>(<var>'copy-on-failure?))" is "(<code>'#f)", an error is raised in tail position.  An implementation might want to replace this error call with a continuable exception to give the programmer more flexibility.")
 (<p>(<b>"Examples: ")"Reshaping an array is not a Bawden-type array transform.  For example, we use "(<code>'array-display)" defined below to see:")
 (<pre>
  (<code>"
@@ -1611,8 +1613,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 ;;; (0 0)   (0 1)   (0 2)   (0 3)   (2 0)   (2 1)   (2 2)   (2 3)
 "))
 (<p>"The following examples succeed:")
-(<code>
- (<pre>"
+(<pre>
+ (<code>"
 (specialized-array-reshape
  (array-copy (make-array (make-interval '#(2 1 3 1)) list))
  (make-interval '#(6)))
@@ -1639,8 +1641,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
  (make-interval '#(4)))
 "))
 (<p>"The following examples raise an exception: ")
-(<code>
- (<pre>"
+(<pre>
+ (<code>"
 (specialized-array-reshape
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f))
  (make-interval '#(6)))
@@ -1659,6 +1661,73 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (specialized-array-reshape
  (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1))
  (make-interval '#(4)))
+"))
+(<p> "In the next examples, we start with vector fields, $100\\times 100$ arrays of 4-vectors.  In one example, we reshape each large array to $100\\times 100\\times2\\times2$ vector fields (so we consider each 4-vector as a $2\\times 2$ matrix), and multiply the $2\\times 2$ matrices together.  In the second example, we reshape each 4-vector to a $2\\times 2$ matrix individually, and compare the times.")
+(<pre>
+ (<code>"
+(define interval-flat (make-interval '#(100 100 4)))
+
+(define interval-2x2  (make-interval '#(100 100 2 2)))
+
+(define A (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define B (array-copy (make-array interval-flat (lambda args (random-integer 5)))))
+
+(define C (array-copy (make-array interval-flat (lambda args 0))))
+
+(define (2x2-matrix-multiply-into! A B C)
+  (let ((C! (array-setter C))
+        (A_ (array-getter A))
+        (B_ (array-getter B)))
+    (C! (+ (* (A_ 0 0) (B_ 0 0))
+           (* (A_ 0 1) (B_ 1 0)))
+        0 0)
+    (C! (+ (* (A_ 0 0) (B_ 0 1))
+           (* (A_ 0 1) (B_ 1 1)))
+        0 1)
+    (C! (+ (* (A_ 1 0) (B_ 0 0))
+           (* (A_ 1 1) (B_ 1 0)))
+        1 0)
+    (C! (+ (* (A_ 1 0) (B_ 0 1))
+           (* (A_ 1 1) (B_ 1 1)))
+        1 1)))
+
+;;; Reshape A, B, and C to change all the 4-vectors to 2x2 matrices
+
+(time
+ (array-for-each 2x2-matrix-multiply-into!
+                 (array-curry (specialized-array-reshape A interval-2x2) 2)
+                 (array-curry (specialized-array-reshape B interval-2x2) 2)
+                 (array-curry (specialized-array-reshape C interval-2x2) 2)))
+;;; Displays
+
+;;;    0.015186 secs real time
+;;;    0.015186 secs cpu time (0.015186 user, 0.000000 system)
+;;;    4 collections accounting for 0.004735 secs real time (0.004732 user, 0.000000 system)
+;;;    46089024 bytes allocated
+;;;    no minor faults
+;;;    no major faults
+
+;;; Reshape each 4-vector to a 2x2 matrix individually
+
+(time
+ (array-for-each (lambda (A B C)
+                   (2x2-matrix-multiply-into!
+                    (specialized-array-reshape A (make-interval '#(2 2)))
+                    (specialized-array-reshape B (make-interval '#(2 2)))
+                    (specialized-array-reshape C (make-interval '#(2 2)))))
+                 (array-curry A 1)
+                 (array-curry B 1)
+                 (array-curry C 1)))
+
+;;; Displays
+
+;;;    0.039193 secs real time
+;;;    0.039193 secs cpu time (0.039191 user, 0.000002 system)
+;;;    6 collections accounting for 0.006855 secs real time (0.006851 user, 0.000001 system)
+;;;    71043024 bytes allocated
+;;;    no minor faults
+;;;    no major faults
 "))
 
 (<h2> "Implementation")
@@ -1925,8 +1994,8 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
   (max 0 (min (exact (round pixel)) max-grey)))
 "))
 (<p> "We can then compute edges and sharpen a test image as follows: ")
-(<code>
- (<pre>"
+(<pre>
+ (<code>"
 (define test-pgm (read-pgm \"girl.pgm\"))
 
 (let ((greys (pgm-greys test-pgm)))
@@ -2118,7 +2187,7 @@ Second-differences in the direction $k\\times (1,-1)$:
               (transform a))))
       (helper a))))
 "))
-(<p>  "By adding a single loop that calculates scaled sums and differences of adjacent elements in a one-dimensional array, we can define various "(<a> name: "Haar" "Haar wavelet transforms")" as follows:")
+(<p>  "By adding a single loop that calculates scaled sums and differences of adjacent elements in a one-dimensional array, we can define various "(<a> id: "Haar" "Haar wavelet transforms")" as follows:")
 (<pre>(<code>"
 (define (1D-Haar-loop a)
   (let ((a_ (array-getter a))
@@ -2208,7 +2277,7 @@ Reconstructed image:
 (<p> "In perfect arithmetic, this hyperbolic Haar transform is "(<i>'orthonormal)", in that the sum of the squares of the elements of the image is the same as the sum of the squares of the hyperbolic Haar coefficients of the image.  We can see that this is approximately true here.")
 
 (<p> "We can apply the (nonhyperbolic) Haar transform to the same image as follows: ")
-(<pre>"
+(<pre>(<code>"
  (let ((image
        (array-copy
         (make-array (make-interval '#(4 4))
@@ -2228,7 +2297,7 @@ Reconstructed image:
   (display \"\\nReconstructed image: \\n\")
   (pretty-print (list (array-domain image)
                       (array->list image))))
-")
+"))
 (<p> "This yields: ")
 (<pre>"
 Initial image:
@@ -2490,14 +2559,14 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 (<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
- (<li> (<a> name: 'bawden href: "https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
+ (<li> (<a> id: 'bawden href: "https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
        ", by Alan Bawden.")
- (<li> (<a> name: 'SRFI-4  href: "https://srfi.schemers.org/srfi-4/"  "SRFI 4:  Homogeneous Numeric Vector Datatypes")", by Marc Feeley.")
- (<li> (<a> name: 'SRFI-25 href: "https://srfi.schemers.org/srfi-25/" "SRFI 25: Multi-dimensional Array Primitives")", by Jussi Piitulainen.")
- (<li> (<a> name: 'SRFI-47 href: "https://srfi.schemers.org/srfi-47/" "SRFI 47: Array")", by Aubrey Jaffer.")
- (<li> (<a> name: 'SRFI-58 href: "https://srfi.schemers.org/srfi-58/" "SRFI 58: Array Notation")", by Aubrey Jaffer.")
- (<li> (<a> name: 'SRFI-63 href: "https://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer.")
- (<li> (<a> name: 'SRFI-164 href: "https://srfi.schemers.org/srfi-164/" "SRFI 164: Enhanced multi-dimensional Arrays")", by Per Bothner."))
+ (<li> (<a> id: 'SRFI-4  href: "https://srfi.schemers.org/srfi-4/"  "SRFI 4:  Homogeneous Numeric Vector Datatypes")", by Marc Feeley.")
+ (<li> (<a> id: 'SRFI-25 href: "https://srfi.schemers.org/srfi-25/" "SRFI 25: Multi-dimensional Array Primitives")", by Jussi Piitulainen.")
+ (<li> (<a> id: 'SRFI-47 href: "https://srfi.schemers.org/srfi-47/" "SRFI 47: Array")", by Aubrey Jaffer.")
+ (<li> (<a> id: 'SRFI-58 href: "https://srfi.schemers.org/srfi-58/" "SRFI 58: Array Notation")", by Aubrey Jaffer.")
+ (<li> (<a> id: 'SRFI-63 href: "https://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer.")
+ (<li> (<a> id: 'SRFI-164 href: "https://srfi.schemers.org/srfi-164/" "SRFI 164: Enhanced multi-dimensional Arrays")", by Per Bothner."))
 (<h2> "Copyright")
 (<p> (<unprotected> "&copy;")" 2016, 2018, 2020 Bradley J Lucier. All Rights Reserved.")
 (<p> "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: ")
