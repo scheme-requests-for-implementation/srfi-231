@@ -59,8 +59,8 @@ MathJax.Hub.Config({
              (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
              ".  You can access previous messages via the mailing list "
              (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".")
-        
-        
+
+
         (<ul> (<li> "Received: 2020-01-11")
               (<li> "60-day deadline: 2020-03-13")
               (<li> "Draft #1 published: 2020-01-11")
@@ -105,7 +105,7 @@ MathJax.Hub.Config({
                (<code>'array-outer-product)", "
                (<code>'array-tile)", "
                (<code>'array-rotate)", "
-               (<code>'array-reduce)", " 
+               (<code>'array-reduce)", "
                (<code>'array-assign!)", "
                (<code>'array-ref)", "
                (<code>'array-set!)", and "
@@ -2399,10 +2399,10 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-  
+
   (define (display-item x)
     (display x) (display \"\\t\"))
-  
+
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -2522,8 +2522,8 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 (<pre>
  (<code>"
 ;; Examples from
-;; http://microapl.com/apl_help/ch_020_020_880.htm 
-   
+;; http://microapl.com/apl_help/ch_020_020_880.htm
+
 (define TABLE1
   (list->array
    '(1 2

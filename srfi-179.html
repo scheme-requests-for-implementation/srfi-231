@@ -1978,10 +1978,10 @@ Reconstructed image:
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-  
+
   (define (display-item x)
     (display x) (display &quot;\t&quot;))
-  
+
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -2098,8 +2098,8 @@ Reconstructed image:
     <p>We take some examples from the <a href="https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf">APLX Language Reference</a>:</p>
     <pre><code>
 ;; Examples from
-;; http://microapl.com/apl_help/ch_020_020_880.htm 
-   
+;; http://microapl.com/apl_help/ch_020_020_880.htm
+
 (define TABLE1
   (list-&gt;array
    '(1 2
