@@ -4,7 +4,7 @@
 
 
 
-keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]], [[https://srfi.schemers.org/?keywords=numeric][Numeric]]
+keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]], [[https://srfi.schemers.org/?keywords=numbers][Numbers]]
 
 This repository hosts [[https://srfi.schemers.org/srfi-179/][SRFI 179]]: Nonempty Intervals and Generalized Arrays (Updated), a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
 
