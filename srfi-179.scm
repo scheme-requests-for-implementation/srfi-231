@@ -28,12 +28,18 @@
        lang: 'en
        (<head>
         (<meta> charset: "utf-8")
-        (<meta> name: 'viewport
-                content: "width=device-width, initial-scale=1")
-        (<title> "Nonempty Intervals and Generalized Arrays (Updated)")
+        (<title> "SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)")
+        (<link>
+         rel: "icon"
+         sizes: "192x192"
+         type: "image/png"
+         href: "favicon.png"
+         )
         (<link> href: "https://srfi.schemers.org/srfi.css"
                 rel: "stylesheet"
                 type: "text/css")
+        (<meta> name: 'viewport
+                content: "width=device-width, initial-scale=1")
         (<script> type: "text/x-mathjax-config" "
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\\\(','\\\\)']]}
@@ -43,14 +49,12 @@ MathJax.Hub.Config({
                   src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
         )
        (<body>
-        (<h1> "Title")
-        (<p> "Nonempty Intervals and Generalized Arrays (Updated)")
+        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) "179: Nonempty Intervals and Generalized Arrays (Updated)")
 
-        (<h2> "Author")
-        (<p> "Bradley J. Lucier")
+        (<p> " by Bradley J. Lucier")
 
         (<h2> "Status")
-        (<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
+        (<p> "This SRFI is currently in " (<em> "final") " status.  Here is "
              (<a> href: "https://srfi.schemers.org/srfi-process.html" "an explanation")
              " of each status that a SRFI can hold.  To provide input on this SRFI, please send email to "
              (<code> (<a> href: "mailto:srfi+minus+179+at+srfi+dotschemers+dot+org"
@@ -59,10 +63,9 @@ MathJax.Hub.Config({
              (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
              ".  You can access previous messages via the mailing list "
              (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".")
-
-
+        
+        
         (<ul> (<li> "Received: 2020-01-11")
-              (<li> "60-day deadline: 2020-03-13")
               (<li> "Draft #1 published: 2020-01-11")
               (<li> "Draft #2 published: 2020-01-25")
               (<li> "Draft #3 published: 2020-02-04")
@@ -73,7 +76,8 @@ MathJax.Hub.Config({
               (<li> "Draft #8 published: 2020-05-17")
               (<li> "Draft #9 published: 2020-05-31")
               (<li> "Draft #10 published: 2020-06-02")
-              (<li> "Draft #11 published: 2020-06-28"))
+              (<li> "Draft #11 published: 2020-06-28")
+              (<li> "Finalized: 2020-06-30"))
 
         (<h2> "Abstract")
         (<p>
@@ -105,7 +109,7 @@ MathJax.Hub.Config({
                (<code>'array-outer-product)", "
                (<code>'array-tile)", "
                (<code>'array-rotate)", "
-               (<code>'array-reduce)", "
+               (<code>'array-reduce)", " 
                (<code>'array-assign!)", "
                (<code>'array-ref)", "
                (<code>'array-set!)", and "
@@ -140,7 +144,7 @@ MathJax.Hub.Config({
         (<p> "Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\\vec i$ for a multi-index "
              "$i_0,\\ldots,i_{d-1}$. (Multi-indices correspond to Scheme "(<code>'values)".)  Arrays will be denoted by capital letters "
              "$A,B,\\ldots$, the domain of the array $A$ will be denoted by $D_A$, "
-             "and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$ will be denoted by $I_A$.  Initially, Bawden constructs "
+             "and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$, will be denoted by $I_A$.  Initially, Bawden constructs "
              "$I_A$ such that $I_A(\\vec i)$ steps consecutively through the values $0,1,\\ldots,N-1$ as $\\vec i$ steps through the "
              "multi-indices $(l_0,\\ldots,l_{d-2},l_{d-1})$, $(l_0,\\ldots,l_{d-2},l_{d-1}+1)$, $\\ldots$, $(l_0,\\ldots,l_{d-2}+1,l_{d-1})$, etc., in lexicographical order, which means "
              "that if $\\vec i$ and $\\vec j$ are two multi-indices, then $\\vec i<\\vec j$ iff the first coordinate $k$ where $\\vec i$ and $\\vec j$ "
@@ -229,7 +233,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<h3> "Array-map does not produce a specialized array")
         (<p> "Daniel Friedman and David Wise wrote a famous paper "(<a> href: "http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR44" "CONS should not Evaluate its Arguments")". "
              "In the spirit of that paper, our procedure "(<code>'array-map)" does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of "(<code>'array-map)
-             " each time they are accessed.   This immutable array can be passed on to further applications of "(<code>'array-map)" for further processing, without generating the storage bodies for intermediate arrays.")
+             " each time they are accessed.   This immutable array can be passed on to further applications of "(<code>'array-map)" for further processing without generating the storage bodies for intermediate arrays.")
         (<p> "We provide the procedure "(<code>'array-copy)" to transform a generalized array (like that returned by "(<code>'array-map)
              ") to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ operations.")
 
@@ -240,19 +244,19 @@ they may have hash tables or databases behind an implementation, one may read th
 
 
 
-        (<h2> "Issues and Notes")
+        (<h2> "Notes")
         (<ul>
          (<li> (<b> "Relationship to "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
                "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
-         (<li> (<b> "Indexers. ")"The argument new-domain->old-domain to "(<code> 'specialized-array-share)" is, conceptually, a multi-valued array.")
+         (<li> (<b> "Indexers. ")"The argument "(<code>(<var> "new-domain->old-domain"))" to "(<code> 'specialized-array-share)" is, conceptually, a multi-valued array.")
          (<li> (<b> "Source of function names. ")"The function "(<code> 'array-curry)" gets its name from the" #\newline
                (<a> href: "https://en.wikipedia.org/wiki/Currying" "curry operator")
-               " in programming---we are currying the getter of the array and keeping careful track of the domains." #\newline
+               " in programming" (string (integer->char 8212)) "we are currying the getter of the array and keeping careful track of the domains." #\newline
                (<code>'interval-projections)" can be thought of as currying the" #\newline
                "characteristic function of the interval,  encapsulated here as "(<code> 'interval-contains-multi-index?)".")
          (<li> (<b> "Choice of functions on intervals. ")"The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.")
          (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
-         (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would a compatible extension of this SRFI.")
+         (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.")
          (<li> (<b> "No low-level specialized array constructor. ")
                "While the author of the SRFI uses mainly "(<code>"(make-array ...)")", "(<code>'array-map)", and "(<code>'array-copy)" to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple "(<code>"(make-array ...)")" mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.")
 
@@ -463,7 +467,7 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
         (<p> "If "(<code>(<var>"interval1"))" and "(<code>(<var>"interval2"))" are intervals of the same dimension $d$, "
              "then "(<code>'interval-subset?)" returns "(<code>'#t)" if ")
         (<pre>
-         (<code>"(<= (interval-lower-bound "(<var>'interval1)" j) (interval-lower-bound "(<var>'interval2)" j))"))
+         (<code>"(>= (interval-lower-bound "(<var>'interval1)" j) (interval-lower-bound "(<var>'interval2)" j))"))
         (<p> "and")
         (<pre>
          (<code>"(<= (interval-upper-bound "(<var>'interval1)" j) (interval-upper-bound "(<var>'interval2)" j))"))
@@ -551,7 +555,7 @@ nonempty interval.  It is an error if the arguments do not satisfy these conditi
 
 (format-lambda-list '(interval-intersect interval-1 interval-2 ...))
 (<p> "If all the arguments are intervals of the same dimension and they have a nonempty intersection,
-the "(<code> 'interval-intersect)" returns that intersection; otherwise it returns "(<code>'#f)".")
+then "(<code> 'interval-intersect)" returns that intersection; otherwise it returns "(<code>'#f)".")
 (<p> "It is an error if the arguments are not all intervals with the same dimension.")
 
 (format-lambda-list '(interval-translate interval translation))
@@ -1416,7 +1420,7 @@ calls")
 (<p> "It is an error to call "(<code> 'array-for-each)" if its arguments do not satisfy these conditions.")
 
 (format-lambda-list '(array-fold kons knil array))
-(<p> "If we use the defining relations for fold over lists from SRFI 1:")
+(<p> "If we use the defining relations for fold over lists from "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")":")
 (<pre>
  (<code>"
 (fold kons knil lis)
@@ -1431,7 +1435,7 @@ calls")
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'kons))" is not a procedure.")
 
 (format-lambda-list '(array-fold-right kons knil array))
-(<p> "If we use the defining relations for fold-right over lists from SRFI 1:")
+(<p> "If we use the defining relations for fold-right over lists from "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")":")
 (<pre>
  (<code>"
 (fold-right kons knil lis)
@@ -1494,7 +1498,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (block-sum A)        => 1.6449340658482325
 "))
 (<p> "Since $\\pi^2/6\\approx{}$"(<code>"1.6449340668482264")", we see  using the first method that the difference $\\pi^2/6-{}$"(<code>"1.644934057834575")"${}\\approx{}$"(<code>"9.013651380840315e-9")" and with the second we have "
-     "$\\pi^2/6-{}$"(<code>"1.6449340658482325")"${}\\approx{}$"(<code>"9.99993865491433e-10")".  The true difference should be between $\\frac 1{1{,}000{,}000{,}001}\\approx{}$"(<code>"9.99999999e-10")" and $\\frac 1{1{,}000{,}000{,}000}={}$"(<code>"1e-9")". The difference for the first method is about 10 times too big, and, in fact, will not change further because any futher terms, when added to the partial sum, are too small to increase the sum after rounding-to-nearest in double-precision IEEE-754 floating-point arithmetic.")
+     "$\\pi^2/6-{}$"(<code>"1.6449340658482325")"${}\\approx{}$"(<code>"9.99993865491433e-10")".  The true difference should be between $\\frac 1{1{,}000{,}000{,}001}\\approx{}$"(<code>"9.99999999e-10")" and $\\frac 1{1{,}000{,}000{,}000}={}$"(<code>"1e-9")". The difference for the first method is about 10 times too big, and, in fact, will not change further because any further terms, when added to the partial sum, are too small to increase the sum after rounding-to-nearest in double-precision IEEE-754 floating-point arithmetic.")
 
 
 (format-lambda-list '(array-any pred array1 array2 "..."))
@@ -1739,7 +1743,7 @@ and "(<code>"define-macro")".")
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI
-specialized arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
+specialized arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from "(<a> href: "https://srfi.schemers.org/srfi-63/" "SRFI 63")", we can
 translate: ")
 (<dl>
  (<dt> (<code> "(array? obj)"))
@@ -1819,7 +1823,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
             (else #f))))
 
   ;; The image file formats defined in netpbm
-  ;; are problematical, because they read the data
+  ;; are problematical because they read the data
   ;; in the header as variable-length ISO-8859-1 text,
   ;; including arbitrary whitespace and comments,
   ;; and then they may read the rest of the file
@@ -1845,8 +1849,8 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
              (rows (read-pgm-object port))
              (greys (read-pgm-object port)))
 
-        ;; now we switch back to buffering
-        ;; to speed things up
+        ;; Now we switch back to buffering
+        ;; to speed things up.
 
         (port-settings-set! port '(buffering: #t))
 
@@ -2031,7 +2035,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
    \"edge-test.pgm\"))
 "))
 
-(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".  Note that the first permutation is not a rotation---you want to have the head up in both the median and frontal views.")
+(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".  Note that the first permutation is not a rotation"(string (integer->char 8212))"you want to have the head up in both the median and frontal views.")
 
 
 (<p> (<b> "Calculating second differences of images. ")"For another example, if a real-valued function is defined
@@ -2369,20 +2373,20 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
                                          (values i k))))
 
              ;; the subarray to the right and
-             ;;below the (i,i) entry
+             ;; below the (i,i) entry
              (subarray
               (array-extract
                A (make-interval
                   (vector (fx+ i 1) (fx+ i 1))
                   (vector n         n)))))
-        ;; compute multipliers
+        ;; Compute multipliers.
         (array-assign!
          column
          (array-map (lambda (x)
                       (/ x pivot))
                     column))
-        ;; subtract the outer product of i'th
-        ;; row and column from the subarray
+        ;; Subtract the outer product of i'th
+        ;; row and column from the subarray.
         (array-assign!
          subarray
          (array-map -
@@ -2399,10 +2403,10 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-
+  
   (define (display-item x)
     (display x) (display \"\\t\"))
-
+  
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -2522,8 +2526,8 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 (<pre>
  (<code>"
 ;; Examples from
-;; http://microapl.com/apl_help/ch_020_020_880.htm
-
+;; http://microapl.com/apl_help/ch_020_020_880.htm 
+   
 (define TABLE1
   (list->array
    '(1 2
@@ -2556,10 +2560,10 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 ;;; 2
 "))
 (<h2> "Acknowledgments")
-(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")
+(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
- (<li> (<a> id: 'bawden href: "https://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
+ (<li> (<a> id: 'bawden href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "\"multi-dimensional arrays in R5RS?\"")
        ", by Alan Bawden.")
  (<li> (<a> id: 'SRFI-4  href: "https://srfi.schemers.org/srfi-4/"  "SRFI 4:  Homogeneous Numeric Vector Datatypes")", by Marc Feeley.")
  (<li> (<a> id: 'SRFI-25 href: "https://srfi.schemers.org/srfi-25/" "SRFI 25: Multi-dimensional Array Primitives")", by Jussi Piitulainen.")
