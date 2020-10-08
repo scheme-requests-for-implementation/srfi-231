@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)</title>
-    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link type="image/png" sizes="192x192" rel="icon" href="favicon.png">
     <link type="text/css" rel="stylesheet" href="https://srfi.schemers.org/srfi.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script type="text/x-mathjax-config">
@@ -13,8 +13,8 @@
     <script integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </head>
   <body>
-    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo" /></a>179: Nonempty Intervals and Generalized Arrays (Updated)</h1>
-    <p>by Bradley J. Lucier</p>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo"></a>179: Nonempty Intervals and Generalized Arrays (Updated)</h1>
+    <p> by Bradley J. Lucier</p>
     <h2>Status</h2>
     <p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+179+at+srfi+dotschemers+dot+org">srfi-179@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-179">archive</a>.</p>
     <ul>
@@ -97,9 +97,9 @@
     <h2>Notes</h2>
     <ul>
       <li><b>Relationship to <a href="https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
-      <li><b>Indexers. </b>The argument <var>new-domain-&gt;old-domain</var> to <code>specialized-array-share</code> is, conceptually, a multi-valued array.</li>
+      <li><b>Indexers. </b>The argument <code><var>new-domain-&gt;old-domain</var></code> to <code>specialized-array-share</code> is, conceptually, a multi-valued array.</li>
       <li><b>Source of function names. </b>The function <code>array-curry</code> gets its name from the
-        <a href="https://en.wikipedia.org/wiki/Currying">curry operator</a> in programming &mdash; we are currying the getter of the array and keeping careful track of the domains.
+        <a href="https://en.wikipedia.org/wiki/Currying">curry operator</a> in programming—we are currying the getter of the array and keeping careful track of the domains.
         <code>interval-projections</code> can be thought of as currying the
         characteristic function of the interval,  encapsulated here as <code>interval-contains-multi-index?</code>.</li>
       <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
@@ -279,7 +279,7 @@
     <p>It is an error to call <code>interval=</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a id="interval-subset?">interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals of the same dimension $d$, then <code>interval-subset?</code> returns <code>#t</code> if </p>
-    <pre><code>(&lt;= (interval-lower-bound <var>interval1</var> j) (interval-lower-bound <var>interval2</var> j))</code></pre>
+    <pre><code>(&gt;= (interval-lower-bound <var>interval1</var> j) (interval-lower-bound <var>interval2</var> j))</code></pre>
     <p>and</p>
     <pre><code>(&lt;= (interval-upper-bound <var>interval1</var> j) (interval-upper-bound <var>interval2</var> j))</code></pre>
     <p>for all $0\leq j&lt;d$, otherwise it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
@@ -1619,7 +1619,7 @@ indexer:       (lambda multi-index
                edge-array))
    &quot;edge-test.pgm&quot;))
 </code></pre>
-    <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.  Note that the first permutation is not a rotation&mdash; you want to have the head up in both the median and frontal views.</p>
+    <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.  Note that the first permutation is not a rotation—you want to have the head up in both the median and frontal views.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
       and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on &quot;Moduli of smoothness&quot; in <a href="https://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory">these notes on wavelets and approximation theory</a> for more details.</p>
@@ -1977,10 +1977,10 @@ Reconstructed image:
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-
+  
   (define (display-item x)
     (display x) (display &quot;\t&quot;))
-
+  
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -2097,8 +2097,8 @@ Reconstructed image:
     <p>We take some examples from the <a href="https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf">APLX Language Reference</a>:</p>
     <pre><code>
 ;; Examples from
-;; http://microapl.com/apl_help/ch_020_020_880.htm
-
+;; http://microapl.com/apl_help/ch_020_020_880.htm 
+   
 (define TABLE1
   (list-&gt;array
    '(1 2

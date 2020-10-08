@@ -362,7 +362,7 @@
                                (##write-substring character-value 0 (string-length character-value) port)
                                (loop (+ end 1) (+ end 1))))))
                       (else
-                       (display (string-append "Warning: Character (integer->char "
+                       #;(display (string-append "Warning: Character (integer->char "
                                                index
                                                ") is not a valid HTML 4.0 character entity\n")
                                 ##stderr)
@@ -380,7 +380,7 @@
                          (display character-value port))
                      (##write-substring character-value 0 (string-length character-value) port))))
               (else
-               (display (string-append "Warning: Character (integer->char "
+               #;(display (string-append "Warning: Character (integer->char "
                                        index
                                        ") is not a valid HTML 4.0 character entity\n")
                         ##stderr)
@@ -657,7 +657,7 @@
 
 (define-tag li start-newline?: #t attributes: (type value))
 
-(define-tag link start-newline?: #t end-tag?: #f attributes: (charset href hreflang media rel rev type))
+(define-tag link start-newline?: #t end-tag?: #f attributes: (charset href hreflang media rel rev sizes type))
 
 (define-tag map attributes: (name))
 
