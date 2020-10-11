@@ -77,7 +77,9 @@ MathJax.Hub.Config({
               (<li> "Draft #9 published: 2020-05-31")
               (<li> "Draft #10 published: 2020-06-02")
               (<li> "Draft #11 published: 2020-06-28")
-              (<li> "Finalized: 2020-06-30"))
+              (<li> "Finalized: 2020-06-30")
+              (<li> "Revised to fix errata:"
+                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)))))
 
         (<h2> "Abstract")
         (<p>
