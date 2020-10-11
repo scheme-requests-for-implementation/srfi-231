@@ -37,6 +37,13 @@
                       (read))
                 (loop result (read))))))))
 
+(define sld-names
+  (with-input-from-file "179.sld"
+    (lambda ()
+      (let* ((sld (read))
+             (exports (cdaddr sld)))
+        exports))))
+
 (define srfi-names
   (with-input-from-file "srfi-179.scm"
     (lambda ()
@@ -70,3 +77,9 @@
 
 (newline)(pp "Code names not in SRFI: ")
 (pp (in-a-not-in-b code-names srfi-names))
+
+(newline)(pp "sld names not in SRFI: ")
+(pp (in-a-not-in-b sld-names srfi-names))
+
+(newline)(pp "SRFI names not in sld: ")
+(pp (in-a-not-in-b srfi-names sld-names))

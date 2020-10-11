@@ -20,7 +20,7 @@
     specialized-array-default-mutable? make-specialized-array specialized-array? array-storage-class array-indexer array-body array-safe?
     array-elements-in-order? specialized-array-share array-copy array-curry array-extract array-tile array-translate array-permute
     array-rotate array-reverse array-sample array-outer-product array-map array-for-each array-fold array-fold-right array-reduce array-any array-every
-    array->list list->array array-assign! array-swap! specialized-array-reshape array-ref array-set!
+    array->list list->array array-assign! specialized-array-reshape array-ref array-set!
     )
 
   (cond-expand
