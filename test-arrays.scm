@@ -8,9 +8,9 @@
   ;; 1. Put generic-arrays.scm and 179.sld in new directory ./srfi/179.
   ;; 2. Uncomment this "begin".
   ;; 3. Run "gsi . test-arrays".
-
+  
   (import (srfi 179))
-
+  
   (##namespace
    ("srfi/179#"
     ;; Internal SRFI 179 procedures that are either tested or called here.
@@ -21,6 +21,13 @@
 (declare (inlining-limit 0))
 (define tests 100)
 (set! tests tests)
+
+(define total-tests 0)
+(set! total-tests total-tests)
+
+(define failed-tests 0)
+(set! failed-tests failed-tests)
+
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -40,15 +47,21 @@
 
                       (lambda ()
                         ,expr))))))
+     (set! total-tests (+ total-tests 1))
      (if (not (equal? result ,value))
-         (pp (list ',expr" => " result ", not " ,value)))))
+         (begin
+           (set! failed-tests (+ failed-tests 1))
+           (pp (list ',expr" => " result ", not " ,value))))))
 
 (define-macro (test-multiple-values expr vals)
   `(call-with-values
        (lambda () ,expr)
      (lambda args
+       (set! total-tests (+ total-tests 1))
        (if (not (equal? args ,vals))
-           (pp (list ',expr  " => " args ", not " ,vals #\newline))))))
+           (begin
+             (set! failed-tests (+ failed-tests 1))
+             (pp (list ',expr  " => " args ", not " ,vals #\newline)))))))
 
 ;;; requires make-list function
 
@@ -522,10 +535,10 @@
   (zero? (random 2)))
 
 (define (array-display A)
-
+  
   (define (display-item x)
     (display x) (display "\t"))
-
+  
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -1072,8 +1085,6 @@
         (test (myarray= destination source)
               #t)
         ))))
-
-
 
 (pp "array-copy error tests")
 
@@ -3330,7 +3341,7 @@
   (array-for-each (lambda (row)
                     (pretty-print (array->list row)))
                   (array-curry b 1))
-
+  
   ;; which prints
   ;; ((0 0) (0 1) (0 2) (0 3) (0 4))
   ;; ((1 1) (1 2) (1 3) (1 4) (1 5))
@@ -3923,7 +3934,7 @@ that computes the componentwise products when we need them, the times are
 
 ;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm
-
+ 
 (define TABLE1
   (list->array
    '(1 2
@@ -4064,3 +4075,5 @@ that computes the componentwise products when we need them, the times are
                   (specialized-array-reshape C interval-2x2)
                   2))
                 0 0))
+
+(for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))

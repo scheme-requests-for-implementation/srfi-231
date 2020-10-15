@@ -79,7 +79,7 @@ MathJax.Hub.Config({
               (<li> "Draft #11 published: 2020-06-28")
               (<li> "Finalized: 2020-06-30")
               (<li> "Revised to fix errata:"
-                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)))))
+                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)"))))
 
         (<h2> "Abstract")
         (<p>
@@ -787,7 +787,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
                         (if (= i j)
                             1
                             0))))
-(defina a_ (array-getter a))
+(define a_ (array-getter a))
 
 (a_ 3 3) => 1
 (a_ 2 3) => 0
