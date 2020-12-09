@@ -3931,8 +3931,8 @@ that computes the componentwise products when we need them, the times are
   (array-outer-product
    (lambda (a b)
      (array-reduce f (array-map g a b)))
-   (array-curry A 1)
-   (array-curry (array-rotate B 1) 1)))
+   (array-copy (array-curry A 1))
+   (array-copy (array-curry (array-rotate B 1) 1))))
 
 ;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm
