@@ -1051,6 +1051,8 @@ of whose elements is itself an (immutable) array and ")
                          inner-multi-index))))))))"))
 (<p> "It is an error to call "(<code> 'array-curry)" if its arguments do not satisfy these conditions.")
 (<p> "If "(<code>(<var>'array))" is a specialized array, the subarrays of the result inherit their safety and mutability from "(<code>(<var>'array))".")
+(<p> (<b> "Note: ")"Let's denote by "(<code>(<var>'B))" the result of "(<code>"(array-curry "(<var>'A)" "(<var>'k)")")". While the result of calling "(<code>"(array-getter "(<var>'B)")")
+     " is an immutable, mutable, or specialized array according to whether "(<code>(<var>'A))" itself is immutable, mutable, or specialized, "(<code>(<var>'B))" is always an immutable array, where "(<code>"(array-getter "(<var>'B)")")", which returns an array, is computed anew for each call.  If "(<code>"(array-getter "(<var>'B)")")" will be called multiple times with the same arguments, it may be useful to store these results in a specialized array for fast repeated access.")
 (<p> "Please see the note in the discussion of "(<a> href: "#array-tile" "array-tile")".")
 
 (<p>"Example:")
@@ -1350,6 +1352,13 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
               (op (apply (array-getter array1) (list-take args (array-dimension array1)))
                   (apply (array-getter array2) (list-tail args (array-dimension array1))))))"))
 (<p> "This operation can be considered a partial inverse to "(<code>'array-curry)".  It is an error if the arguments do not satisfy these assumptions.")
+(<p> (<b> "Note: ")"You can see from the above definition that if "(<code>(<var>'C))" is "(<code>"(array-outer-product "(<var>'op)" "(<var>'A)" "(<var>'B)")")", then each call to "(<code>"(array-getter "(<var>'C)")")
+     " will call "(<code>(<var>'op))" as well as "(<code>"(array-getter "(<var>'A)")")" and "(<code>"(array-getter "(<var>'B)")")".  This implies that if all elements of "(<code>(<var>'C))" are eventually accessed, then "
+     (<code>"(array-getter "(<var>'A)")")" will be called "(<code>"(array-volume "(<var>'B)")")" times; similarly "(<code>"(array-getter "(<var>'B)")")" will be called "(<code>"(array-volume "(<var>'A)")")" times. ")
+(<p> "This implies that if "(<code>"(array-getter "(<var>'A)")")" is expensive to compute (for example, if it's returning an array, as does "(<code>'array-curry)") then the elements of "(<code>(<var>'A))
+     " should be pre-computed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
+     "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for matrix multiplication and "(<code>'inner-product)
+     " applies "(<code>'array-outer-product)" to curried arrays, so we apply "(<code>"array-copy")" to the arguments before passage to "(<code>'array-outer-product)".")
 
 (format-lambda-list '(array-map f array #\. arrays))
 (<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain and "(<code>(<var> 'f))" is a procedure, then "(<code> 'array-map)"
@@ -2488,15 +2497,15 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 
 ;;; We'll define a brief, not-very-efficient matrix multiply routine.
 
-(define (dot-product a b)
+(define (array-dot-product a b)
   (array-fold + 0 (array-map * a b)))
 
 (define (matrix-multiply a b)
   (let ((a-rows
-         (array-curry a 1))
+         (array-copy (array-curry a 1)))
         (b-columns
-         (array-curry (array-rotate b 1) 1)))
-    (array-outer-product dot-product a-rows b-columns)))
+         (array-copy (array-curry (array-rotate b 1) 1))))
+    (array-outer-product array-dot-product a-rows b-columns)))
 
 ;;; We'll check that the product of the result of LU
 ;;; decomposition of A is again A.
@@ -2520,8 +2529,8 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
   (array-outer-product
    (lambda (a b)
      (array-reduce f (array-map g a b)))
-   (array-curry A 1)
-   (array-curry (array-rotate B 1) 1)))
+   (array-copy (array-curry A 1))
+   (array-copy (array-curry (array-rotate B 1) 1))))
 "))
 (<p> "This routine differs from that found in APL in several ways: The arguments "(<code>(<var>'A))" and "(<code>(<var>'B))" must each have two or more dimensions, and the result is always an array, never a scalar.")
 (<p> "We take some examples from the "(<a> href: "https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf" "APLX Language Reference")":")

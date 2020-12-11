@@ -3911,9 +3911,11 @@ that computes the componentwise products when we need them, the times are
 
 (define (matrix-multiply a b)
   (let ((a-rows
-         (array-curry a 1))
+         ;; We copy this array because its elements are accessed multiple times.
+         (array-copy (array-curry a 1)))
         (b-columns
-         (array-curry (array-rotate b 1) 1)))
+         ;; We copy this array because its elements are accessed multiple times.
+         (array-copy (array-curry (array-rotate b 1) 1))))
     (array-outer-product array-dot-product a-rows b-columns)))
 
 ;;; We'll check that the product of the result of LU
@@ -3929,8 +3931,8 @@ that computes the componentwise products when we need them, the times are
   (array-outer-product
    (lambda (a b)
      (array-reduce f (array-map g a b)))
-   (array-curry A 1)
-   (array-curry (array-rotate B 1) 1)))
+   (array-copy (array-curry A 1))
+   (array-copy (array-curry (array-rotate B 1) 1))))
 
 ;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm
