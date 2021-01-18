@@ -79,7 +79,12 @@ MathJax.Hub.Config({
               (<li> "Draft #11 published: 2020-06-28")
               (<li> "Finalized: 2020-06-30")
               (<li> "Revised to fix errata:"
-                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)"))))
+                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)")))
+              (<li> id: 'pfn1 "Post-finalization note added on 2020-12-10: The document
+was updated to improve the examples and to explain the use of "(<code>'array-copy)" to
+improve efficiency in some situations.")
+              (<li> id: 'pfn2 "Post-finalization note added on 2021-01-17: The document
+was updated to explain that \"lexicographical order\" is the same as \"row-major order\"."))
 
         (<h2> "Abstract")
         (<p>
@@ -149,8 +154,9 @@ MathJax.Hub.Config({
              "and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$, will be denoted by $I_A$.  Initially, Bawden constructs "
              "$I_A$ such that $I_A(\\vec i)$ steps consecutively through the values $0,1,\\ldots,N-1$ as $\\vec i$ steps through the "
              "multi-indices $(l_0,\\ldots,l_{d-2},l_{d-1})$, $(l_0,\\ldots,l_{d-2},l_{d-1}+1)$, $\\ldots$, $(l_0,\\ldots,l_{d-2}+1,l_{d-1})$, etc., in lexicographical order, which means "
-             "that if $\\vec i$ and $\\vec j$ are two multi-indices, then $\\vec i<\\vec j$ iff the first coordinate $k$ where $\\vec i$ and $\\vec j$ "
-             "differ satisfies $\\vec i_k<\\vec j_k$.")
+             "that if $\\vec i$ and $\\vec j$ are two multi-indices, then $\\vec i<\\vec j$ if and only if the least coordinate $k$ where $\\vec i$ and $\\vec j$ "
+             "differ satisfies $\\vec i_k<\\vec j_k$.  This ordering of multi-indices is also known as "(<a> href: "https://en.wikipedia.org/w/index.php?title=Row-_and_column-major_order&oldid=995330290" "row-major order")
+             ", which is used in the programming language C to order the elements of multi-dimensional arrays.  In contrast, the programming language Fortran uses column-major order to order the elements of multi-dimensional arrays.")
         (<p> "In "(<code>'make-shared-array)", Bawden allows you to specify a new $r$-dimensional interval $D_B$ as the domain of a new array $B$, and a "
              "mapping $T_{BA}:D_B\\to D_A$ of the form $T_{BA}(\\vec i)=M\\vec i+\\vec b$; here $M$ is a $d\\times r$ matrix of integer values and "
              "$\\vec b$ is a $d$-vector.  So this mapping $T_{BA}$ is "(<i>'affine)", in that $T_{BA}(\\vec i)-T_{BA}(\\vec j)=M(\\vec i-\\vec j)$ is "
@@ -1515,7 +1521,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (format-lambda-list '(array-any pred array1 array2 "..."))
 
 (<p> "Assumes that "(<code>(<var>'array1))", "(<code>(<var>'array2))", etc., are arrays, all with the same domain, which we'll call "(<code>'interval)".  Also assumes that "(<code>(<var>'pred))" is a procedure that takes as many arguments as there are arrays and returns a single value.")
-(<p> (<code>'array-any)" first applies "(<code>"(array-getter "(<var>'array1)")")", etc., to the first element of "(<code>'interval)" in lexicographical order, to which values it then applies "(<code>(<var>'pred))".")
+(<p> (<code>'array-any)" first applies "(<code>"(array-getter "(<var>'array1)")")", etc., to the first element of "(<code>'interval)" in lexicographical order, to which value it then applies "(<code>(<var>'pred))".")
 (<p> "If the result of "(<code>(<var>'pred))" is not "(<code>'#f)", then that result is returned by "(<code>'array-any)".  If the result of "(<code>(<var>'pred))" is "(<code>'#f)", then "(<code>'array-any)" continues with the second element of "(<code>'interval)", etc., returning the first nonfalse value of  "(<code>(<var>'pred))".")
 (<p> "If "(<code>(<var>'pred))" always returns  "(<code>'#f)", then "(<code>'array-any)" returns "(<code>'#f)".")
 (<p> "If it happens that "(<code>(<var>'pred))" is applied to the results of applying "(<code>"(array-getter "(<var>'array1)")")", etc., to the last element of "(<code>'interval)", then this last call to "(<code>(<var>'pred))" is in tail position.")

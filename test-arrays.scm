@@ -1,3 +1,37 @@
+#|
+SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
+
+Copyright 2016, 2018, 2020 Bradley J Lucier.
+All Rights Reserved.
+
+Permission is hereby granted, free of charge,
+to any person obtaining a copy of this software
+and associated documentation files (the "Software"),
+to deal in the Software without restriction,
+including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice
+(including the next paragraph) shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+|#
+
+;;; A test program for SRFI 179:
+;;; Nonempty Intervals and Generalized Arrays (Updated)
+
 (begin
   ;; Uncomment this line to run test-arrays.scm in Gambit.
   (include "generic-arrays.scm"))
@@ -14,7 +48,7 @@
   (##namespace
    ("srfi/179#"
     ;; Internal SRFI 179 procedures that are either tested or called here.
-    %%compose-indexers make-%%array %%every %%interval->basic-indexer %%interval-lower-bounds %%interval-upper-bounds %%move-array-elements %%permutation-invert %%vector-every %%vector-permute %%vector-permute->list ))
+    %%compose-indexers make-%%array %%every %%interval->basic-indexer %%interval-lower-bounds %%interval-upper-bounds %%move-array-elements %%permutation-invert %%vector-every %%vector-permute %%vector-permute->list %%order-unknown %%compute-array-elements-in-order? %%array-domain %%array-indexer %%array-elements-in-order?))
   )
 
 (declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))
@@ -72,7 +106,7 @@
 
 (define (random-sample n #!optional (l 4))
   (list->vector (map (lambda (i)
-                       (random-integer 1 l))
+                       (random 1 l))
                      (iota n))))
 
 (define (random-permutation n)
@@ -189,19 +223,19 @@
       "interval-lower-bound: The first argument is not an interval: ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) #f)
-      "interval-lower-bound: The second argument is not an exact integer: ")
+      "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 1.)
-      "interval-lower-bound: The second argument is not an exact integer: ")
+      "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) -1)
-      "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 3)
-      "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 4)
-      "interval-lower-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (pp "interval-upper-bound error tests")
 
@@ -209,19 +243,19 @@
       "interval-upper-bound: The first argument is not an interval: ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) #f)
-      "interval-upper-bound: The second argument is not an exact integer: ")
+      "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 1.)
-      "interval-upper-bound: The second argument is not an exact integer: ")
+      "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) -1)
-      "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 3)
-      "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 4)
-      "interval-upper-bound: The second argument is not between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+      "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
 (pp "interval-lower-bounds->list error tests")
 
@@ -291,16 +325,16 @@
 
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 1/2)
-      "interval-projections: The second argument is not an exact integer: ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 1.)
-      "interval-projections: The second argument is not an exact integer: ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 0)
-      "interval-projections: The second argument is not between 0 and the dimension of the first argument (exclusive): ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 2)
-      "interval-projections: The second argument is not between 0 and the dimension of the first argument (exclusive): ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
 
 (pp "interval-projections result tests")
 
@@ -386,8 +420,8 @@
                                            (list->vector upper1))
                             (make-interval (list->vector lower2)
                                            (list->vector upper2)))
-          (and (%%every >= lower1 lower2)
-               (%%every <= upper1 upper2)))))
+          (and (%%every (lambda (x) (>= (car x) (cdr x))) (map cons lower1 lower2))
+               (%%every (lambda (x) (<= (car x) (cdr x))) (map cons upper1 upper2))))))
 
 (pp "interval-contains-multi-index?  error tests")
 
@@ -487,13 +521,17 @@
                      (list interval-lower-bounds->list
                            interval-upper-bounds->list)))))
 
+(define use-bignum-intervals #f)
 
-(define (random-interval #!optional (min 1) (max 8) )
+
+(define (random-interval #!optional (min 1) (max 6))
   ;; a random interval with min <= dimension < max
   ;; positive and negative lower bounds
   (let* ((lower
           (map (lambda (x)
-                 (random -10 10))
+                 (if use-bignum-intervals
+                     (random (- (expt 2 90)) (expt 2 90))
+                     (random -10 10)))
                (vector->list (make-vector (random min max)))))
          (upper
           (map (lambda (x)
@@ -512,19 +550,13 @@
     subinterval))
 
 
-(define (random-nonnegative-interval #!optional (min 1) (max 11) )
+(define (random-nonnegative-interval #!optional (min 1) (max 6) )
   ;; a random interval with min <= dimension < max
-  ;; positive and negative lower bounds
   (let* ((lower
-          (map (lambda (x)
-                 0)
-               (vector->list (make-vector (random min max)))))
+          (make-vector (random min max) 0))
          (upper
-          (map (lambda (x)
-                 (+ (random 1 11) x))
-               lower)))
-    (make-interval (list->vector lower)
-                   (list->vector upper))))
+          (vector-map (lambda (x) (random 1 7)) lower)))
+    (make-interval lower upper)))
 
 (define (random-positive-vector n #!optional (max 5))
   (vector-map (lambda (x)
@@ -567,7 +599,8 @@
                            #f
                            #f
                            #f
-                           #f)))
+                           #f
+                           %%order-unknown)))
 
 (pp "array-domain and array-getter error tests")
 
@@ -606,7 +639,8 @@
                              #f
                              #f
                              #f
-                             #f))))
+                             #f
+                             %%order-unknown))))
 
 (pp "array-setter error tests")
 
@@ -796,7 +830,7 @@
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let ((array
-         (make-specialized-array (random-interval 1 6)
+         (make-specialized-array (random-interval)
                                  u1-storage-class)))
     (test (array-elements-in-order? array)
           #t)))
@@ -854,7 +888,7 @@
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((base
-          (make-specialized-array (random-interval 1 6)
+          (make-specialized-array (random-interval)
                                   u1-storage-class))
          (domain
           (array-domain base))
@@ -899,7 +933,7 @@
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((base
-          (make-specialized-array (random-interval 1 6)
+          (make-specialized-array (random-interval)
                                   u1-storage-class))
          (domain
           (array-domain base))
@@ -955,6 +989,75 @@
           (array-sample base scales)))
     (test (array-elements-in-order? sampled)
           (sampled-array-elements-in-order? base scales))))
+
+;;; Now we need to test the precomputation and caching of array-elements-in-order?
+;;; The only places we precompute are
+;;; 1.  after creating a new specialized array
+;;; 2.  in %%specialized-array-translate
+;;; 3.  in %%specialized-array-curry
+;;; 4.  reshaping a specialized array in place.
+;;; So we need to check these situations.
+
+(let ((array (array-copy (make-array (make-interval '#(3 5)) list))))
+  (test (and (%%array-elements-in-order? array)
+             (%%compute-array-elements-in-order? (%%array-domain array) (%%array-indexer array)))
+        #t))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((array
+          (make-specialized-array (random-nonnegative-interval) u8-storage-class))
+         (ignore  ;; compute and cache the results
+          (array-elements-in-order? array))
+         (sampled-array
+          (array-sample array (random-sample (array-dimension array))))
+         (ignore  ;; compute and cache the results
+          ;; possibly not in order
+          (array-elements-in-order? sampled-array))
+         (translated-array
+          (array-translate array (vector-map (lambda (x) (random 10)) (make-vector (array-dimension array)))))
+         (translated-sampled-array
+          (array-translate sampled-array (vector-map (lambda (x) (random 10)) (make-vector (array-dimension array))))))
+    (test (%%array-elements-in-order? translated-array)
+          (%%compute-array-elements-in-order? (%%array-domain translated-array) (%%array-indexer translated-array)))
+    (test (%%array-elements-in-order? translated-sampled-array)
+          (%%compute-array-elements-in-order? (%%array-domain translated-sampled-array) (%%array-indexer translated-sampled-array)))))
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((array
+          (make-specialized-array (random-nonnegative-interval 2 4) u8-storage-class))
+         (d-1
+          (- (array-dimension array) 1))
+         (ignore
+          ;; compute and cache the result, in order
+          (array-elements-in-order? array))
+         (rotated-array
+          (array-rotate array 1))
+         (ignore  ;; compute and cache the results
+          ;; possibly not in order
+          (array-elements-in-order? rotated-array))
+         (sampled-array
+          (array-sample array (list->vector (cons 2 (make-list d-1 1)))))
+         (ignore
+          ;; almost definitely not in order,
+          ;; but if we curry it with dimension 1 the subarrays are in order.
+          (array-elements-in-order? sampled-array))
+         (curried-array
+          (array-ref (array-curry array d-1) (interval-lower-bound (array-domain array) 0)))
+         (curried-rotated-array
+          (array-ref (array-curry rotated-array d-1) (interval-lower-bound (array-domain rotated-array) 0)))
+         (curried-sampled-array
+          (array-ref (array-curry sampled-array d-1) (interval-lower-bound (array-domain sampled-array) 0))))
+    (test (array-elements-in-order? curried-array)
+          (%%compute-array-elements-in-order? (%%array-domain curried-array) (%%array-indexer curried-array)))
+    (test (array-elements-in-order? curried-rotated-array)
+          (%%compute-array-elements-in-order? (%%array-domain curried-rotated-array) (%%array-indexer curried-rotated-array)))
+    (test (array-elements-in-order? curried-sampled-array)
+          (%%compute-array-elements-in-order? (%%array-domain curried-sampled-array) (%%array-indexer curried-sampled-array)))))
+         
+;;; FIXME: array-reshape tests.
+
 
 (pp "%%move-array-elements tests")
 
@@ -1156,14 +1259,16 @@
 (test (specialized-array-default-mutable? 'a)
       "specialized-array-default-mutable?: The argument is not a boolean: ")
 
-(let* ((mutable-default (specialized-array-default-mutable?))
-       (ignore (specialized-array-default-mutable? #f))
-       (A (array-copy (make-array (make-interval '#(10)) (lambda args 10))))
-       (ignore (specialized-array-default-mutable? #t)))
-  (test (array-set! A 0 19)
-        "array-set!: The first argument is not mutable array: ")
-  (test (array-assign! A A)
-        "array-assign!: The destination is not a mutable array: "))
+(let ((mutable-default (specialized-array-default-mutable?)))
+  (specialized-array-default-mutable? #f)
+  (do ((i 1 (+ i 1)))
+      ((= i 6))
+    (let ((A (array-copy (make-array (make-interval (make-vector i 2)) (lambda args 10)))))
+      (test (apply array-set! A 0 (make-list i 0))
+            "array-set!: The first argument is not a mutable array: ")
+      (test (array-assign! A A)
+            "array-assign!: The destination is not a mutable array: ")))
+  (specialized-array-default-mutable? mutable-default))
 
 
 (pp "array-copy result tests")
@@ -1174,15 +1279,12 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((lower-bounds
-          (map (lambda (x) (random 4))
-               (vector->list (make-vector (random 1 7)))))
+  (let* ((domain
+          (random-interval))
+         (lower-bounds
+          (interval-lower-bounds->list domain))
          (upper-bounds
-          (map (lambda (x) (+ x (random 1 5)))
-               lower-bounds))
-         (domain
-          (make-interval (list->vector lower-bounds)
-                         (list->vector upper-bounds)))
+          (interval-upper-bounds->list domain))
          (array1
           (let ((alist '()))
             (make-array
@@ -1221,15 +1323,12 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((lower-bounds
-          (map (lambda (x) (random 4))
-               (vector->list (make-vector (random 1 7)))))
+  (let* ((domain
+          (random-interval))
+         (lower-bounds
+          (interval-lower-bounds->list domain))
          (upper-bounds
-          (map (lambda (x) (+ x (random 1 5)))
-               lower-bounds))
-         (domain
-          (make-interval (list->vector lower-bounds)
-                         (list->vector upper-bounds)))
+          (interval-upper-bounds->list domain))
          (array1
           (let ((alist '()))
             (make-array
@@ -1457,20 +1556,17 @@
                               (list generic-storage-class (lambda indices indices)))))
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((lower-bounds
-            (map (lambda (x) (random 4))
-                 (vector->list (make-vector (random 1 10)))))
+    (let* ((domain
+            (random-interval))
+           (lower-bounds
+            (interval-lower-bounds->list domain))
            (upper-bounds
-            (map (lambda (x) (+ x (random 1 4)))
-                 lower-bounds))
+            (interval-upper-bounds->list domain))
            (array-length
             (lambda (a)
               (let ((upper-bounds (interval-upper-bounds->list (array-domain a)))
                     (lower-bounds (interval-lower-bounds->list (array-domain a))))
                 (apply * (map - upper-bounds lower-bounds)))))
-           (domain
-            (make-interval (list->vector lower-bounds)
-                           (list->vector upper-bounds)))
            (arrays
             (map (lambda (ignore)
                    (let ((array-builder (vector-ref array-builders (random (vector-length array-builders)))))
@@ -1530,15 +1626,12 @@
                               (list generic-storage-class (lambda indices indices)))))
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((lower-bounds
-            (map (lambda (x) (random 4))
-                 (vector->list (make-vector (random 1 10)))))
+    (let* ((domain
+            (random-interval))
+           (lower-bounds
+            (interval-lower-bounds->list domain))
            (upper-bounds
-            (map (lambda (x) (+ x (random 1 4)))
-                 lower-bounds))
-           (domain
-            (make-interval (list->vector lower-bounds)
-                           (list->vector upper-bounds)))
+            (interval-upper-bounds->list domain))
            (arrays
             (map (lambda (ignore)
                    (let ((array-builder (vector-ref array-builders (random (vector-length array-builders)))))
@@ -1703,13 +1796,13 @@
       "array-curry: The first argument is not an array: ")
 
 (test (array-curry (make-array (make-interval '#(0) '#(1)) list)  'a)
-      "array-curry: The second argument is not an exact integer: ")
+      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): ")
 
 (test (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  0)
-      "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): ")
+      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): ")
 
 (test (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  2)
-      "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): ")
+      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): ")
 
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
@@ -1728,15 +1821,12 @@
                               (list generic-storage-class (lambda indices indices)))))
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((lower-bounds
-            (map (lambda (x) (random 4))
-                 (vector->list (make-vector (random 2 7)))))
+    (let* ((domain
+            (random-interval 2 7))
+           (lower-bounds
+            (interval-lower-bounds->list domain))
            (upper-bounds
-            (map (lambda (x) (+ x (random 1 5)))
-                 lower-bounds))
-           (domain
-            (make-interval (list->vector lower-bounds)
-                           (list->vector upper-bounds)))
+            (interval-upper-bounds->list domain))
            (array-builder
             (vector-ref array-builders (random (vector-length array-builders))))
            (random-array-element
@@ -1887,13 +1977,11 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((axes (local-iota 0 (random 1 5)))
-         (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
-         (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
-         (a (array-copy (make-array (make-interval lower-bounds
-                                                   upper-bounds)
-                                    list)
-                        generic-storage-class))
+  (let* ((interval (random-interval))
+         (axes (local-iota 0 (interval-dimension interval)))
+         (lower-bounds (interval-lower-bounds->vector interval))
+         (upper-bounds (interval-upper-bounds->vector interval))
+         (a (array-copy (make-array interval list)))
          (new-axis-order (vector-permute (list->vector axes) (random-permutation (length axes))))
          (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
     (let ((b (make-array (make-interval (vector-permute lower-bounds new-axis-order)
@@ -1937,13 +2025,11 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((axes (local-iota 0 (random 1 5)))
-         (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
-         (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
-         (a (array-copy (make-array (make-interval lower-bounds
-                                                   upper-bounds)
-                                    list)
-                        generic-storage-class))
+  (let* ((interval (random-interval))
+         (axes (local-iota 0 (interval-dimension interval)))
+         (lower-bounds (interval-lower-bounds->vector interval))
+         (upper-bounds (interval-upper-bounds->vector interval))
+         (a (array-copy (make-array interval list)))
          (new-axis-order (vector-permute (list->vector axes) (random-permutation (length axes))))
          (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
     (let ((b (make-array (make-interval (vector-permute lower-bounds new-axis-order)
@@ -2058,7 +2144,7 @@
 
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((domain (random-interval 1 6))
+    (let* ((domain (random-interval))
            (Array (let ((temp (make-array domain list)))
                     (case (random-integer 3)
                       ((0) temp)
@@ -2163,7 +2249,7 @@
 
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((domain (random-interval 1 6))
+    (let* ((domain (random-interval))
            (Array (let ((temp (make-array domain list)))
                     (case (random-integer 3)
                       ((0) temp)
@@ -2220,7 +2306,7 @@
 
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((domain (random-interval 1 6))
+    (let* ((domain (random-interval))
            (Array (let ((temp (make-array domain list)))
                     (case (random-integer 3)
                       ((0) temp)
@@ -2458,10 +2544,10 @@
           (myinterval-scale interval scales))))
 
 (test (array-sample 'a 'a)
-      "array-sample: The first argument is an array whose domain has nonzero lower bounds: ")
+      "array-sample: The first argument is not an array whose domain has zero lower bounds: ")
 
 (test (array-sample (make-array (make-interval '#(1) '#(2)) list) 'a)
-      "array-sample: The first argument is an array whose domain has nonzero lower bounds: ")
+      "array-sample: The first argument is not an array whose domain has zero lower bounds: ")
 
 (test (array-sample (make-array (make-interval '#(0) '#(2)) list) 'a)
       "array-sample: The second argument is not a vector of positive, exact, integers: ")
@@ -2762,7 +2848,7 @@
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
-  (let* ((domain (random-interval 1 6))
+  (let* ((domain (random-interval))
          (Array (let ((temp (make-array domain list)))
                   (case (random-integer 3)
                     ((0) temp)
@@ -2896,7 +2982,7 @@
 (do ((i 0 (fx+ i 1)))
     ((fx= i tests))
   (let* ((interval
-          (random-interval 1 6))
+          (random-interval))
          (subinterval
           (random-subinterval interval))
          (storage-class-and-initializer
@@ -2986,7 +3072,7 @@
                               )))
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((domain (random-interval 1 6))
+    (let* ((domain (random-interval))
            (builders (vector-ref array-builders (random-integer (vector-length array-builders))))
            (storage-class (car builders))
            (random-entry (cadr builders))
@@ -3071,7 +3157,7 @@
                               (list generic-storage-class (lambda indices indices)))))
   (do ((i 0 (+ i 1)))
       ((= i tests))
-    (let* ((domain (random-interval 1 6))
+    (let* ((domain (random-interval))
            (builders (vector-ref array-builders (random-integer (vector-length array-builders))))
            (storage-class (car builders))
            (random-entry (cadr builders))
@@ -3137,8 +3223,10 @@
    (make-array (make-interval '#(10 10))
                (lambda (i j) (if (= i j) 1 0)))))
 
-(test (array-ref 1 1 1)
-      "array-ref: The first argument is not an array: ")
+(do ((i 1 (+ i 1)))
+    ((= i 6))
+  (test (apply array-ref 1 (make-list i 0))
+        "array-ref: The first argument is not an array: "))
 
 (test (array-ref A-ref 1)
       "Wrong number of arguments passed to procedure ")
@@ -3159,7 +3247,7 @@
    u1-storage-class))
 
 (test (array-set! 1 1 1)
-      "array-set!: The first argument is not mutable array: ")
+      "array-set!: The first argument is not a mutable array: ")
 
 (test (array-set! B-set!)
       "Wrong number of arguments passed to procedure ")
@@ -4041,12 +4129,14 @@ that computes the componentwise products when we need them, the times are
                   2))
                 0 0))
 
+(define 2x2 (make-interval '#(2 2)))
+
 (time
  (array-for-each (lambda (A B C)
                    (2x2-matrix-multiply-into!
-                    (specialized-array-reshape A (make-interval '#(2 2)))
-                    (specialized-array-reshape B (make-interval '#(2 2)))
-                    (specialized-array-reshape C (make-interval '#(2 2)))))
+                    (specialized-array-reshape A 2x2)
+                    (specialized-array-reshape B 2x2)
+                    (specialized-array-reshape C 2x2)))
                  (array-curry A 1)
                  (array-curry B 1)
                  (array-curry C 1)))
@@ -4054,10 +4144,10 @@ that computes the componentwise products when we need them, the times are
 (time
  (array-for-each (lambda (A B C)
                    (array-assign!
-                    (specialized-array-reshape C (make-interval '#(2 2)))
+                    (specialized-array-reshape C 2x2)
                     (matrix-multiply
-                     (specialized-array-reshape A (make-interval '#(2 2)))
-                     (specialized-array-reshape B (make-interval '#(2 2))))))
+                     (specialized-array-reshape A 2x2)
+                     (specialized-array-reshape B 2x2))))
                  (array-curry A 1)
                  (array-curry B 1)
                  (array-curry C 1)))
