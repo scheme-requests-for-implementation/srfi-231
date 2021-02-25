@@ -79,7 +79,8 @@ MathJax.Hub.Config({
               (<li> "Draft #11 published: 2020-06-28")
               (<li> "Finalized: 2020-06-30")
               (<li> "Revised to fix errata:"
-                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)")))
+                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)")
+                          (<li> "2021-02-24 (Correct the note comparing  "(<code>'array-curry)" and "(<code>'array-tile)".)")))
               (<li> id: 'pfn1 "Post-finalization note added on 2020-12-10: The document
 was updated to improve the examples and to explain the use of "(<code>'array-copy)" to
 improve efficiency in some situations.")
@@ -1117,7 +1118,7 @@ $$
 (<p> "It is an error if the arguments of "(<code>'array-tile)" do not satisfy these conditions.")
 (<p> "If "(<code>(<var>'A))" is a specialized array, the subarrays of the result inherit safety and mutability from "(<code>(<var>'A))".")
 
-(<p> (<b> "Note: ")"The routines "(<code>'array-tile)" and "(<code>'array-curry)" both decompose an array into subarrays, but in different ways.  For example, if "(<code>(<var>'A))" is defined as "(<code>"(make-array (make-interval '#(10 10)) list)")", then "(<code>"(array-tile "(<var>'A)" '#(1 10))")" returns an array with domain "(<code>"(make-interval '#(10 1))")", each element of which is an array with domain "(<code>"(make-interval '#(1 10))")" (i.e., a two-dimensional array whose elements are two-dimensional arrays), while "(<code>"(array-curry "(<var>'A)" 1)")" returns an array with domain "(<code>"(make-interval '#(10))")", each element of which has domain "(<code>"(make-interval '#(10))")" (i.e., a one-dimensional array whose elements are one-dimensional arrays).")
+(<p> (<b> "Note: ")"The routines "(<code>'array-tile)" and "(<code>'array-curry)" both decompose an array into subarrays, but in different ways.  For example, if "(<code>(<var>'A))" is defined as "(<code>"(make-array (make-interval '#(10 10)) list)")", then "(<code>"(array-tile "(<var>'A)" '#(1 10))")" returns an array with domain "(<code>"(make-interval '#(10 1))")" for which the value at the multi-index "(<code>"("(<var>'i)" 0)")" is an array with domain "(<code>"(make-interval (vector "(<var>'i)" 0) (vector (+ "(<var>'i)" 1) 10))")" (i.e., a two-dimensional array whose elements are two-dimensional arrays), while "(<code>"(array-curry "(<var>'A)" 1)")" returns an array with domain "(<code>"(make-interval '#(10))")", each element of which has domain "(<code>"(make-interval '#(10))")" (i.e., a one-dimensional array whose elements are one-dimensional arrays).")
 
 
 (format-lambda-list '(array-translate array translation))
