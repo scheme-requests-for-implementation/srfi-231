@@ -34,7 +34,8 @@
       <li>Revised to fix errata:
         <ul>
           <li>2020-10-08 (Fix documentation for <code>interval-subset?</code>.)</li>
-          <li>2021-02-24 (Correct the note comparing  <code>array-curry</code> and <code>array-tile</code>.)</li></ul></li>
+          <li>2021-02-24 (Correct the note comparing  <code>array-curry</code> and <code>array-tile</code>.)</li>
+          <li>2021-05-02 (Correct documentation of <code>interval-cartesian-product</code>; document initial values for <code>(specialized-array-default-safe?)</code> and <code>(specialized-array-default-mutable?)</code>.</li></ul></li>
       <li id="pfn1">Post-finalization note added on 2020-12-10: The document
         was updated to improve the examples and to explain the use of <code>array-copy</code> to
         improve efficiency in some situations.</li>
@@ -396,8 +397,8 @@
     <p><b>Procedure: </b><code><a id="interval-cartesian-product">interval-cartesian-product</a> <var>interval</var> . <var>intervals</var></code></p>
     <p>Implements the Cartesian product of the intervals in <code>(cons <var>interval</var> <var>intervals</var>)</code>. Returns</p>
     <pre><code>
-(make-interval (list-&gt;vector (apply append (map array-lower-bounds-&gt;list (cons interval intervals))))
-               (list-&gt;vector (apply append (map array-upper-bounds-&gt;list (cons interval intervals)))))</code></pre>
+(make-interval (list-&gt;vector (apply append (map interval-lower-bounds-&gt;list (cons interval intervals))))
+               (list-&gt;vector (apply append (map interval-upper-bounds-&gt;list (cons interval intervals)))))</code></pre>
     <p>It is an error if any argument is not an interval.</p>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized array.
@@ -564,11 +565,13 @@
     <p>If <code><var>bool</var></code> is <code>#t</code> then the next call to <code>specialized-array-default-safe?</code> will return <code>#t</code>;
       if <code><var>bool</var></code> is <code>#f</code> then the next call to <code>specialized-array-default-safe?</code> will return <code>#f</code>;
       otherwise it is an error.</p>
+    <p>Initially, <code>(specialized-array-default-safe?)</code> returns <code>#f</code>.</p>
     <p><b>Procedure: </b><code><a id="specialized-array-default-mutable?">specialized-array-default-mutable?</a> [ <var>bool</var> ]</code></p>
     <p>With no argument, returns <code>#t</code> if newly constructed specialized arrays are mutable by default, and <code>#f</code> otherwise.</p>
     <p>If <code><var>bool</var></code> is <code>#t</code> then the next call to <code>specialized-array-default-mutable?</code> will return <code>#t</code>;
       if <code><var>bool</var></code> is <code>#f</code> then the next call to <code>specialized-array-default-mutable?</code> will return <code>#f</code>;
       otherwise it is an error.</p>
+    <p>Initially, <code>(specialized-array-default-mutable?)</code> returns <code>#t</code>.</p>
     <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Constructs a mutable specialized array from its arguments.</p>
     <p><code><var>interval</var></code> must be given as a nonempty interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>

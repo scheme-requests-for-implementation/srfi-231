@@ -33,7 +33,7 @@
          rel: "icon"
          sizes: "192x192"
          type: "image/png"
-         href: "favicon.png"
+         href: "/favicon.png"
          )
         (<link> href: "https://srfi.schemers.org/srfi.css"
                 rel: "stylesheet"
@@ -80,7 +80,8 @@ MathJax.Hub.Config({
               (<li> "Finalized: 2020-06-30")
               (<li> "Revised to fix errata:"
                     (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)")
-                          (<li> "2021-02-24 (Correct the note comparing  "(<code>'array-curry)" and "(<code>'array-tile)".)")))
+                          (<li> "2021-02-24 (Correct the note comparing  "(<code>'array-curry)" and "(<code>'array-tile)".)")
+                          (<li> "2021-05-02 (Correct documentation of "(<code>'interval-cartesian-product)"; document initial values for "(<code> "(specialized-array-default-safe?)")" and "(<code> "(specialized-array-default-mutable?)")".")))
               (<li> id: 'pfn1 "Post-finalization note added on 2020-12-10: The document
 was updated to improve the examples and to explain the use of "(<code>'array-copy)" to
 improve efficiency in some situations.")
@@ -612,8 +613,8 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
       (<var>'intervals)
       ")")". Returns")
 (<pre>(<code>"
-(make-interval (list->vector (apply append (map array-lower-bounds->list (cons interval intervals))))
-               (list->vector (apply append (map array-upper-bounds->list (cons interval intervals)))))"))
+(make-interval (list->vector (apply append (map interval-lower-bounds->list (cons interval intervals))))
+               (list->vector (apply append (map interval-upper-bounds->list (cons interval intervals)))))"))
 (<p> "It is an error if any argument is not an interval.")
 
 (<h2> "Storage classes")
@@ -818,12 +819,15 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#t)";
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
 otherwise it is an error.")
+(<p> "Initially, "(<code> "(specialized-array-default-safe?)")" returns "(<code>'#f)".")
 
 (format-lambda-list '(specialized-array-default-mutable? #\[ bool #\]))
 (<p> "With no argument, returns "(<code>'#t)" if newly constructed specialized arrays are mutable by default, and "(<code>'#f)" otherwise.")
 (<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-mutable?)" will return "(<code>'#t)";
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-mutable?)" will return "(<code>'#f)";
 otherwise it is an error.")
+(<p> "Initially, "(<code> "(specialized-array-default-mutable?)")" returns "(<code>'#t)".")
+
 
 (format-lambda-list '(make-specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
 (<p> "Constructs a mutable specialized array from its arguments.")
