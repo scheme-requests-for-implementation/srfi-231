@@ -1757,11 +1757,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%make-specialized-array interval
                                   storage-class
+                                  initial-value
                                   ;; must be mutable
                                   safe?)
   (let* ((body    ((storage-class-maker storage-class)
                    (%%interval-volume interval)
-                   (storage-class-default storage-class)))
+                   initial-value))
          (indexer (%%interval->basic-indexer interval)))
     (%%finish-specialized-array interval
                                 storage-class
@@ -1771,24 +1772,67 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 safe?
                                 #t)))         ;; new arrays are always in order
 
-
-(define (make-specialized-array interval
-                                #!optional
-                                (storage-class generic-storage-class)
-                                ;; must be mutable?
-                                (safe? (specialized-array-default-safe?)))
-  ;; Returns a mutable specialized-array
-  (cond ((not (interval? interval))
-         (error "make-specialized-array: The first argument is not an interval: " interval))
-        ((not (storage-class? storage-class))
-         (error "make-specialized-array: The second argument is not a storage-class: " interval storage-class))
-        ((not (boolean? safe?))
-         (error "make-specialized-array: The third argument is not a boolean: " interval storage-class safe?))
-        (else
-         (%%make-specialized-array interval
-                                   storage-class
+(define make-specialized-array
+  (case-lambda
+   ((interval)
+    (cond ((not (interval? interval))
+           (error "make-specialized-array: The first argument is not an interval: "
+                  interval))
+          (else
+           (%%make-specialized-array interval
+                                     generic-storage-class
+                                     (storage-class-default generic-storage-class)
                                    ;; must be mutable
-                                   safe?))))
+                                     (specialized-array-default-safe?)))))
+   ((interval storage-class)
+    (cond ((not (interval? interval))
+           (error "make-specialized-array: The first argument is not an interval: "
+                  interval storage-class))
+          ((not (storage-class? storage-class))
+           (error "make-specialized-array: The second argument is not a storage-class: "
+                  interval storage-class))
+          (else
+           (%%make-specialized-array interval
+                                     storage-class
+                                     (storage-class-default storage-class)
+                                   ;; must be mutable
+                                     (specialized-array-default-safe?)))))
+   ((interval storage-class initial-value)
+    (cond ((not (interval? interval))
+           (error "make-specialized-array: The first argument is not an interval: "
+                  interval storage-class initial-value))
+          ((not (storage-class? storage-class))
+           (error "make-specialized-array: The second argument is not a storage-class: "
+                  interval storage-class initial-value))
+          ((not ((storage-class-checker storage-class) initial-value))
+           (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
+                  interval storage-class initial-value))
+          (else
+           (%%make-specialized-array interval
+                                     storage-class
+                                     initial-value
+                                   ;; must be mutable
+                                     (specialized-array-default-safe?)))))
+   ((interval storage-class initial-value safe?)
+    (cond ((not (interval? interval))
+           (error "make-specialized-array: The first argument is not an interval: "
+                  interval storage-class initial-value safe?))
+          ((not (storage-class? storage-class))
+           (error "make-specialized-array: The second argument is not a storage-class: "
+                  interval storage-class initial-value safe?))
+          ((not ((storage-class-checker storage-class) initial-value))
+           (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
+                  interval storage-class initial-value safe?))
+          ((not (boolean? safe?))
+           (error "make-specialized-array: The fourth argument is not a boolean: "
+                  interval storage-class initial-value safe?))
+          (else
+           (%%make-specialized-array interval
+                                     storage-class
+                                     initial-value
+                                   ;; must be mutable
+                                     safe?))))))
+
 
 ;;; We consolidate all moving of array elements to the following procedure.
 
@@ -2161,6 +2205,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       safe?)
   (let ((result (%%make-specialized-array domain
                                           result-storage-class
+                                          (storage-class-default result-storage-class)
                                           safe?)))
     (%%move-array-elements result array "array-copy: ")
     (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
@@ -3517,6 +3562,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (result
                  (%%make-specialized-array interval
                                            result-storage-class
+                                           (storage-class-default result-storage-class)
                                            safe?))
                 (body
                  (%%array-body result))

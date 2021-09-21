@@ -95,7 +95,8 @@ MathJax.Hub.Config({
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
          (<ul>
           (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
-          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(array-reshape (array-copy ...))")" instead.")
+          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
+          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
          )
 
 
@@ -787,20 +788,23 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 if "(<code>(<var> 'array))" is not a mutable array.")
 
 
-(format-lambda-list '(make-specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
+(format-lambda-list '(make-specialized-array interval
+                                             #\[ storage-class "generic-storage-class" #\]
+                                             #\[ initial-value "(storage-class-default " storage-class")" #\]
+                                             #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "Constructs a mutable specialized array from its arguments.")
-(<p> (<code>(<var>'interval))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
+(<p> (<code>(<var>'interval))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'initial-value))" must be a value that can be manipulated by "(<code>(<var>'storage-class))"; if it is not given it defaults to "(<code>"(storage-class-default "(<var>'storage-class)")")". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
 
 (<p>"The body of the result is constructed as ")
 (<pre>
  (<code>"
   ((storage-class-maker "(<var>'storage-class)")
    (interval-volume "(<var>'interval)")
-   (storage-class-default "(<var>'storage-class)"))
+   "(<var>'initial-value)")
   "))
 (<p> "The indexer of the resulting array is constructed as the lexicographical mapping of "(<code>(<var>'interval))" onto the interval "(<code> "[0,(interval-volume "(<var>'interval)"))")".")
 
-(<p> "If "(<code>(<var>'safe))" is "(<code>'#t)", then the arguments of the getter and setter (including the value to be stored) of the resulting array are always checked for correctness.")
+(<p> "If "(<code>(<var>'safe))" is "(<code>'#t)", then the arguments of the getter and setter (including the value to be stored) of the resulting array are  checked for correctness.")
 (<p> "After correctness checking (if needed), "(<code>"(array-getter "(<var>'array)")")" is defined simply as ")
 (<pre>
  (<code>"

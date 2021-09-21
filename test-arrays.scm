@@ -823,8 +823,32 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (make-specialized-array (make-interval '#(0) '#(10)) 'a)
       "make-specialized-array: The second argument is not a storage-class: ")
 
-(test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a)
-      "make-specialized-array: The third argument is not a boolean: ")
+(test (make-specialized-array (make-interval '#(0) '#(10)) u16-storage-class 'a)
+      "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): ")
+
+(test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a 'a)
+      "make-specialized-array: The fourth argument is not a boolean: ")
+
+;;; let's test a few more
+
+(test (array-every (lambda (x) (eqv? x 42)) (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
+      #t)
+
+(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
+      (specialized-array-default-safe?))
+
+(test (let () (specialized-array-default-safe? #t) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
+      #t)
+
+(test (let () (specialized-array-default-safe? #f) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
+      #f)
+
+(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #t))
+      #t)
+
+(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #f))
+      #f)
+
 
 (define random-storage-class-and-initializer
   (let* ((storage-classes
@@ -3067,6 +3091,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (safe-specialized-destination
           (make-specialized-array (make-interval (make-vector d 10))
                                   u1-storage-class
+                                  0
                                   #t))
          (mutable-destination
           (make-array (array-domain safe-specialized-destination)

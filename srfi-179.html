@@ -32,7 +32,8 @@
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a> in the following ways:</p>
     <ul>
       <li><code>specialized-array-default-safe?</code> and <code>specialized-array-default-mutable?</code> are <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a> parameters.</li>
-      <li><code>array-copy</code> no longer allows changing the domain of the result, use <code>(array-reshape (array-copy ...))</code> instead.</li></ul>
+      <li><code>array-copy</code> no longer allows changing the domain of the result, use <code>(array-reshape (array-copy ...) <var>new-domain</var>)</code> instead.</li>
+      <li><code>make-specialized-array</code> now accepts an optional initial value with which to fill the new array.</li></ul>
     <h2>Overview</h2>
     <h3>Bawden-style arrays</h3>
     <p>In a <a href="https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>, as well as <code>make-array</code> and <code>make-shared-array</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$.  I'll note that his function <code>array-set!</code> put the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a routine <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a function from the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden called the mapping specified in <code>make-shared-array</code> <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
@@ -537,17 +538,17 @@
     <pre><code>(make-array <var>interval</var> <var>getter</var> <var>setter</var>)</code></pre>
     <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
       if <code><var>array</var></code> is not a mutable array.</p>
-    <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>initial-value</var> (storage-class-default  <var>storage-class</var> ) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Constructs a mutable specialized array from its arguments.</p>
-    <p><code><var>interval</var></code> must be given as a nonempty interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>
+    <p><code><var>interval</var></code> must be given as a nonempty interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>initial-value</var></code> must be a value that can be manipulated by <code><var>storage-class</var></code>; if it is not given it defaults to <code>(storage-class-default <var>storage-class</var>)</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>
     <p>The body of the result is constructed as </p>
     <pre><code>
   ((storage-class-maker <var>storage-class</var>)
    (interval-volume <var>interval</var>)
-   (storage-class-default <var>storage-class</var>))
+   <var>initial-value</var>)
   </code></pre>
     <p>The indexer of the resulting array is constructed as the lexicographical mapping of <code><var>interval</var></code> onto the interval <code>[0,(interval-volume <var>interval</var>))</code>.</p>
-    <p>If <code><var>safe</var></code> is <code>#t</code>, then the arguments of the getter and setter (including the value to be stored) of the resulting array are always checked for correctness.</p>
+    <p>If <code><var>safe</var></code> is <code>#t</code>, then the arguments of the getter and setter (including the value to be stored) of the resulting array are  checked for correctness.</p>
     <p>After correctness checking (if needed), <code>(array-getter <var>array</var>)</code> is defined simply as </p>
     <pre><code>
   (lambda multi-index
