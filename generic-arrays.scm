@@ -2170,29 +2170,20 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (array-copy array
                     #!optional
                     (result-storage-class generic-storage-class)
-                    (new-domain #f)
                     (mutable? (specialized-array-default-mutable?))
                     (safe? (specialized-array-default-safe?)))
   (cond ((not (array? array))
          (error "array-copy: The first argument is not an array: " array))
         ((not (storage-class? result-storage-class))
          (error "array-copy: The second argument is not a storage-class: " result-storage-class))
-        ((not (or (eq? new-domain #f) (%%interval? new-domain)))
-         (error "array-copy: The third argument is neither #f nor an interval: " new-domain))
-        ((and (%%interval? new-domain)
-              (not (= (%%interval-volume new-domain)
-                      (%%interval-volume (%%array-domain array)))))
-         (error
-          "array-copy: The volume of the third argument is not the volume of the domain of the first argument: "
-          array result-storage-class new-domain))
         ((not (boolean? mutable?))
-         (error "array-copy: The fourth argument is not a boolean: " mutable?))
+         (error "array-copy: The third argument is not a boolean: " mutable?))
         ((not (boolean? safe?))
-         (error "array-copy: The fifth argument is not a boolean: " safe?))
+         (error "array-copy: The fourth argument is not a boolean: " safe?))
         (else
          (%!array-copy array
                        result-storage-class
-                       (if new-domain new-domain (%%array-domain array))
+                       (%%array-domain array)
                        mutable?
                        safe?))))
 

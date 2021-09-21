@@ -30,7 +30,9 @@
       <li>Separate <b>the routines that specify the work to be done</b> (<code>array-map</code>, <code>array-outer-product</code>, etc.) from <b>the routines that actually do the work</b> (<code>array-copy</code>, <code>array-assign!</code>, <code>array-fold</code>, etc.). This approach <b>avoids temporary intermediate arrays</b> in computations.</li>
       <li>Encourage <b>bulk processing of arrays</b> rather than word-by-word operations.</li></ul>
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a> in the following ways:</p>
-    <ul></ul>
+    <ul>
+      <li><code>specialized-array-default-safe?</code> and <code>specialized-array-default-mutable?</code> are <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a> parameters.</li>
+      <li><code>array-copy</code> no longer allows changing the domain of the result, use <code>(array-reshape (array-copy ...))</code> instead.</li></ul>
     <h2>Overview</h2>
     <h3>Bawden-style arrays</h3>
     <p>In a <a href="https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>, as well as <code>make-array</code> and <code>make-shared-array</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$.  I'll note that his function <code>array-set!</code> put the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a routine <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a function from the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden called the mapping specified in <code>make-shared-array</code> <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
@@ -630,19 +632,17 @@ indexer:       (lambda multi-index
 ;; ((4 4) (4 5) (4 6) (4 7) (4 8))
 </code></pre>
     <p>This &quot;shearing&quot; operation cannot be achieved by combining the procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-translate</code>, <code>array-curry</code>, <code>array-reverse</code>, and <code>array-sample</code>.</p>
-    <p><b>Procedure: </b><code><a id="array-copy">array-copy</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>new-domain</var> #f ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
-    <p>Assumes that <code><var>array</var></code> is an array, <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>array</var></code>, <code><var>new-domain</var></code> is either <code>#f</code> or an interval with the same volume as <code>(array-domain <var>array</var>)</code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
-    <p>If <code><var>new-domain</var></code> is <code>#f</code>, then it is set to <code>(array-domain <var>array</var>)</code>. </p>
+    <p><b>Procedure: </b><code><a id="array-copy">array-copy</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p>Assumes that <code><var>array</var></code> is an array, <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>array</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>The specialized array returned by <code>array-copy</code> can be defined conceptually by:</p>
     <pre><code>
 (list-&gt;array (array-&gt;list array)
-             new-domain
+             (array-domain array)
              result-storage-class
              mutable?
              safe?)
 </code></pre>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
-    <p><b>Note: </b>If <code><var>new-domain</var></code> is not the same as <code>(array-domain <var>array</var>)</code>, one can think of the resulting array as a <i>reshaped</i> version of <code><var>array</var></code>.</p>
     <p><b>Procedure: </b><code><a id="array-curry">array-curry</a> <var>array</var> <var>inner-dimension</var></code></p>
     <p>If <code><var>array</var></code> is an array whose domain is an interval  $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$, and <code><var>inner-dimension</var></code> is an exact integer strictly between $0$ and $d$, then <code>array-curry</code> returns an immutable array with domain $[l_0,u_0)\times\cdots\times[l_{d-\text{inner-dimension}-1},u_{d-\text{inner-dimension}-1})$, each of whose entries is in itself an array with domain $[l_{d-\text{inner-dimension}},u_{d-\text{inner-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$.</p>
     <p>For example, if <code>A</code> and <code>B</code> are defined by </p>

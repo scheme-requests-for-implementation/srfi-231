@@ -93,7 +93,9 @@ MathJax.Hub.Config({
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
-        (<ul>
+         (<ul>
+          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
+          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(array-reshape (array-copy ...))")" instead.")
          )
 
 
@@ -903,26 +905,22 @@ indexer:       (lambda multi-index
 
 (format-lambda-list '(array-copy array
                                  #\[ result-storage-class "generic-storage-class" #\]
-                                 #\[ new-domain #f #\]
                                  #\[ mutable? "(specialized-array-default-mutable?)" #\]
                                  #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "Assumes that "
      (<code>(<var> 'array))" is an array, "
-     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'array))", "
-     (<code>(<var> 'new-domain))" is either "(<code>'#f)" or an interval with the same volume as "(<code>"(array-domain "(<var>'array)")")", and "
+     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'array))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> "If "(<code>(<var> 'new-domain))" is "(<code>'#f)", then it is set to "(<code>"(array-domain "(<var>'array)")")". ")
 (<p> "The specialized array returned by "(<code> 'array-copy)" can be defined conceptually by:")
 (<pre>
  (<code>"
 (list->array (array->list array)
-             new-domain
+             (array-domain array)
              result-storage-class
              mutable?
              safe?)
 "))
 (<p> "It is an error if the arguments do not satisfy these conditions.")
-(<p>(<b> "Note: ")"If "(<code>(<var> 'new-domain))" is not the same as "(<code>"(array-domain "(<var>'array)")")", one can think of the resulting array as a "(<i>'reshaped)" version of "(<code>(<var> 'array))".")
 
 
 (format-lambda-list '(array-curry array inner-dimension))

@@ -605,6 +605,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (random-nonnegative-interval #!optional (min 1) (max 6) )
   ;; a random interval with min <= dimension < max
+  ;; positive and negative lower bounds
   (let* ((lower
           (make-vector (random min max) 0))
          (upper
@@ -1276,13 +1277,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                               list)
                   generic-storage-class
                   'a)
-      "array-copy: The third argument is neither #f nor an interval: ")
+      "array-copy: The third argument is not a boolean: ")
 
-(test (array-copy (make-array (make-interval '#(1) '#(2))
-                              list)
-                  generic-storage-class
-                  (make-interval '#(10)))
-      "array-copy: The volume of the third argument is not the volume of the domain of the first argument: ")
 
 (test (array-copy (make-array (make-interval '#(1) '#(2))
                               list)
@@ -1290,14 +1286,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                   #f
                   'a)
       "array-copy: The fourth argument is not a boolean: ")
-
-(test (array-copy (make-array (make-interval '#(1) '#(2))
-                              list)
-                  generic-storage-class
-                  #f
-                  #f
-                  'a)
-      "array-copy: The fifth argument is not a boolean: ")
 
 ;; We gotta make sure than the error checks work in all dimensions ...
 
@@ -3159,7 +3147,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-safe?
        (array-copy (make-array (make-interval '#(0 0) '#(10 10)) list)
                    generic-storage-class
-                   #f
                    #t
                    #t))
       #t)
@@ -3168,7 +3155,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-safe?
        (array-copy (make-array (make-interval '#(0 0) '#(10 10)) list)
                    generic-storage-class
-                   #f
                    #t
                    #f))
       #f)
@@ -3196,7 +3182,6 @@ OTHER DEALINGS IN THE SOFTWARE.
            (invalid-entry (list-ref (caddr builders) (random 2)))
            (Array (array-copy (make-array domain random-entry)
                               storage-class
-                              #f
                               #t   ; mutable
                               #t)) ; safe
            (getter (array-getter Array))
