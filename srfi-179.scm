@@ -18,6 +18,10 @@
   (<p> (<b> "Variable: ")
        (<code> (<a> id: name name))))
 
+(define (format-parameter name)
+  (<p> (<b> "Parameter: ")
+       (<code> (<a> id: name name))))
+
 (with-output-to-file
     "srfi-179.html"
   (lambda()
@@ -66,6 +70,7 @@ MathJax.Hub.Config({
         
         
         (<ul>
+         (<li> "Received: ")
          )
 
         (<h2> "Abstract")
@@ -288,15 +293,15 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#c128-storage-class" "c128-storage-class")
                  ".")
            (<dt> "Arrays")
-           (<dd> (<a> href: "#make-array" "make-array")END
+           (<dd> (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
+                 (<a> href: "#specialized-array-default-mutable?" "specialized-array-default-mutable?") END
+                 (<a> href: "#make-array" "make-array")END
                  (<a> href: "#array?" "array?")END
                  (<a> href: "#array-domain" "array-domain")END
                  (<a> href: "#array-getter" "array-getter")END
                  (<a> href: "#array-dimension" "array-dimension")END
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
-                 (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
-                 (<a> href: "#specialized-array-default-mutable?" "specialized-array-default-mutable?") END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
                  (<a> href: "#array-storage-class" "array-storage-class")END
@@ -660,6 +665,14 @@ manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 (<h2> "Arrays")
 (<p> "Arrays are a data type distinct from other Scheme data types.")
 
+(<h3> "Parameters")
+
+(format-parameter 'specialized-array-default-safe?)
+(<p> "A parameter as specified in SRFI 39. Initially, "(<code> "(specialized-array-default-safe?)")" returns "(<code>'#f)". It is an error to call "(<code> "(specialized-array-default-safe? "(<var>'arg)")")" if "(<code>(<var>'arg))" is not a boolean.")
+
+(format-parameter 'specialized-array-default-mutable?)
+(<p> "A parameter as specified in SRFI 39. Initially, "(<code> "(specialized-array-default-mutable?)")" returns "(<code>'#t)". It is an error to call "(<code> "(specialized-array-default-mutable? "(<var>'arg)")")" if "(<code>(<var>'arg))" is not a boolean.")
+
 (<h3> "Procedures")
 
 (format-lambda-list '(make-array interval getter #\[ setter #\]))
@@ -770,20 +783,6 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
  (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)" "(<var> 'setter)")"))
 (<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". It is an error to call "(<code> 'array-setter)"
 if "(<code>(<var> 'array))" is not a mutable array.")
-
-(format-lambda-list '(specialized-array-default-safe? #\[ bool #\]))
-(<p> "With no argument, returns "(<code>'#t)" if newly constructed specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
-(<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#t)";
-if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
-otherwise it is an error.")
-(<p> "Initially, "(<code> "(specialized-array-default-safe?)")" returns "(<code>'#f)".")
-
-(format-lambda-list '(specialized-array-default-mutable? #\[ bool #\]))
-(<p> "With no argument, returns "(<code>'#t)" if newly constructed specialized arrays are mutable by default, and "(<code>'#f)" otherwise.")
-(<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-mutable?)" will return "(<code>'#t)";
-if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-mutable?)" will return "(<code>'#f)";
-otherwise it is an error.")
-(<p> "Initially, "(<code> "(specialized-array-default-mutable?)")" returns "(<code>'#t)".")
 
 
 (format-lambda-list '(make-specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))

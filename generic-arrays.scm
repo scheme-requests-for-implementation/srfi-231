@@ -774,26 +774,20 @@ OTHER DEALINGS IN THE SOFTWARE.
   )
 
 (define specialized-array-default-safe?
-  (let ((%%specialized-array-default-safe? #f))
-    (case-lambda
-     (() %%specialized-array-default-safe?)
-     ((bool)
-      (cond ((not (boolean? bool))
-             (error "specialized-array-default-safe?: The argument is not a boolean: " bool))
-            (else
-             (set! %%specialized-array-default-safe? bool)))))))
+  (make-parameter
+   #f
+   (lambda (bool)
+     (if (boolean? bool)
+         bool
+         (error "specialized-array-default-safe?: The argument is not a boolean: " bool)))))
 
 (define specialized-array-default-mutable?
-  (let ((%%specialized-array-default-mutable? #t))
-    (case-lambda
-     (()
-      %%specialized-array-default-mutable?)
-     ((bool)
-      (cond ((not (boolean? bool))
-             (error "specialized-array-default-mutable?: The argument is not a boolean: " bool))
-            (else
-             (set! %%specialized-array-default-mutable? bool)))))))
-
+  (make-parameter
+   #t
+   (lambda (bool)
+     (if (boolean? bool)
+         bool
+         (error "specialized-array-default-mutable?: The argument is not a boolean: " bool)))))
 
 (declare (not inline))
 
