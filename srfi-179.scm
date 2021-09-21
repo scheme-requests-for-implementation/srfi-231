@@ -28,7 +28,7 @@
        lang: 'en
        (<head>
         (<meta> charset: "utf-8")
-        (<title> "SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)")
+        (<title> "SRFI XXX: Nonempty Intervals and Generalized Arrays (Followup)")
         (<link>
          rel: "icon"
          sizes: "192x192"
@@ -49,44 +49,24 @@ MathJax.Hub.Config({
                   src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
         )
        (<body>
-        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) "179: Nonempty Intervals and Generalized Arrays (Updated)")
+        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) "XXX: Nonempty Intervals and Generalized Arrays (Updated)")
 
         (<p> " by Bradley J. Lucier")
 
         (<h2> "Status")
-        (<p> "This SRFI is currently in " (<em> "final") " status.  Here is "
+        (<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
              (<a> href: "https://srfi.schemers.org/srfi-process.html" "an explanation")
              " of each status that a SRFI can hold.  To provide input on this SRFI, please send email to "
-             (<code> (<a> href: "mailto:srfi+minus+179+at+srfi+dotschemers+dot+org"
-                          "srfi-179@" (<span> class: "antispam" "nospam") "srfi.schemers.org"))
+             (<code> (<a> href: "mailto:srfi+minus+XXX+at+srfi+dotschemers+dot+org"
+                          "srfi-XXX@" (<span> class: "antispam" "nospam") "srfi.schemers.org"))
              ".  To subscribe to the list, follow "
              (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
              ".  You can access previous messages via the mailing list "
-             (<a> href: "https://srfi-email.schemers.org/srfi-179" "archive")".")
+             (<a> href: "https://srfi-email.schemers.org/srfi-XXX" "archive")".")
         
         
-        (<ul> (<li> "Received: 2020-01-11")
-              (<li> "Draft #1 published: 2020-01-11")
-              (<li> "Draft #2 published: 2020-01-25")
-              (<li> "Draft #3 published: 2020-02-04")
-              (<li> "Draft #4 published: 2020-03-25")
-              (<li> "Draft #5 published: 2020-04-30")
-              (<li> "Draft #6 published: 2020-05-03")
-              (<li> "Draft #7 published: 2020-05-08")
-              (<li> "Draft #8 published: 2020-05-17")
-              (<li> "Draft #9 published: 2020-05-31")
-              (<li> "Draft #10 published: 2020-06-02")
-              (<li> "Draft #11 published: 2020-06-28")
-              (<li> "Finalized: 2020-06-30")
-              (<li> "Revised to fix errata:"
-                    (<ul> (<li> "2020-10-08 (Fix documentation for "(<code>'interval-subset?)".)")
-                          (<li> "2021-02-24 (Correct the note comparing  "(<code>'array-curry)" and "(<code>'array-tile)".)")
-                          (<li> "2021-05-02 (Correct documentation of "(<code>'interval-cartesian-product)"; document initial values for "(<code> "(specialized-array-default-safe?)")" and "(<code> "(specialized-array-default-mutable?)")".")))
-              (<li> id: 'pfn1 "Post-finalization note added on 2020-12-10: The document
-was updated to improve the examples and to explain the use of "(<code>'array-copy)" to
-improve efficiency in some situations.")
-              (<li> id: 'pfn2 "Post-finalization note added on 2021-01-17: The document
-was updated to explain that \"lexicographical order\" is the same as \"row-major order\"."))
+        (<ul>
+         )
 
         (<h2> "Abstract")
         (<p>
@@ -107,32 +87,9 @@ was updated to explain that \"lexicographical order\" is the same as \"row-major
          (<li> "Separate "(<b>"the routines that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the routines that actually do the work")" ("(<code>'array-copy)", "(<code>'array-assign!)", "(<code>'array-fold)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
-         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-122/" "SRFI 122")" in the following ways:")
+         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
         (<ul>
-         (<li> "The procedures "
-               (<code>'specialized-array-default-mutable?)", "
-               (<code>'interval-for-each)", "
-               (<code>'interval-cartesian-product)", "
-               (<code>'interval-rotate)" and "
-               (<code>'array-elements-in-order?)", "
-               (<code>'array-outer-product)", "
-               (<code>'array-tile)", "
-               (<code>'array-rotate)", "
-               (<code>'array-reduce)", " 
-               (<code>'array-assign!)", "
-               (<code>'array-ref)", "
-               (<code>'array-set!)", and "
-               (<code>'specialized-array-reshape)
-               " have been added together with some examples.")
-         (<li> "Global variables "
-               (<code>'f8-storage-class)" and "
-               (<code>'f16-storage-class)" have been added.")
-         (<li> "Homogeneous storage classes must be implemented using homogeneous vectors, or be defined as "(<code>'#f)".")
-         (<li> "The procedure "(<code>'make-interval)" now takes one or two arguments.")
-         (<li> "Specialized arrays can be mutable or immutable; the default, which can be changed, is mutable. Shared arrays inherit safety and mutability from source arrays.")
-         (<li> "The discussion of Haar transforms as examples of separable transforms has been corrected.")
-         (<li> "The documentation has a few more examples of image processing algorithms.")
-         (<li> "Some matrix examples have been added to this document."))
+         )
 
 
         (<h2> "Overview")
@@ -1761,7 +1718,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 in the implementation are: DSSSL-style optional and keyword arguments; a
 unique object to indicate absent arguments; "(<code>"define-structure")";
 and "(<code>"define-macro")".")
-(<p> "There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-179"  "git repository")" of this document, a sample implementation, a test file, and other materials.")
+(<p> "There is a "(<a> href: "https://github.com/scheme-requests-for-implementation/srfi-XXX"  "git repository")" of this document, a sample implementation, a test file, and other materials.")
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI
