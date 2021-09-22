@@ -137,7 +137,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%finish-interval lower-bounds upper-bounds)
   (make-%%interval (vector-length upper-bounds)
-                   #f                            
+                   #f
                    (vector-copy lower-bounds)
                    (vector-copy upper-bounds)))
 
@@ -656,14 +656,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; This version assumes, and may use, that f is thread-safe and that operator is associative.
 ;;; The order of application of f and operator is not specified.
 
-(define (%%interval-fold f operator identity interval)
+(define (%%interval-foldl f operator identity interval)
   (case (%%interval-dimension interval)
     ((1) (let ((lower-i (%%interval-lower-bound interval 0))
                (upper-i (%%interval-upper-bound interval 0)))
            (let i-loop ((i lower-i) (result identity))
              (if (= i upper-i)
                  result
-                 (i-loop (+ i 1) (operator (f i) result))))))
+                 (i-loop (+ i 1) (operator result (f i)))))))
     ((2) (let ((lower-i (%%interval-lower-bound interval 0))
                (lower-j (%%interval-lower-bound interval 1))
                (upper-i (%%interval-upper-bound interval 0))
@@ -674,7 +674,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (let j-loop ((j lower-j) (result result))
                    (if (= j upper-j)
                        (i-loop (+ i 1) result)
-                       (j-loop (+ j 1) (operator (f i j) result))))))))
+                       (j-loop (+ j 1) (operator result (f i j)))))))))
     ((3) (let ((lower-i (%%interval-lower-bound interval 0))
                (lower-j (%%interval-lower-bound interval 1))
                (lower-k (%%interval-lower-bound interval 2))
@@ -690,7 +690,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (let k-loop ((k lower-k) (result result))
                          (if (= k upper-k)
                              (j-loop (+ j 1) result)
-                             (k-loop (+ k 1) (operator (f i j k) result))))))))))
+                             (k-loop (+ k 1) (operator result (f i j k)))))))))))
     ((4) (let ((lower-i (%%interval-lower-bound interval 0))
                (lower-j (%%interval-lower-bound interval 1))
                (lower-k (%%interval-lower-bound interval 2))
@@ -711,7 +711,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (let l-loop ((l lower-l) (result result))
                                (if (= l upper-l)
                                    (k-loop (+ k 1) result)
-                                   (l-loop (+ l 1) (operator (f i j k l) result))))))))))))
+                                   (l-loop (+ l 1) (operator result (f i j k l)))))))))))))
     (else
      (let* ((lower-bounds (%%interval-lower-bounds->list interval))
             (upper-bounds (%%interval-upper-bounds->list interval))
@@ -737,7 +737,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (begin
                        (set-car! arg-tail i)
                        (loop (+ i 1)
-                             (operator (apply f arg) result)))))
+                             (operator result (apply f arg))))))
                (let loop ((i lower-bound)
                           (result result))
                  (if (= i upper-bound)
@@ -3453,26 +3453,26 @@ OTHER DEALINGS IN THE SOFTWARE.
                          (%%array-domain array)))))
 
 
-(define (%%array-fold op id a)
-  (%%interval-fold (%%array-getter a) op id (%%array-domain a)))
+(define (%%array-foldl op id a)
+  (%%interval-foldl (%%array-getter a) op id (%%array-domain a)))
 
-(define (array-fold op id a)
+(define (array-foldl op id a)
   (cond ((not (procedure? op))
-         (error "array-fold: The first argument is not a procedure: " op id a))
+         (error "array-foldl: The first argument is not a procedure: " op id a))
         ((not (array? a))
-         (error "array-fold: The third argument is not an array: " op id a))
+         (error "array-foldl: The third argument is not an array: " op id a))
         (else
-         (%%array-fold op id a))))
+         (%%array-foldl op id a))))
 
-(define (array-fold-right op id a)
+(define (array-foldr op id a)
   (cond ((not (procedure? op))
-         (error "array-fold-right: The first argument is not a procedure: " op id a))
+         (error "array-foldr: The first argument is not a procedure: " op id a))
         ((not (array? a))
-         (error "array-fold-right: The third argument is not an array: " op id a))
+         (error "array-foldr: The third argument is not an array: " op id a))
         (else
          ;; We let array-reverse do a redundant array? check to not generate
          ;; a new vector of #t's.
-         (%%array-fold op id (array-reverse a)))))
+         (%%array-foldl (lambda (result new) (op new result)) id (array-reverse a)))))
 
 (define (array-reduce sum A)
   (cond ((not (array? A))
@@ -3536,7 +3536,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (cond ((not (array? array))
          (error "array->list: The argument is not an array: " array))
         (else
-         (array-fold-right cons '() array))))
+         (array-foldr cons '() array))))
 
 (define (list->array l
                      interval

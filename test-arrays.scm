@@ -126,7 +126,6 @@ OTHER DEALINGS IN THE SOFTWARE.
       (random-source-pseudo-randomize!
        test-random-source
        0 j))))
-  
 
 (define test-random-integer
   (random-source-make-integers
@@ -489,15 +488,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (let ((interval   (make-interval '#(1 2 3) '#(4 5 6)))
       (interval-2 (make-interval '#(10 11 12) '#(13 14 15))))
-  (if (not (array-fold (lambda (x result)
-                         (and result (apply interval-contains-multi-index? interval x)))
-                       #t
-                       (make-array interval list)))
+  (if (not (array-foldl (lambda (result x)
+                          (and result (apply interval-contains-multi-index? interval x)))
+                        #t
+                        (make-array interval list)))
       (error "these should all be true"))
-  (if (not (array-fold (lambda (x result)
-                         (and result (not (apply interval-contains-multi-index? interval x))))
-                       #t
-                       (make-array interval-2 list)))
+  (if (not (array-foldl (lambda (result x)
+                          (and result (not (apply interval-contains-multi-index? interval x))))
+                        #t
+                        (make-array interval-2 list)))
       (error "these should all be false")))
 
 (pp "interval-for-each error tests")
@@ -724,12 +723,12 @@ OTHER DEALINGS IN THE SOFTWARE.
             domain))))
 
 (define (myindexer= indexer1 indexer2 interval)
-  (array-fold (lambda (x y) (and x y))
-              #t
-              (make-array interval
-                          (lambda args
-                            (= (apply indexer1 args)
-                               (apply indexer2 args))))))
+  (array-foldl (lambda (x y) (and x y))
+               #t
+               (make-array interval
+                           (lambda args
+                             (= (apply indexer1 args)
+                                (apply indexer2 args))))))
 
 
 (define (my-indexer base lower-bounds increments)
@@ -794,12 +793,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (myarray= array1 array2)
   (and (interval= (array-domain array1)
                   (array-domain array2))
-       (array-fold (lambda (vs result)
-                     (and (equal? (car vs)
-                                  (cadr vs))
-                          result))
-                   #t
-                   (array-map list array1 array2))))
+       (array-foldl (lambda (result vs)
+                      (and (equal? (car vs)
+                                   (cadr vs))
+                           result))
+                    #t
+                    (array-map list array1 array2))))
 
 (pp "array body, indexer, storage-class, and safe? error tests")
 
@@ -1149,7 +1148,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           (%%compute-array-elements-in-order? (%%array-domain curried-rotated-array) (%%array-indexer curried-rotated-array)))
     (test (array-elements-in-order? curried-sampled-array)
           (%%compute-array-elements-in-order? (%%array-domain curried-sampled-array) (%%array-indexer curried-sampled-array)))))
-         
+
 (next-test-random-source-state!)
 
 ;;; FIXME: array-reshape tests.
@@ -1259,18 +1258,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (if (equal? storage-class generic-storage-class)
                       "In order, no checks needed, generic-storage-class"
                       "In order, no checks needed")))
-        (test (equal? (array->list rotated-specialized-source)
-                      (array->list specialized-destination))
-              #t)
+        (test (array->list rotated-specialized-source)
+              (array->list specialized-destination))
         ;; copy to adjacent elements of destination, checking needed
         ;; arrays of different shapes
         (test (%%move-array-elements specialized-destination rotated-source "test: ")
               (if (equal? storage-class generic-storage-class)
                   "In order, no checks needed, generic-storage-class"
                   "In order, checks needed"))
-        (test (equal? (array->list rotated-source)
-                      (array->list specialized-destination))
-              #t)
+        (test (array->list rotated-source)
+              (array->list specialized-destination))
         ;; copy to non-adjacent elements of destination, no checking needed
         (test (%%move-array-elements (array-reverse specialized-destination) specialized-source "test: ")
               (if (array-elements-in-order? (array-reverse specialized-destination))
@@ -1592,19 +1589,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-(pp "array-fold error tests")
+(pp "array-foldl error tests")
 
-(test (array-fold 1 1 1)
-      "array-fold: The first argument is not a procedure: ")
+(test (array-foldl 1 1 1)
+      "array-foldl: The first argument is not a procedure: ")
 
-(test (array-fold list 1 1)
-      "array-fold: The third argument is not an array: ")
+(test (array-foldl list 1 1)
+      "array-foldl: The third argument is not an array: ")
 
-(test (array-fold-right 1 1 1)
-      "array-fold-right: The first argument is not a procedure: ")
+(test (array-foldr 1 1 1)
+      "array-foldr: The first argument is not a procedure: ")
 
-(test (array-fold-right list 1 1)
-      "array-fold-right: The third argument is not an array: ")
+(test (array-foldr list 1 1)
+      "array-foldr: The third argument is not an array: ")
 
 (pp "array-for-each error tests")
 
@@ -1680,24 +1677,24 @@ OTHER DEALINGS IN THE SOFTWARE.
             (make-array domain
                         (lambda indices
                           (map (lambda (g) (apply g indices)) getters)))))
-      (if (not (and (myarray= result-array-1 result-array-2)
-                    (myarray= result-array-2 result-array-3)
-                    (equal? (vector->list (array-body result-array-2))
-                            (reverse (array-fold (lambda (x y) (cons x y))
-                                                   '()
-                                                   result-array-2)))
-                    (equal? (vector->list (array-body result-array-2))
-                            (reverse (let ((result '()))
-                                       (array-for-each (lambda (f)
-                                                         (set! result (cons f result)))
-                                                       result-array-2)
-                                       result)))
-                    (equal?  (map array-length arrays)
-                             (map (lambda (array)
-                                    ((storage-class-length (array-storage-class array)) (array-body array)))
-                                  arrays))))
-          (pp "Arghh"))
-      )))
+      (test (myarray= result-array-1 result-array-2)
+            #t)
+      (test (myarray= result-array-2 result-array-3)
+            #t)
+      (test (vector->list (array-body result-array-2))
+            (array-foldr (lambda (x y) (cons x y))
+                         '()
+                         result-array-2))
+      (test (vector->list (array-body result-array-2))
+            (reverse (let ((result '()))
+                       (array-for-each (lambda (f)
+                                         (set! result (cons f result)))
+                                       result-array-2)
+                       result)))
+      (test  (map array-length arrays)
+             (map (lambda (array)
+                    ((storage-class-length (array-storage-class array)) (array-body array)))
+                  arrays)))))
 
 (next-test-random-source-state!)
 
@@ -1747,19 +1744,20 @@ OTHER DEALINGS IN THE SOFTWARE.
             (make-array domain
                         (lambda indices
                           (map (lambda (g) (apply g indices)) getters)))))
-      (if (not (and (myarray= result-array-1 result-array-2)
-                    (myarray= result-array-2 result-array-3)
-                    (equal? (vector->list (array-body result-array-2))
-                            (reverse (array-fold cons
-                                                 '()
-                                                 result-array-2)))
-                    (equal? (vector->list (array-body result-array-2))
-                            (reverse (let ((result '()))
-                                       (array-for-each (lambda (f)
-                                                         (set! result (cons f result)))
-                                                       result-array-2)
-                                       result)))))
-          (pp "Arghh")))))
+      (test (myarray= result-array-1 result-array-2)
+            #t)
+      (test (myarray= result-array-2 result-array-3)
+            #t)
+      (test (vector->list (array-body result-array-2))
+            (array-foldr cons
+                         '()
+                         result-array-2))
+      (test (vector->list (array-body result-array-2))
+            (reverse (let ((result '()))
+                       (array-for-each (lambda (f)
+                                         (set! result (cons f result)))
+                                       result-array-2)
+                       result))))))
 
 (next-test-random-source-state!)
 
@@ -1802,11 +1800,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     i 1)))))
 
 (test (array-reduce 2x2-multiply A)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A))
+      (array-foldr 2x2-multiply (matrix 1 0 0 1) A))
 
-(test (not (equal? (array-reduce 2x2-multiply A)
-                   (array-fold 2x2-multiply (matrix 1 0 0 1) A)))
-      #t)
+(test (array-reduce 2x2-multiply A)
+      (array-foldl 2x2-multiply (matrix 1 0 0 1) A))
 
 
 (define A_2 (make-array (make-interval '#(1 1) '#(3 7))
@@ -1818,11 +1815,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i -1)))))
 
 (test (array-reduce 2x2-multiply A_2)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_2))
+      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_2))
 
-(test (equal? (array-reduce 2x2-multiply A_2)
-              (array-fold 2x2-multiply (matrix 1 0 0 1) A_2))
-      #f)
+(test (array-reduce 2x2-multiply A_2)
+      (array-foldl 2x2-multiply (matrix 1 0 0 1) A_2))
 
 (test (equal? (array-reduce 2x2-multiply A_2)
               (array-reduce 2x2-multiply (array-rotate A_2 1)))
@@ -1837,11 +1833,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i -1)))))
 
 (test (array-reduce 2x2-multiply A_3)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_3))
+      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_3))
 
-(test (equal? (array-reduce 2x2-multiply A_3)
-              (array-fold 2x2-multiply (matrix 1 0 0 1) A_3))
-      #f)
+(test (array-reduce 2x2-multiply A_3)
+      (array-foldl 2x2-multiply (matrix 1 0 0 1) A_3))
 
 (test (equal? (array-reduce 2x2-multiply A_3)
               (array-reduce 2x2-multiply (array-rotate A_3 1)))
@@ -1856,11 +1851,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i j)))))
 
 (test (array-reduce 2x2-multiply A_4)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_4))
+      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_4))
 
-(test (equal? (array-reduce 2x2-multiply A_4)
-              (array-fold 2x2-multiply (matrix 1 0 0 1) A_4))
-      #f)
+(test (array-reduce 2x2-multiply A_4)
+      (array-foldl 2x2-multiply (matrix 1 0 0 1) A_4))
 
 (test (equal? (array-reduce 2x2-multiply A_4)
               (array-reduce 2x2-multiply (array-rotate A_4 1)))
@@ -1875,11 +1869,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i j)))))
 
 (test (array-reduce 2x2-multiply A_5)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_5))
+      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_5))
 
-(test (equal? (array-reduce 2x2-multiply A_5)
-              (array-fold 2x2-multiply (matrix 1 0 0 1) A_5))
-      #f)
 
 (test (equal? (array-reduce 2x2-multiply A_5)
               (array-reduce 2x2-multiply (array-rotate A_5 1)))
@@ -2774,20 +2765,28 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (array-setter B-prime))))
          (mut-B-extract (array-extract mut-B subdomain)))
     ;; test that the extracts are the same kind of arrays as the original
-    (if (not (and (specialized-array? spec-A)
-                  (specialized-array? spec-A-extract)
-                  (mutable-array? mut-A)
-                  (mutable-array? mut-A-extract)
-                  (not (specialized-array? mut-A))
-                  (not (specialized-array? mut-A-extract))
-                  (array? immutable-A)
-                  (array? immutable-A-extract)
-                  (not (mutable-array? immutable-A))
-                  (not (mutable-array? immutable-A-extract))
-                  (equal? (array-domain spec-A-extract) subdomain)
-                  (equal? (array-domain mut-A-extract) subdomain)
-                  (equal? (array-domain immutable-A-extract) subdomain)))
-        (error "extract: Aargh!"))
+    (test (specialized-array? spec-A)
+          #t)
+    (test (specialized-array? spec-A-extract)
+          #t)
+    (test (and (mutable-array? mut-A)
+               (not (specialized-array? mut-A)))
+          #t)
+    (test (and (mutable-array? mut-A-extract)
+               (not (specialized-array? mut-A-extract)))
+          #t)
+    (test (and (array? immutable-A)
+               (not (mutable-array? immutable-A)))
+          #t)
+    (test (and (array? immutable-A-extract)
+               (not (mutable-array? immutable-A-extract)))
+          #t)
+    (test (array-domain spec-A-extract)
+          subdomain)
+    (test (array-domain mut-A-extract)
+          subdomain)
+    (test (array-domain immutable-A-extract)
+          subdomain)
     ;; test that applying the original setter to arguments in
     ;; the subdomain gives the same answer as applying the
     ;; setter of the extracted array to the same arguments.
@@ -3077,9 +3076,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       (source (array-rotate (make-array (make-interval '#(3 2)) list) ;; not the same interval, but same volume
                             1)))
   (array-assign! destination source)
-  (test (equal? (array->list destination)
-                (array->list source))
-        #t))
+  (test (array->list destination)
+        (array->list source)))
 
 
 
@@ -3601,6 +3599,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                             #\newline)))
           '("" "a" "aa" "ab" "aba" "abc" "abba" "abca" "abbc"))
 
+(let ((a (make-array (make-interval '#(10)) (lambda (i) i))))
+  (test (array-foldl cons '() a)
+        '((((((((((() . 0) . 1) . 2) . 3) . 4) . 5) . 6) . 7) . 8) . 9))
+  (test (array-foldr cons '() a)
+        '(0 1 2 3 4 5 6 7 8 9))
+  (test (array-foldl - 0 a)
+        -45)
+  (test (array-foldr - 0 a)
+        -5))
+
 
 (define make-pgm   cons)
 (define pgm-greys  car)
@@ -3722,13 +3730,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define test-pgm (read-pgm "girl.pgm"))
 
 (define (array-dot-product a b)
-  (array-fold (lambda (x y)
-                (+ x y))
-              0
-              (array-map
-               (lambda (x y)
-                 (* x y))
-               a b)))
+  (array-foldl (lambda (x y)
+                 (+ x y))
+               0
+               (array-map
+                (lambda (x y)
+                  (* x y))
+                a b)))
 
 (define (array-convolve source filter)
   (let* ((source-domain
@@ -3799,7 +3807,7 @@ that computes the componentwise products when we need them, the times are
     no major faults
             |#
                 (lambda (i j)
-                  (array-fold
+                  (array-foldl
                    (lambda (p q)
                      (+ p q))
                    0
@@ -3850,7 +3858,7 @@ that computes the componentwise products when we need them, the times are
             (pgm-pixels test-pgm)
             edge-filter))))
         (max-pixel
-         (array-fold max 0 edge-array))
+         (array-foldl max 0 edge-array))
         (normalizer
          (inexact (/ greys max-pixel))))
    (write-pgm
@@ -3866,9 +3874,9 @@ that computes the componentwise products when we need them, the times are
 (define m (array-copy (make-array (make-interval '#(0 0) '#(40 30)) (lambda (i j) (exact->inexact (+ i j))))))
 
 (define (array-sum a)
-  (array-fold + 0 a))
+  (array-foldl + 0 a))
 (define (array-max a)
-  (array-fold max -inf.0 a))
+  (array-foldl max -inf.0 a))
 
 (define (max-norm a)
   (array-max (array-map abs a)))
@@ -4159,7 +4167,7 @@ that computes the componentwise products when we need them, the times are
 
 ;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm
- 
+
 (define TABLE1
   (list->array
    '(1 2
