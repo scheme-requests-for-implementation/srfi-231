@@ -3057,27 +3057,23 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (array-assign! (array-copy (make-array (make-interval '#(0 0) '#(1 1)) values))
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
-      ;; different volume
-      "array-assign!: The destination and source do not have the same number of elements: ")
+      "array-assign: The destination and source do not have the same domains: ")
 
 (test (array-assign! (make-array (make-interval '#(1 2)) list list) ;; not valid
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
-      ;; not a specialized-array
-      "array-assign!: The destination and source do not have the same domains, and the destination is not a specialized array: ")
+      "array-assign: The destination and source do not have the same domains: ")
 
 (test (array-assign! (array-rotate (array-copy (make-array (make-interval '#(2 3))
                                                            list ))
                                    1)
                      (make-array (make-interval '#(2 3)) list))
-      ;; transpose the destination
-      "array-assign!: The destination and source do not have the same domains, and the elements of the destination are not stored adjacently and in order: ")
+      "array-assign: The destination and source do not have the same domains: ")
 
 (let ((destination (make-specialized-array (make-interval '#(3 2))))  ;; elements in order
       (source (array-rotate (make-array (make-interval '#(3 2)) list) ;; not the same interval, but same volume
                             1)))
-  (array-assign! destination source)
-  (test (array->list destination)
-        (array->list source)))
+  (test (array-assign! destination source)
+        "array-assign: The destination and source do not have the same domains: "))
 
 
 

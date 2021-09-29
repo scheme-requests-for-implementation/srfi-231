@@ -2594,20 +2594,19 @@ OTHER DEALINGS IN THE SOFTWARE.
                (else
                 (apply setter v (map - indices translation-list)))))))))
 
-(define (%%immutable-array-translate array translation)
-  (make-array (%%interval-translate (%%array-domain array) translation)
-              (%%getter-translate (%%array-getter array) translation)))
-
-(define (%%mutable-array-translate array translation)
-  (make-array (%%interval-translate (%%array-domain array) translation)
-              (%%getter-translate (%%array-getter array) translation)
-              (%%setter-translate (%%array-setter array) translation)))
-
-(define (%%specialized-array-translate array translation)
-  (%%specialized-array-share array
-                             (%%interval-translate (%%array-domain array) translation)
-                             (%%getter-translate values translation)
-                             (%%array-in-order? array)))
+(define (%%array-translate array translation)
+  (cond ((specialized-array? array)
+         (%%specialized-array-share array
+                                    (%%interval-translate (%%array-domain array) translation)
+                                    (%%getter-translate values translation)
+                                    (%%array-in-order? array)))
+        ((mutable-array? array)
+         (make-array (%%interval-translate (%%array-domain array) translation)
+                     (%%getter-translate (%%array-getter array) translation)
+                     (%%setter-translate (%%array-setter array) translation)))
+        (else
+         (make-array (%%interval-translate (%%array-domain array) translation)
+                     (%%getter-translate (%%array-getter array) translation)))))
 
 (define (array-translate array translation)
   (cond ((not (array? array))
@@ -2617,12 +2616,8 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (fx= (%%array-dimension array)
                    (vector-length translation)))
          (error "array-translate: The dimension of the first argument (an array) does not equal the dimension of the second argument (a vector): " array translation))
-        ((specialized-array? array)
-         (%%specialized-array-translate array translation))
-        ((mutable-array? array)
-         (%%mutable-array-translate array translation))
         (else
-         (%%immutable-array-translate array translation))))
+         (%%array-translate array translation))))
 
 (define-macro (setup-permuted-getters-and-setters)
 
@@ -2732,6 +2727,9 @@ OTHER DEALINGS IN THE SOFTWARE.
             (error "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): " interval dim)
             (%%interval-permute interval (%%rotation->permutation dim d))))))
 
+(define (%%array-rotate array dim)
+  (%%array-permute array (%%rotation->permutation dim (%%array-dimension array))))
+
 (define (array-rotate array dim)
   (if (not (array? array))
       (error "array-rotate: The first argument is not an array: " array dim)
@@ -2739,7 +2737,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (if (not (and (fixnum? dim)
                       (fx< -1 dim d)))
             (error "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): " array dim)
-            (%%array-permute array (%%rotation->permutation dim d))))))
+            (%%array-rotate array dim)))))
 
 (define-macro (setup-reversed-getters-and-setters)
 
@@ -3162,18 +3160,22 @@ OTHER DEALINGS IN THE SOFTWARE.
            (else (lambda left-multi-index
                    (%%specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) in-order?)))))))))
 
+(define (%%array-curry array right-dimension)
+  (cond ((specialized-array? array)
+         (%%specialized-array-curry array right-dimension))
+        ((mutable-array? array)
+         (%%mutable-array-curry array right-dimension))
+        (else ; immutable array
+         (%%immutable-array-curry array right-dimension))))
+
 (define (array-curry array right-dimension)
   (cond ((not (array? array))
          (error "array-curry: The first argument is not an array: " array right-dimension))
         ((not (and (fixnum? right-dimension)
                    (fx< 0 right-dimension (%%array-dimension array))))
          (error "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): " array right-dimension))
-        ((specialized-array? array)
-         (%%specialized-array-curry array right-dimension))
-        ((mutable-array? array)
-         (%%mutable-array-curry array right-dimension))
-        (else ; immutable array
-         (%%immutable-array-curry array right-dimension))))
+        (else
+         (%%array-curry array right-dimension))))
 
 ;;;
 ;;; array-map returns an array whose domain is the same as the common domain of (cons array arrays)
@@ -3260,6 +3262,10 @@ OTHER DEALINGS IN THE SOFTWARE.
            ((4)  (lambda (i j k l)   (apply f (map (lambda (g) (g i j k l))           getters))))
            (else (lambda multi-index (apply f (map (lambda (g) (apply g multi-index)) getters))))))))))
 
+(define (%%array-map f array arrays)
+  (make-array (%%array-domain array)
+              (%%specialize-function-applied-to-array-getters f array arrays)))
+
 (define (array-map f array #!rest arrays)
   (cond ((not (procedure? f))
          (apply error "array-map: The first argument is not a procedure: " f array arrays))
@@ -3268,8 +3274,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
          (apply error "array-map: Not all arguments after the first have the same domain: " f array arrays))
         (else
-         (make-array (%%array-domain array)
-                     (%%specialize-function-applied-to-array-getters f array arrays)))))
+         (%%array-map f array arrays))))
 
 ;;; applies f to the elements of the arrays in lexicographical order.
 
@@ -3474,63 +3479,66 @@ OTHER DEALINGS IN THE SOFTWARE.
          ;; a new vector of #t's.
          (%%array-foldl (lambda (result new) (op new result)) id (array-reverse a)))))
 
+(define (%%array-reduce sum A)
+  (case (%%array-dimension A)
+    ((1) (let ((box '())
+               (A_ (%%array-getter A)))
+           (%%interval-for-each
+            (lambda (i)
+              (if (null? box)
+                  (set! box (list (A_ i)))
+                  (set-car! box (sum (car box)
+                                     (A_ i)))))
+            (%%array-domain A))
+           (car box)))
+    ((2) (let ((box '())
+               (A_ (%%array-getter A)))
+           (%%interval-for-each
+            (lambda (i j)
+              (if (null? box)
+                  (set! box (list (A_ i j)))
+                  (set-car! box (sum (car box)
+                                     (A_ i j)))))
+            (%%array-domain A))
+           (car box)))
+    ((3) (let ((box '())
+               (A_ (%%array-getter A)))
+           (%%interval-for-each
+            (lambda (i j k)
+              (if (null? box)
+                  (set! box (list (A_ i j k)))
+                  (set-car! box (sum (car box)
+                                     (A_ i j k)))))
+            (%%array-domain A))
+           (car box)))
+    ((4) (let ((box '())
+               (A_ (%%array-getter A)))
+           (%%interval-for-each
+            (lambda (i j k l)
+              (if (null? box)
+                  (set! box (list (A_ i j k l)))
+                  (set-car! box (sum (car box)
+                                     (A_ i j k l)))))
+            (%%array-domain A))
+           (car box)))
+    (else (let ((box '())
+                (A_ (%%array-getter A)))
+            (%%interval-for-each
+             (lambda args
+               (if (null? box)
+                   (set! box (list (apply A_ args)))
+                   (set-car! box (sum (car box)
+                                      (apply A_ args)))))
+             (%%array-domain A))
+            (car box)))))
+
 (define (array-reduce sum A)
   (cond ((not (array? A))
          (error "array-reduce: The second argument is not an array: " sum A))
         ((not (procedure? sum))
          (error "array-reduce: The first argument is not a procedure: " sum A))
         (else
-         (case (%%array-dimension A)
-           ((1) (let ((box '())
-                      (A_ (%%array-getter A)))
-                  (%%interval-for-each
-                   (lambda (i)
-                     (if (null? box)
-                         (set! box (list (A_ i)))
-                         (set-car! box (sum (car box)
-                                            (A_ i)))))
-                   (%%array-domain A))
-                  (car box)))
-           ((2) (let ((box '())
-                      (A_ (%%array-getter A)))
-                  (%%interval-for-each
-                   (lambda (i j)
-                     (if (null? box)
-                         (set! box (list (A_ i j)))
-                         (set-car! box (sum (car box)
-                                            (A_ i j)))))
-                   (%%array-domain A))
-                  (car box)))
-           ((3) (let ((box '())
-                      (A_ (%%array-getter A)))
-                  (%%interval-for-each
-                   (lambda (i j k)
-                     (if (null? box)
-                         (set! box (list (A_ i j k)))
-                         (set-car! box (sum (car box)
-                                            (A_ i j k)))))
-                   (%%array-domain A))
-                  (car box)))
-           ((4) (let ((box '())
-                      (A_ (%%array-getter A)))
-                  (%%interval-for-each
-                   (lambda (i j k l)
-                     (if (null? box)
-                         (set! box (list (A_ i j k l)))
-                         (set-car! box (sum (car box)
-                                            (A_ i j k l)))))
-                   (%%array-domain A))
-                  (car box)))
-           (else (let ((box '())
-                       (A_ (%%array-getter A)))
-                   (%%interval-for-each
-                    (lambda args
-                      (if (null? box)
-                          (set! box (list (apply A_ args)))
-                          (set-car! box (sum (car box)
-                                             (apply A_ args)))))
-                    (%%array-domain A))
-                   (car box)))))))
+         (%%array-reduce sum A))))
 
 (define (array->list array)
   (cond ((not (array? array))
@@ -3585,26 +3593,20 @@ OTHER DEALINGS IN THE SOFTWARE.
                                (cdr local)))
                        (error "list->array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
 
+(define (%%array-assign destination source)
+  (%%move-array-elements destination source "array-assign!: ")
+  destination)
+
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
          (error "array-assign!: The destination is not a mutable array: " destination source))
         ((not (array? source))
          (error "array-assign!: The source is not an array: " destination source))
-        ((interval= (%%array-domain destination)
-                    (%%array-domain source))
-         (%%move-array-elements destination source "array-assign!: ")
-         destination)
-        ((not (fx= (%%interval-volume (%%array-domain destination))
-                   (%%interval-volume (%%array-domain source))))
-         (error "array-assign!: The destination and source do not have the same number of elements: " destination source))
-        ((not (specialized-array? destination))
-         (error "array-assign!: The destination and source do not have the same domains, and the destination is not a specialized array: " destination source))
-        ((not (%%array-elements-in-order? destination))
-         (error "array-assign!: The destination and source do not have the same domains, and the elements of the destination are not stored adjacently and in order: "
-                destination source))
+        ((not (interval= (%%array-domain destination)
+                         (%%array-domain source)))
+         (error "array-assign: The destination and source do not have the same domains: " destination source))
         (else
-         (%%move-array-elements destination source "array-assign!: ")
-         destination)))
+         (%%array-assign destination source))))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,

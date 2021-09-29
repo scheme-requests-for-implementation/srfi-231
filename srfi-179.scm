@@ -96,9 +96,10 @@ MathJax.Hub.Config({
          (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
          (<ul>
           (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
-          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
+          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
           (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
           (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
+          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          )
 
 
@@ -1532,13 +1533,11 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
 
 (format-lambda-list '(array-assign! destination source))
-(<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
-(<p> "The array "(<code>(<var>'destination))" must be compatible with "(<code>(<var>'source))", in the sense that either "(<code>(<var>'destination))" and "(<code>(<var>'source))" have the same domain, or "(<code>(<var>'destination))" is a specialized array whose elements are stored adjacently and in order in its body and whose domain has the same volume as the domain of "(<code>(<var>'source))".")
+(<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array with the same domain, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
 (<p> "Evaluates "(<code>"(array-getter "(<var>'source)")")" on the multi-indices in "(<code>"(array-domain "(<var>'source)")")" in lexicographical order, "
      "and assigns each value to the multi-index in "(<code>(<var>'destination))" in the same lexicographical order.")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
-(<p> (<b>"Note: ")"If the domains of "(<code>(<var>'destination))" and "(<code>(<var>'source))" are not the same, one can think of "(<code>(<var>'destination))" as a "(<i>'reshaped)" copy of "(<code>(<var>'source))".")
 
 (format-lambda-list '(array-ref A i0 #\. i-tail))
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
