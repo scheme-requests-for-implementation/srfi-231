@@ -136,10 +136,12 @@ OTHER DEALINGS IN THE SOFTWARE.
      #(0 0 0 0)))
 
 (define (%%finish-interval lower-bounds upper-bounds)
+  ;; Requires that lower-bounds and upper-bounds are not user visible and therefore
+  ;; not user modifiable.
   (make-%%interval (vector-length upper-bounds)
                    #f
-                   (vector-copy lower-bounds)
-                   (vector-copy upper-bounds)))
+                   lower-bounds
+                   upper-bounds))
 
 (define make-interval
   (case-lambda
@@ -272,18 +274,14 @@ OTHER DEALINGS IN THE SOFTWARE.
          (left-upper-bounds (make-vector left-dimension))
          (right-lower-bounds (make-vector (- n left-dimension)))
          (right-upper-bounds (make-vector (- n left-dimension))))
-    (do ((i 0 (fx+ i 1)))
-        ((fx= i left-dimension)
-         (do ((i i (fx+ i 1)))
-             ((fx= i n)
-              (values (%%finish-interval left-lower-bounds
-                                         left-upper-bounds)
-                      (%%finish-interval right-lower-bounds
-                                         right-upper-bounds)))
-           (vector-set! right-lower-bounds (fx- i left-dimension) (vector-ref lower-bounds i))
-           (vector-set! right-upper-bounds (fx- i left-dimension) (vector-ref upper-bounds i))))
-      (vector-set! left-lower-bounds i (vector-ref lower-bounds i))
-      (vector-set! left-upper-bounds i (vector-ref upper-bounds i)))))
+    (subvector-move! lower-bounds 0 left-dimension left-lower-bounds 0)
+    (subvector-move! upper-bounds 0 left-dimension left-upper-bounds 0)
+    (subvector-move! lower-bounds left-dimension n right-lower-bounds 0)
+    (subvector-move! upper-bounds left-dimension n right-upper-bounds 0)
+    (values (%%finish-interval left-lower-bounds
+                               left-upper-bounds)
+            (%%finish-interval right-lower-bounds
+                               right-upper-bounds))))
 
 (define (permutation? permutation)
   (and (vector? permutation)
@@ -364,6 +362,8 @@ OTHER DEALINGS IN THE SOFTWARE.
          (new-uppers (vector-map (lambda (u s)
                                    (quotient (+ u s -1) s))
                                  uppers scales)))
+    ;; lowers is not newly allocated, but it's already been copied because it's the
+    ;; lower bounds of an existing interval
     (%%finish-interval lowers new-uppers)))
 
 (define (interval-scale interval scales)
@@ -381,6 +381,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-scale interval scales))))
 
 (define (%%interval-cartesian-product intervals)
+  ;; Even if there is only one interval, its lower and upper bounds have already been copied.
   (%%finish-interval (append-vectors (map %%interval-lower-bounds intervals))
                      (append-vectors (map %%interval-upper-bounds intervals))))
 
