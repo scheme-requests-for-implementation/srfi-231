@@ -3593,10 +3593,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                                (cdr local)))
                        (error "list->array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
 
-(define (%%array-assign destination source)
-  (%%move-array-elements destination source "array-assign!: ")
-  destination)
-
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
          (error "array-assign!: The destination is not a mutable array: " destination source))
@@ -3606,7 +3602,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                          (%%array-domain source)))
          (error "array-assign: The destination and source do not have the same domains: " destination source))
         (else
-         (%%array-assign destination source))))
+         (%%move-array-elements destination source "array-assign!: ")
+         destination)))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,
