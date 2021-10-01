@@ -2213,25 +2213,78 @@ OTHER DEALINGS IN THE SOFTWARE.
         (%%array-setter-set! result #f))
     result))
 
-(define (array-copy array
-                    #!optional
-                    (result-storage-class generic-storage-class)
-                    (mutable? (specialized-array-default-mutable?))
-                    (safe? (specialized-array-default-safe?)))
-  (cond ((not (array? array))
-         (error "array-copy: The first argument is not an array: " array))
-        ((not (storage-class? result-storage-class))
-         (error "array-copy: The second argument is not a storage-class: " result-storage-class))
-        ((not (boolean? mutable?))
-         (error "array-copy: The third argument is not a boolean: " mutable?))
-        ((not (boolean? safe?))
-         (error "array-copy: The fourth argument is not a boolean: " safe?))
-        (else
-         (%!array-copy array
-                       result-storage-class
-                       (%%array-domain array)
-                       mutable?
-                       safe?))))
+(define array-copy
+  (let ()
+    
+    (define (four-args array result-storage-class mutable? safe?)
+      (if (not (boolean? safe?))
+          (error "array-copy: The fourth argument is not a boolean: " safe?)
+          (three-args array
+                      result-storage-class
+                      mutable?
+                      safe?)))
+    
+    (define (three-args array result-storage-class mutable? safe?)
+      (if (not (boolean? mutable?))
+          (error "array-copy: The third argument is not a boolean: " safe?)
+          (two-args array
+                    result-storage-class
+                    mutable?
+                    safe?)))
+    
+    (define (two-args array result-storage-class mutable? safe?)
+      (if (not (storage-class? result-storage-class))
+          (error "array-copy: The second argument is not a storage-class: " result-storage-class)
+          (one-arg array
+                   result-storage-class
+                   mutable?
+                   safe?)))
+  
+    (define (one-arg array result-storage-class mutable? safe?)
+      (if (not (array? array))
+          (error "array-copy: The first argument is not an array: " array)
+          (%!array-copy array
+                        result-storage-class
+                        (%%array-domain array)
+                        mutable?
+                        safe?)))
+                            
+    (case-lambda
+     ((array)
+      (if (specialized-array? array)
+          (one-arg array
+                   (%%array-storage-class array)
+                   (mutable-array? array)
+                   (%%array-safe? array))
+          (one-arg array
+                   generic-storage-class
+                   (specialized-array-default-mutable?)
+                   (specialized-array-default-safe?))))
+     ((array storage-class)
+      (if (specialized-array? array)
+          (two-args array
+                    storage-class
+                    (mutable-array? array)
+                    (%%array-safe? array))
+          (two-args array
+                    storage-class
+                    (specialized-array-default-mutable?)
+                    (specialized-array-default-safe?))))
+     ((array storage-class mutable?)
+      (if (specialized-array? array)
+          (three-args array
+                      storage-class
+                      mutable?
+                      (%%array-safe? array))
+          (three-args array
+                      storage-class
+                      mutable?
+                      (specialized-array-default-safe?))))
+     ((array storage-class mutable? safe?)
+      (four-args array
+                 storage-class
+                 mutable?
+                 safe?)))))
 
 ;;;
 ;;; In the next function, old-indexer is an affine 1-1 mapping from an interval to [0,N), for some N.

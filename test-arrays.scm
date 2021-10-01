@@ -1286,6 +1286,18 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "array-copy error tests")
 
+(test (array-copy 'a 'a 'a 'a)
+      "array-copy: The fourth argument is not a boolean: ")
+
+(test (array-copy 'a 'a 'a)
+      "array-copy: The third argument is not a boolean: ")
+
+(test (array-copy 'a 'a)
+      "array-copy: The second argument is not a storage-class: ")
+
+(test (array-copy 'a)
+      "array-copy: The first argument is not an array: ")
+
 (test (array-copy #f generic-storage-class)
       "array-copy: The first argument is not an array: ")
 
@@ -1307,6 +1319,147 @@ OTHER DEALINGS IN THE SOFTWARE.
                   #f
                   'a)
       "array-copy: The fourth argument is not a boolean: ")
+
+;;; Check that explicit setting of mutable? and safe? work
+
+
+(test (mutable-array? (array-copy (list->array '(1 2 3 4)
+                                               (make-interval '#(2 2))
+                                               generic-storage-class
+                                               #f)))
+      #f)
+
+(test (mutable-array? (array-copy (list->array '(1 2 3 4)
+                                               (make-interval '#(2 2))
+                                               generic-storage-class
+                                               #f)
+                                  generic-storage-class
+                                  #t))
+      #t)
+
+
+(test (array-safe? (array-copy (list->array '(1 2 3 4)
+                                            (make-interval '#(2 2))
+                                            generic-storage-class
+                                            #f
+                                            #f)))
+      #f)
+
+(test (array-safe? (array-copy (list->array '(1 2 3 4)
+                                            (make-interval '#(2 2))
+                                            generic-storage-class
+                                            #f
+                                            #f)
+                               generic-storage-class
+                               #t
+                               #t))
+      #t)
+
+;;; Check that defaults of mutable? and safe? work
+
+(parameterize
+    ((specialized-array-default-mutable? #t))
+  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
+                                                 (make-interval '#(2 2))
+                                                 generic-storage-class
+                                                 #t)))
+        #t)
+  
+  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
+                                                 (make-interval '#(2 2))
+                                                 generic-storage-class
+                                                 #t)
+                                    generic-storage-class
+                                    #f))
+        #f)
+  (test (mutable-array? (array-copy (make-array (make-interval '#(2 2)) list)))
+        #t)
+
+  (test (mutable-array? (array-copy (make-array (make-interval '#(2 2)) list)
+                                    generic-storage-class
+                                    #f))
+        #f))
+
+(parameterize
+    ((specialized-array-default-mutable? #f))
+  (test (array-safe? (array-copy (list->array '(1 2 3 4)
+                                              (make-interval '#(2 2))
+                                              generic-storage-class
+                                              #t
+                                              #t)))
+        #t)
+  
+  (test (array-safe? (array-copy (list->array '(1 2 3 4)
+                                              (make-interval '#(2 2))
+                                              generic-storage-class
+                                              #t
+                                              #t)
+                                 generic-storage-class
+                                 #f
+                                 #f))
+        #f)
+
+  (test (mutable-array? (array-copy (make-array (make-interval '#(2 2)) list)))
+        #f)
+
+  (test (mutable-array? (array-copy (make-array (make-interval '#(2 2)) list)
+                                    generic-storage-class
+                                    #t))
+        #t))
+
+(parameterize
+    ((specialized-array-default-safe? #t))
+  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
+                                                 (make-interval '#(2 2))
+                                                 generic-storage-class
+                                                 #f)))
+        #f)
+  
+  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
+                                                 (make-interval '#(2 2))
+                                                 generic-storage-class
+                                                 #f)
+                                    generic-storage-class
+                                    #t))
+        #t)
+  (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)))
+        #t)
+  
+  (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)
+                                 generic-storage-class
+                                 #f
+                                 #f))
+        #f))
+
+(parameterize
+    ((specialized-array-default-safe? #f))
+  (test (array-safe? (array-copy (list->array '(1 2 3 4)
+                                              (make-interval '#(2 2))
+                                              generic-storage-class
+                                              #f
+                                              #f)))
+        #f)
+  
+  (test (array-safe? (array-copy (list->array '(1 2 3 4)
+                                              (make-interval '#(2 2))
+                                              generic-storage-class
+                                              #f
+                                              #f)
+                                 generic-storage-class
+                                 #t
+                                 #t))
+        #t)
+  
+  (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)))
+        #f)
+
+  (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)
+                                 generic-storage-class
+                                 #t
+                                 #t))
+        #t))
+
+
 
 ;; We gotta make sure than the error checks work in all dimensions ...
 

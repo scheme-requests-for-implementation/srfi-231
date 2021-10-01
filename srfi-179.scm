@@ -100,6 +100,7 @@ MathJax.Hub.Config({
           (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
           (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
           (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
+          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
          )
 
 
@@ -911,9 +912,9 @@ indexer:       (lambda multi-index
 (<p> "This \"shearing\" operation cannot be achieved by combining the procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", "(<code>'array-translate)", "(<code>'array-curry)", "(<code>'array-reverse)", and "(<code>'array-sample)".")
 
 (format-lambda-list '(array-copy array
-                                 #\[ result-storage-class "generic-storage-class" #\]
-                                 #\[ mutable? "(specialized-array-default-mutable?)" #\]
-                                 #\[ safe? "(specialized-array-default-safe?)" #\]))
+                                 #\[ result-storage-class
+                                 #\[ mutable?
+                                 #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "
      (<code>(<var> 'array))" is an array, "
      (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'array))", and "
@@ -927,6 +928,8 @@ indexer:       (lambda multi-index
              mutable?
              safe?)
 "))
+(<p> "If "(<code>(<var>'array))" is a specialized array, then if any of "(<code>(<var>'result-storage-class))", "(<code>(<var>'mutable?))", "(<code>(<var>'safe?))" are omitted,  their values are assigned "(<code>"(array-storage-class "(<var>'array)")")", "(<code>"(mutable-array? "(<var>'array)")")", and "(<code>"(array-safe? "(<var>'array)")")", respectively.")
+(<p> "Otherwise, omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
 
 
