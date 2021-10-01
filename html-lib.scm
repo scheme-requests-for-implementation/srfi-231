@@ -674,7 +674,7 @@
   attributes: (align archive border classid codebase codetype data height hspace name standby tabindex type usemap vspace width)
   single-attributes: (declare))
 
-(define-tag ol start-newline?: #t end-tag-start-newline?: #f attributes: (start type) single-attributes: (compact))
+(define-tag ol start-newline?: #t end-tag-start-newline?: #t attributes: (start type) single-attributes: (compact))
 
 (define-tag optgroup attributes: (label) single-attributes: (disabled))
 
@@ -732,7 +732,7 @@
 
 (define-tag u)
 
-(define-tag ul start-newline?: #t end-tag-start-newline?: #f attributes: (type) single-attributes: (compact))
+(define-tag ul start-newline?: #t end-tag-start-newline?: #t attributes: (type) single-attributes: (compact))
 
 (define-tag var)
 
