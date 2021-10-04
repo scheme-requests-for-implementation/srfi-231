@@ -3878,15 +3878,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define test-pgm (read-pgm "girl.pgm"))
 
-(define (array-dot-product a b)
-  (array-foldl (lambda (x y)
-                 (+ x y))
-               0
-               (array-map
-                (lambda (x y)
-                  (* x y))
-                a b)))
-
 (define (array-convolve source filter)
   (let* ((source-domain
           (array-domain source))
@@ -3919,6 +3910,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (array-translate source (vector (- i) (- j)))
                     filter-domain)
                    filter))
+where
+
+(define (array-dot-product a b)
+  (array-foldl (lambda (x y)
+                 (+ x y))
+               0
+               (array-map
+                (lambda (x y)
+                  (* x y))
+                a b)))
 
                 The times are
 (time (let ((greys (pgm-greys test-pgm))) (write-pgm (make-pgm greys (array-map (lambda (p) (round-and-clip p greys)) (array-convolve (pgm-pixels test-pgm) sharpen-filter))) "sharper-test.pgm")))
@@ -4290,13 +4291,7 @@ that computes the componentwise products when we need them, the times are
 ;;; We'll define a brief, not-very-efficient matrix multiply routine.
 
 (define (matrix-multiply a b)
-  (let ((a-rows
-         ;; We copy this array because its elements are accessed multiple times.
-         (array-copy (array-curry a 1)))
-        (b-columns
-         ;; We copy this array because its elements are accessed multiple times.
-         (array-copy (array-curry (array-rotate b 1) 1))))
-    (array-outer-product array-dot-product a-rows b-columns)))
+  (array-inner-product a + * b))
 
 ;;; We'll check that the product of the result of LU
 ;;; decomposition of A is again A.
@@ -4307,12 +4302,26 @@ that computes the componentwise products when we need them, the times are
 (display "of LU decomposition of Hilbert matrix:\n\n")
 (array-display product)
 
-(define (inner-product A f g B)
-  (array-outer-product
-   (lambda (a b)
-     (array-reduce f (array-map g a b)))
-   (array-copy (array-curry A 1))
-   (array-copy (array-curry (array-rotate B 1) 1))))
+(array-display
+ (matrix-multiply (list->array '(1 0
+                                 0 1)
+                               (make-interval '#(2 2)))
+                  (make-array (make-interval '#(2 4))
+                              (lambda (i j)
+                                (+ i j)))
+                  ))
+
+(test (myarray= (matrix-multiply (list->array '(1 0
+                                                   0 1)
+                                               (make-interval '#(2 2)))
+                                  (make-array (make-interval '#(2 4))
+                                              (lambda (i j)
+                                                (+ i j)))
+                                  )
+                 (make-array (make-interval '#(2 4))
+                             (lambda (i j)
+                               (+ i j))))
+      #t)
 
 ;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm
@@ -4330,7 +4339,7 @@ that computes the componentwise products when we need them, the times are
      7 0 1 8)
    (make-interval '#(2 4))))
 
-(array-display (inner-product TABLE1 + * TABLE2))
+(array-display (array-inner-product TABLE1 + * TABLE2))
 
 ;;; Displays
 ;;; 20 2 5 20
@@ -4343,7 +4352,7 @@ that computes the componentwise products when we need them, the times are
 (define Y   ;; a "column vector"
   (list->array '(2 3 6 7) (make-interval '#(4 1))))
 
-(array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
+(array-display (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 
 ;;; Displays
 ;;; 2
@@ -4444,20 +4453,141 @@ that computes the componentwise products when we need them, the times are
                  (array-curry B 1)
                  (array-curry C 1)))
 
-(array-display ((array-getter
-                 (array-curry
-                  (specialized-array-reshape A interval-2x2)
-                  2))
-                0 0))
-(array-display ((array-getter
-                 (array-curry
-                  (specialized-array-reshape B interval-2x2)
-                  2))
-                0 0))
-(array-display ((array-getter
-                 (array-curry
-                  (specialized-array-reshape C interval-2x2)
-                  2))
-                0 0))
+
+(pp "array-inner-product tests")
+
+(test (array-inner-product 'a 'a 'a 'a)
+      "array-inner-product: The first argument is not an array: ")
+
+(test (array-inner-product (make-array (make-interval '#(10)) list) 'a 'a 'a)
+      "array-inner-product: The second argument is not a procedure: ")
+
+(test (array-inner-product (make-array (make-interval '#(10)) list) list 'a 'a)
+      "array-inner-product: The third argument is not a procedure: ")
+
+(test (array-inner-product (make-array (make-interval '#(10)) list) list list 'a)
+      "array-inner-product: The fourth argument is not an array: ")
+
+(test (array-inner-product (make-array (make-interval '#(10)) list) list list (make-array (make-interval '#(10)) list))
+      "array-inner-product: The dimension of the first argument is not > 1: ")
+
+(test (array-inner-product (make-array (make-interval '#(10 1)) list) list list (make-array (make-interval '#(10)) list))
+      "array-inner-product: The dimension of the fourth argument is not > 1: ")
+
+(test (array-inner-product (make-array (make-interval '#(10 1)) list) list list (make-array (make-interval '#(10 1)) list))
+      "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")
+
+;;; We steal some tests from Alex Shinn's test suite.
+
+(define (foldl op id l)
+  (if (null? l)
+      id
+      (foldl op (op id (car l)) (cdr l))))
+
+(define (foldr op id l)
+  (if (null? l)
+      id
+      (op (car l) (foldr op id (cdr l)))))
+
+(define (append-map f l)
+  (foldr append
+         '()
+         (map f l)))
+
+(define (flatten ls)
+  (if (pair? (car ls))
+      (append-map flatten ls)
+      ls))
+
+(define (tensor nested-ls . o)
+  (let lp ((ls nested-ls) (lens '()))
+    (cond
+     ((pair? ls) (lp (car ls) (cons (length ls) lens)))
+     (else
+      (apply list->array
+             (flatten nested-ls)
+             (make-interval (list->vector (reverse lens)))
+             o)))))
+
+(define (identity-array k . o)
+  (array-copy (make-array (make-interval (vector k k))
+                          (lambda args
+                            (if (apply = args)
+                                1
+                                0)))
+              (if (null? o) generic-storage-class (car o))))
+
+(test (myarray= (tensor '((4 7) (2 6) (1 0) (0 1)))
+                (array-append 0 (tensor '((4 7) (2 6))) (identity-array 2)))
+      #t)
+
+(test (myarray= (tensor '((4 7) (2 6) (1 0) (0 1)))
+                (array-append 0
+                              (list->array '(4 7 2 6)
+                                           (make-interval '#(2 0) '#(4 2)))
+                              (identity-array 2)))
+      #t)
+(test (myarray= (tensor '((4 7 1 0) (2 6 0 1)))
+                (array-append 1 (tensor '((4 7) (2 6))) (identity-array 2)))
+      #t)
+(test (myarray= (tensor '((4 7 2 1 0) (6 3 5 0 1)))
+                (array-append 1 (tensor '((4 7 2) (6 3 5))) (identity-array 2)))
+      #t)
+(test (myarray= (tensor '((4 7 1 0 0 1 3)
+                          (2 6 0 1 5 8 9)))
+                (array-append
+                 1
+                 (list->array '(4 7 2 6) (make-interval '#(2 2)))
+                 (identity-array 2)
+                 (list->array '(0 1 3 5 8 9) (make-interval '#(2 3)))))
+      #t)
+
+(pp "array-stack tests")
+
+(test (array-stack)
+      "array-stack: Wrong number of arguments: ")
+
+(test (array-stack 'a)
+      "array-stack: Wrong number of arguments: ")
+
+(test (array-stack 'a 'a)
+      "array-stack: Expecting arrays with the same domains after argument 1: ")
+
+(test (array-stack 2 (make-array (make-interval '#(10)) list))
+      "array-stack: Expecting an exact integer between 0 (inclusive) and the number of arrays (inclusive) as argument 1: ")
+
+(test (array-storage-class
+       (array-stack 1 (make-array (make-interval '#(10)) list)))
+      generic-storage-class)
+
+(test (array-storage-class
+       (array-stack 1
+                    (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
+                    (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class)))
+      generic-storage-class)
+
+(test (array-stack generic-storage-class 'a)
+      "array-stack: Wrong number of arguments: ")
+
+(test (array-stack generic-storage-class 'a 'a)
+      "array-stack: Expecting arrays with the same domains after argument 2: ")
+
+(test (array-stack generic-storage-class 2 (make-array (make-interval '#(10)) list))
+      "array-stack: Expecting an exact integer between 0 (inclusive) and the number of arrays (inclusive) as argument 2: ")
+
+(test (myarray= (tensor '(((4 7) (2 6))
+                          ((1 0) (0 1))))
+                (array-stack 0 (tensor '((4 7) (2 6))) (identity-array 2)))
+      #t)
+
+(test (myarray= (tensor '(((4 7) (1 0))
+                          ((2 6) (0 1))))
+                (array-stack 1 (tensor '((4 7) (2 6))) (identity-array 2)))
+      #t)
+
+(test (myarray= (tensor '(((4 1) (7 0))
+                          ((2 0) (6 1))))
+                (array-stack 2 (tensor '((4 7) (2 6))) (identity-array 2)))
+      #t)
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))
