@@ -3686,7 +3686,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                           (%%interval-lower-bound B-dom 0))
                      (fx= (%%interval-upper-bound A-dom (fx- A-dim 1))
                           (%%interval-upper-bound B-dom 0)))))
-         (untrace)
          (error (string-append "array-inner-product: The bounds of the last dimension of the first argument "
                                "are not the same as the bounds of the first dimension of the fourth argument: ")
                 A f g B))
