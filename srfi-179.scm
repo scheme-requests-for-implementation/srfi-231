@@ -83,29 +83,87 @@ MathJax.Hub.Config({
          "integers.  Thus, we introduce a data type "
          "called $d$-"(<i> 'intervals)", or more briefly "(<i>'intervals)", that encapsulates this notion. (We borrow this terminology from, e.g., "
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
-         "Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.")
+         "Specialized variants of arrays provide portable programs with efficient representations for common use cases.")
         (<h2> "Rationale")
         (<p> "This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.")
         (<ul>
          (<li> "Provide a "(<b> "general API")" (Application Program Interface) that specifies the minimal required properties of any given array, without requiring any specific implementation strategy from the programmer for that array.")
          (<li> "Provide a "(<b> "single, efficient implementation for dense arrays")" (which we call "(<i>"specialized arrays")").")
-         (<li> "Provide "(<b> "useful array transformations")" by exploiting the algebraic structure of affine one-to-one mappings on multi-indices.")
+         (<li> "Provide "(<b> "useful array transformations")".")
          (<li> "Separate "(<b>"the routines that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the routines that actually do the work")" ("(<code>'array-copy)", "(<code>'array-assign!)", "(<code>'array-foldl)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
-         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
-         (<ul>
-          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
-          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
-          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
-          (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
-          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
-          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
+        (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
+        (<ul>
+         (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
+         (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
+         (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
+         (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
+         (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
+         (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
+         (<li> "A new set of \"Introductory remarks\" surveys some of the more important routines in this SRFI.")
          )
-
-
+        
         (<h2> "Overview")
-        (<h3> "Bawden-style arrays")
+        
+        (<h3> "Introductory remarks")
+        
+        (<p> "The next few sections talk perhaps too much about the mathematical ideas that underpin many of the routines in this SRFI, so I discuss here some of the routines and compare them to operations on spreadsheets,  matrices, and imaging.")
+        (<p> "There are two routines that simply create new arrays:")
+        (<ul>
+         (<li> (<a> href: "#make-array" (<code>'make-array))": Takes as arguments a specification of the valid indices $i\\ j\\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere, the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a "(<i>"generalized array")".")
+         (<li> (<a> href: "#make-specialized-array"(<code>'make-specialized-array))": Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a "(<i>"specialized array")".")
+         )
+        (<p> "In the next group of routines, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these routines move any data, they just change how the data are indexed to achieve their goals.  The routines that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
+        (<ul>
+         (<li> (<a> href: "#array-extract" (<code>'array-extract))
+               ": Constructs a \"window\" or \"view\" into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.")
+         (<li> (<a> href: "#array-tile" (<code>'array-tile))
+               ": Builds an array of subarrays of the original array, like breaking a large matrix into smaller matrices for block matrix operations.")
+         (<li> (<a> href: "#array-translate" (<code>'array-translate))
+               ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
+         (<li> (<a> href: "#array-permute"(<code>'array-permute))
+               ": Swaps rows, columns, sheets, etc. of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.")
+         (<li> (<a> href: "#array-rotate"(<code>'array-rotate))
+               ": Permutes indices in a special way, pushing them off the left and adding them to the right, like $i\\ j\\to j\\ i$ (so transposing a matrix) or $i\\ j\\ k\\to j\\ k\\ i$")
+         (<li> (<a> href: "#array-curry"(<code>"array-curry"))
+               ": Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.")
+         (<li> (<a> href:"#array-reverse" (<code>'array-reverse))
+               ": Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.")
+         (<li> (<a> href:"#array-sample" (<code>'array-sample))
+               ": Accesses every second (or third, etc.) row or column, or both, of the argument.")
+         )
+        (<p> "The next few routines set up operations to be executed in the future.  They build "(<i> "generalized")" arrays.")
+        (<ul>
+         (<li> (<a> href:"#array-map"(<code>'array-map))
+               ": Specifies an operation to be applied componentwise on arrays, so if A and B are matrices, (array-map + A B) sets up a new generalized array that adds elements of the arrays componentwise.  You can chain these operations, so have (array-map + (array-map (lambda (x) (* alpha x)) A) B) without immediately computing and storing all the values of those arrays.")
+         (<li> (<a> href:"#array-outer-product"(<code>'array-outer-product))
+               ": Applies an operation to all possible pairs of elements of two original arrays. Like considering an $m$-vector as a column vector and an $n$-vector as a row vector, and multiplying them together to compute an $m\\times n$ matrix.")
+         (<li> (<a> href:"#array-inner-product"(<code>'array-inner-product))
+               ": Like APL's inner product; multiplying two matrices is an example of an operation implemented using "(<code>'array-inner-product)".")
+         )
+        (<p> "Then, there are procedures that "(<i>'do)" generate every element of an array and either store them somewhere, or combine them in some way:")
+        (<ul>
+         (<li> (<a> href:"#array-copy"(<code>'array-copy))
+               ": Evaluates the argument array at all valid indices and stores those values into a new specialized array.")
+         (<li> (<a> href:"#array-assign!"(<code>'array-assign!))
+               ": Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine "(<code>'array-map)", "(<code>'array-outer-product)", "(<code>'array-extract)", and "(<code>'array-assign!)" to do one step of the elimination.")
+         (<li> (<a> href:"#array-stack"(<code>'array-stack))
+               ": Like taking the individually rendered frames of an animated movie and ordering them in time to make a complete video.  Can be considered a partial inverse to "(<code>'array-curry)".  Returns a specialized array.")
+         (<li> (<a> href:"#array-append"(<code>'array-append))
+               ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.")
+         (<li> (<a> href:"#array-foldl"(<code>'array-foldl))", "
+               (<a> href:"#array-foldr"(<code>'array-foldr))", "
+               (<a> href:"#array-reduce"(<code>'array-reduce))", "
+               (<a> href:"#array-for-each"(<code>'array-for-each))", "
+               (<a> href:"#array-any"(<code>'array-any))", "
+               (<a> href: "#array-every"(<code>'array-every))", and "
+               (<a> href: "#array-rarrow-list" (<code>'array->list))
+               ": Evaluate all elements of an array (for "(<code>'array-every)" and "(<code>'array-any)", as many as needed to know the result) and combine them in certain ways.")
+         )
+        (<p>"I hope this brief discussion gives a flavor for the design of this SRFI.")
+
+       (<h3> "Bawden-style arrays")
         (<p>  "In a "(<a> href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "1993 post")
               " to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. "
               "The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives "
@@ -204,9 +262,9 @@ they may have hash tables or databases behind an implementation, one may read th
              "a new array $B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ would then be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
         (<p> "One could again \"share\" $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ can be computed with the overhead of computing a single affine transformation.")
         (<p> "So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine "(<code>'specialized-array-share)", not a more general "(<code>'array-share)".")
-        (<p> "Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote "(<code>"(array-getter A)")" by "(<code>'A-getter)", then if B is the result of "(<code>'array-extract)" applied to A, then "
-             (<code>"(array-getter B)")" is simply "(<code>'A-getter)".  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter B)")" is "
-             (<code>"(lambda (i j) (A-getter j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>'A-getter)", at least for arrays of small dimension.")
+        (<p> "Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote "(<code>"(array-getter "(<var>'A)")")" by "(<code>(<var>'A_))", then if "(<code>(<var>'B))" is the result of "(<code>'array-extract)" applied to "(<code>(<var>'A))", then "
+             (<code>"(array-getter "(<var>'B)")")" is simply "(<code>(<var>'A_))".  Similarly, if "(<code>(<var>'A))" is a two-dimensional array, and "(<code>(<var>'B))" is derived from "(<code>(<var>'A))" by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter "(<var>'B)")")" is "
+             (<code>"(lambda (i j) ("(<var>'A_)" j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>(<var>'A_))", at least for arrays of small dimension.")
         (<p> "Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)",  "
              (<code>'array-curry)",  "(<code>'array-reverse)", "(<code>'array-tile)", "(<code>'array-rotate)" and "(<code>'array-sample)",  and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.")
         (<h3> "Array-map does not produce a specialized array")

@@ -4477,6 +4477,57 @@ that computes the componentwise products when we need them, the times are
 (test (array-inner-product (make-array (make-interval '#(10 1)) list) list list (make-array (make-interval '#(10 1)) list))
       "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")
 
+(pp "array-append tests")
+
+(test (array-append)
+      "array-append: Wrong number of arguments: ")
+
+(test (array-append 'a)
+      "array-append: Wrong number of arguments: ")
+
+(test (array-append generic-storage-class 'a)
+      "array-append: Wrong number of arguments: ")
+
+(test (array-append 'a 'a)
+      "array-append: Expecting arrays of the same dimension after argument 1: ")
+
+(test (array-append generic-storage-class 'a 'a)
+      "array-append: Expecting arrays of the same dimension after argument 2: ")
+
+(test (array-append 'a (make-array (make-interval '#(2 2)) list))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 1: ")
+
+(test (array-append 1. (make-array (make-interval '#(2 2)) list))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 1: ")
+
+(test (array-append 3 (make-array (make-interval '#(2 2)) list))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 1: ")
+
+(test (array-append generic-storage-class 'a (make-array (make-interval '#(2 2)) list))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 2: ")
+
+(test (array-append generic-storage-class 1. (make-array (make-interval '#(2 2)) list))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 2: ")
+
+(test (array-append generic-storage-class 3 (make-array (make-interval '#(2 2)) list))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 2: ")
+
+(test (array-append 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2 2)) list))
+      "array-append: Expecting arrays of the same dimension after argument 1: ")
+
+(test (array-append generic-storage-class 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2 2)) list))
+      "array-append: Expecting arrays of the same dimension after argument 2: ")
+
+(test (array-append 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(3 2)) list))
+      "array-append: Expecting arrays with the same upper and lower bounds (except for index 1) after argument 1: ")
+
+(test (array-append generic-storage-class 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(3 2)) list))
+      "array-append: Expecting arrays with the same upper and lower bounds (except for index 1) after argument 2: ")
+
+(test (array-append u1-storage-class 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+      "array-append: Not all elements of the source can be stored in destination: ")
+
+
 ;;; We steal some tests from Alex Shinn's test suite.
 
 (define (foldl op id l)
@@ -4527,17 +4578,24 @@ that computes the componentwise products when we need them, the times are
                                            (make-interval '#(2 0) '#(4 2)))
                               (identity-array 2)))
       #t)
-(test (myarray= (tensor '((4 7 1 0) (2 6 0 1)))
-                (array-append 1 (tensor '((4 7) (2 6))) (identity-array 2)))
+(test (myarray= (tensor '((4 7 1 0)
+                          (2 6 0 1)))
+                (array-append 1 (tensor '((4 7)
+                                          (2 6)))
+                              (identity-array 2)))
       #t)
-(test (myarray= (tensor '((4 7 2 1 0) (6 3 5 0 1)))
-                (array-append 1 (tensor '((4 7 2) (6 3 5))) (identity-array 2)))
+(test (myarray= (tensor '((4 7 2 1 0)
+                          (6 3 5 0 1)))
+                (array-append 1 (tensor '((4 7 2)
+                                          (6 3 5)))
+                              (identity-array 2)))
       #t)
 (test (myarray= (tensor '((4 7 1 0 0 1 3)
                           (2 6 0 1 5 8 9)))
                 (array-append
                  1
-                 (list->array '(4 7 2 6) (make-interval '#(2 2)))
+                 (list->array '(4 7 2 6)
+                              (make-interval '#(2 2)))
                  (identity-array 2)
                  (list->array '(0 1 3 5 8 9) (make-interval '#(2 3)))))
       #t)

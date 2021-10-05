@@ -3817,7 +3817,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (apply = (map %%array-dimension arrays))))
         (apply error
                (string-append "array-append: Expecting arrays of the same dimension after argument "
-                              (number->string argument-k)
+                              (number->string (if storage-class 2 1))
                               ": ")
                args)
         (let* ((argument-k             ;; index of k in argument list, beginning at 1
