@@ -1,7 +1,7 @@
 #|
 SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
 
-Copyright 2016, 2018, 2020 Bradley J Lucier.
+Copyright 2016, 2018, 2020, 2021 Bradley J Lucier.
 All Rights Reserved.
 
 Permission is hereby granted, free of charge,
@@ -4479,6 +4479,15 @@ that computes the componentwise products when we need them, the times are
 
 (pp "array-append tests")
 
+(define optional-arguments
+  (list '()
+        (list generic-storage-class)
+        (list generic-storage-class #t)
+        (list generic-storage-class #t #t)))
+
+(define k-positions
+  '(1 2 3 4))
+
 (test (array-append)
       "array-append: Wrong number of arguments: ")
 
@@ -4486,47 +4495,69 @@ that computes the componentwise products when we need them, the times are
       "array-append: Wrong number of arguments: ")
 
 (test (array-append generic-storage-class 'a)
-      "array-append: Wrong number of arguments: ")
+      "array-append: Wrong number of arguments after seeing storage class: ")
 
-(test (array-append 'a 'a)
-      "array-append: Expecting arrays of the same dimension after argument 1: ")
+(test (array-append generic-storage-class #t 'a)
+      "array-append: Wrong number of arguments after seeing storage class and mutability: ")
 
-(test (array-append generic-storage-class 'a 'a)
-      "array-append: Expecting arrays of the same dimension after argument 2: ")
+(test (array-append generic-storage-class #t #f 'a)
+      "array-append: Wrong number of arguments after seeing storage class, mutability, and safety: ")
 
-(test (array-append 'a (make-array (make-interval '#(2 2)) list))
-      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 1: ")
+(for-each (lambda (optionals position)
+            (test (apply array-append (append optionals '(a a)))
+                  (string-append "array-append: Expecting arrays of the same dimension after argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions)
 
-(test (array-append 1. (make-array (make-interval '#(2 2)) list))
-      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 1: ")
+(for-each (lambda (optionals position k)
+            (test (apply array-append (append optionals (list k (make-array (make-interval '#(2 2)) list))))
+                  (string-append "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions
+          '('a 1. -1 3))
 
-(test (array-append 3 (make-array (make-interval '#(2 2)) list))
-      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 1: ")
+(for-each (lambda (optionals position)
+            (test (apply array-append
+                         (append optionals
+                                 (list 1
+                                       (make-array (make-interval '#(2 2)) list)
+                                       (make-array (make-interval '#(2 2 2)) list))))
+                  (string-append "array-append: Expecting arrays of the same dimension after argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions)
 
-(test (array-append generic-storage-class 'a (make-array (make-interval '#(2 2)) list))
-      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 2: ")
+(for-each (lambda (optionals position)
+            (test (apply array-append
+                         (append optionals
+                                 (list 1
+                                       (make-array (random-interval 2 3) list)
+                                       (make-array (random-interval 2 3) list))))
+                  (string-append "array-append: Expecting arrays with the same upper and lower bounds (except for index 1) after argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions)
 
-(test (array-append generic-storage-class 1. (make-array (make-interval '#(2 2)) list))
-      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 2: ")
-
-(test (array-append generic-storage-class 3 (make-array (make-interval '#(2 2)) list))
-      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument 2: ")
-
-(test (array-append 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2 2)) list))
-      "array-append: Expecting arrays of the same dimension after argument 1: ")
-
-(test (array-append generic-storage-class 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2 2)) list))
-      "array-append: Expecting arrays of the same dimension after argument 2: ")
-
-(test (array-append 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(3 2)) list))
-      "array-append: Expecting arrays with the same upper and lower bounds (except for index 1) after argument 1: ")
-
-(test (array-append generic-storage-class 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(3 2)) list))
-      "array-append: Expecting arrays with the same upper and lower bounds (except for index 1) after argument 2: ")
-
-(test (array-append u1-storage-class 1 (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+(test (array-append u1-storage-class
+                    1
+                    (make-array (make-interval '#(2 2)) list)
+                    (make-array (make-interval '#(2 2)) list))
       "array-append: Not all elements of the source can be stored in destination: ")
 
+
+(test (array-storage-class
+       (array-append 0
+                     (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
+                     (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class)))
+      generic-storage-class)
+
+;;; FIXME: Need to test the values of other optional arguments to array-append
 
 ;;; We steal some tests from Alex Shinn's test suite.
 
@@ -4608,30 +4639,67 @@ that computes the componentwise products when we need them, the times are
 (test (array-stack 'a)
       "array-stack: Wrong number of arguments: ")
 
-(test (array-stack 'a 'a)
-      "array-stack: Expecting arrays with the same domains after argument 1: ")
+(test (array-stack generic-storage-class 'a)
+      "array-stack: Wrong number of arguments after seeing storage class: ")
 
-(test (array-stack 2 (make-array (make-interval '#(10)) list))
-      "array-stack: Expecting an exact integer between 0 (inclusive) and the number of arrays (inclusive) as argument 1: ")
+(test (array-stack generic-storage-class #t 'a)
+      "array-stack: Wrong number of arguments after seeing storage class and mutability: ")
+
+(test (array-stack generic-storage-class #t #f 'a)
+      "array-stack: Wrong number of arguments after seeing storage class, mutability, and safety: ")
+
+(for-each (lambda (optionals position)
+            (test (apply array-stack (append optionals '(a a)))
+                  (string-append "array-stack: Expecting arrays with the same domains after argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions)
+
+(for-each (lambda (optionals position k)
+            (test (apply array-stack (append optionals (list k (make-array (make-interval '#(2 2)) list))))
+                  (string-append "array-stack: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions
+          '(a 1. -1 3))
+
+(for-each (lambda (optionals position)
+            (test (apply array-stack
+                         (append optionals
+                                 (list 1
+                                       (make-array (random-interval 2 3) list)
+                                       (make-array (random-interval 3 4) list))))
+                  (string-append "array-stack: Expecting arrays with the same domains after argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions)
+
+(for-each (lambda (optionals position)
+            (test (apply array-stack
+                         (append optionals
+                                 (list 1
+                                       (make-array (make-interval '#(2 2)) list)
+                                       (make-array (make-interval '#(3 2)) list))))
+                  (string-append "array-stack: Expecting arrays with the same domains after argument "
+                                 (number->string position)
+                                 ": ")))
+          optional-arguments
+          k-positions)
 
 (test (array-storage-class
        (array-stack 1 (make-array (make-interval '#(10)) list)))
       generic-storage-class)
+
+;;; FIXME: Need to test the values of other optional arguments to array-append
 
 (test (array-storage-class
        (array-stack 1
                     (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
                     (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class)))
       generic-storage-class)
-
-(test (array-stack generic-storage-class 'a)
-      "array-stack: Wrong number of arguments: ")
-
-(test (array-stack generic-storage-class 'a 'a)
-      "array-stack: Expecting arrays with the same domains after argument 2: ")
-
-(test (array-stack generic-storage-class 2 (make-array (make-interval '#(10)) list))
-      "array-stack: Expecting an exact integer between 0 (inclusive) and the number of arrays (inclusive) as argument 2: ")
 
 (test (myarray= (tensor '(((4 7) (2 6))
                           ((1 0) (0 1))))

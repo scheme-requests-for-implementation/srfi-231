@@ -1,7 +1,7 @@
 #|
 SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
 
-Copyright 2016, 2018, 2020 Bradley J Lucier.
+Copyright 2016, 2018, 2020, 2021 Bradley J Lucier.
 All Rights Reserved.
 
 Permission is hereby granted, free of charge,
@@ -266,22 +266,16 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-projections interval right-dimension))))
 
 (define (%%interval-projections interval right-dimension)
-  (let* ((n (%%interval-dimension interval))
-         (left-dimension (fx- n right-dimension))
-         (lower-bounds (%%interval-lower-bounds interval))
-         (upper-bounds (%%interval-upper-bounds interval))
-         (left-lower-bounds (make-vector left-dimension))
-         (left-upper-bounds (make-vector left-dimension))
-         (right-lower-bounds (make-vector (- n left-dimension)))
-         (right-upper-bounds (make-vector (- n left-dimension))))
-    (subvector-move! lower-bounds 0 left-dimension left-lower-bounds 0)
-    (subvector-move! upper-bounds 0 left-dimension left-upper-bounds 0)
-    (subvector-move! lower-bounds left-dimension n right-lower-bounds 0)
-    (subvector-move! upper-bounds left-dimension n right-upper-bounds 0)
-    (values (%%finish-interval left-lower-bounds
-                               left-upper-bounds)
-            (%%finish-interval right-lower-bounds
-                               right-upper-bounds))))
+  (let ((left-dimension
+         (fx- (%%interval-dimension interval) right-dimension))
+        (lowers
+         (%%interval-lower-bounds->list interval))
+        (uppers
+         (%%interval-upper-bounds->list interval)))
+    (values (%%finish-interval (list->vector (take lowers left-dimension))
+                               (list->vector (take uppers left-dimension)))
+            (%%finish-interval (list->vector (drop lowers left-dimension))
+                               (list->vector (drop uppers left-dimension))))))
 
 (define (permutation? permutation)
   (and (vector? permutation)
@@ -3695,24 +3689,56 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (array-stack . args) ;; (array-stack [storage-class] k array1 array2 ...)
 
-  (define (wrong-number-of-args)
-    (apply error "array-stack: Wrong number of arguments: " args))
+  (define (wrong-number-of-args message)
+    (apply error
+           (string-append "array-stack: Wrong number of arguments"
+                          message
+                          ": ")
+           args))
   
-  (define (initial-parse mutable? safe? args)
+  (define (initial-parse args)
     (cond ((or (null? args)
                (null? (cdr args)))
-           (wrong-number-of-args))
-          ;; args has at least two list elements
-          ((storage-class? (car args))
-           (if (null? (cddr args))
-               (wrong-number-of-args)
-               (process-args mutable? safe? (car args) (cadr args) (cddr args))))
+           ;; There must be at least two arguments
+           (wrong-number-of-args ""))
+          ((not (storage-class? (car args)))
+           (process-args #f                                   ;; storage class
+                         'not-given                           ;; mutable?
+                         'not-given                           ;; safe?
+                         (car args)                           ;; k (maybe)
+                         (cdr args)))                         ;; arrays (maybe)
+          ((null? (cddr args))
+           (wrong-number-of-args " after seeing storage class"))
+          ((not (boolean? (cadr args)))
+           (process-args (car args)                           ;; storage class
+                         'not-given                           ;; mutable?
+                         'not-given                           ;; safe?
+                         (cadr args)                          ;; k (maybe)
+                         (cddr args)))                        ;; arrays (maybe)
+          ((null? (cdddr args))
+           (wrong-number-of-args " after seeing storage class and mutability"))
+          ((not (boolean? (caddr args)))
+           (process-args (car args)                           ;; storage class
+                         (cadr args)                          ;; mutable?
+                         'not-given                           ;; safe?
+                         (caddr args)                         ;; k (maybe)
+                         (cdddr args)))                       ;; arrays (maybe)
+          ((null? (cddddr args))
+           (wrong-number-of-args" after seeing storage class, mutability, and safety"))
           (else
-           (process-args mutable? safe? #f (car args) (cdr args)))))
+           (process-args (car args)                           ;; storage class
+                         (cadr args)                          ;; mutable?
+                         (caddr args)                         ;; safe?
+                         (cadddr args)                        ;; k (maybe)
+                         (cddddr args)))))                    ;; arrays (maybe)
+
   
-  (define (process-args mutable? safe? storage-class k arrays)
+  (define (process-args storage-class mutable? safe? k arrays)
     (let ((argument-k
-           (if storage-class 2 1))
+           (cond ((boolean? safe?)               4)
+                 ((boolean? mutable?)            3)
+                 ((storage-class? storage-class) 2)
+                 (else                           1)))
           (number-of-arrays
            (length arrays))
           (first-array   ;; may not really be an array at this point
@@ -3732,214 +3758,266 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (fx<= k number-of-arrays)))
              (apply error
                     (string-append "array-stack: Expecting an exact integer between 0 (inclusive) "
-                                   "and the number of arrays (inclusive) as argument "
+                                   "and the dimension of the arrays (inclusive) as argument "
                                    (number->string argument-k)
                                    ": ")
                     args))
             (else
-             (let* ((storage-class
-                     (or storage-class              ;; it's given explicitly
-                         (and (%%every specialized-array? arrays)
-                              (%%every (lambda (a)
-                                         (eq? (%%array-storage-class a)
-                                              (%%array-storage-class first-array)))
-                                       (cdr arrays))
-                              (%%array-storage-class (car arrays)))
-                         generic-storage-class))
-                    (domain                         ;; the common domain of all the arrays
-                     (%%array-domain first-array))
-                    (domain-dimension
-                     (%%interval-dimension domain))
-                    (lowers
-                     (%%interval-lower-bounds domain))
-                    (uppers
-                     (%%interval-upper-bounds domain))
-                    (result-dimension
-                     (fx+ 1 domain-dimension))
-                    (result-domain
-                     (let ((result-lowers
-                            (make-vector result-dimension))
-                           (result-uppers
-                            (make-vector result-dimension)))
-                       (subvector-move! lowers 0 k                result-lowers 0)
-                       (subvector-move! lowers k domain-dimension result-lowers (fx+ k 1))
-                       (subvector-move! uppers 0 k                result-uppers 0)
-                       (subvector-move! uppers k domain-dimension result-uppers (fx+ k 1))
-                       (vector-set! result-lowers k 0)
-                       (vector-set! result-uppers k number-of-arrays)
-                       (%%finish-interval result-lowers result-uppers)))
-                    (result-array
-                     (%%make-specialized-array result-domain
-                                               storage-class
-                                               (storage-class-default storage-class)
-                                               safe?))
-                    (permutation   ;; the permutation that puts dimension k at the beginning
-                     (let ((result
-                            (list->vector (iota result-dimension))))
-                       (subvector-move! result 0 k result 1)
-                       (vector-set! result 0 k)
-                       result))
-                    (permuted-and-curried-result
-                     (%%array-curry (%%array-permute result-array permutation)
-                                    domain-dimension)))
-               ;; copy each array argument to the associated place in stack
-               (array-for-each (lambda (destination source)
-                                 (%%move-array-elements destination source "array-stack!: "))
-                               permuted-and-curried-result
-                               (list->array arrays (make-interval (vector number-of-arrays))))
-               (if (not mutable?)
-                   (%%array-setter-set! result-array #f))
-               result-array)))))
-
-  (initial-parse (specialized-array-default-mutable?)
-                 (specialized-array-default-safe?)
-                 args))
-
-(define (array-append . args) ;; (array-append [storage-class] k array1 array2 ...)
-  
-  (define (wrong-number-of-args)
-    (apply error "array-append: Wrong number of arguments: " args))
-  
-  (define (initial-parse mutable? safe? args)
-    (cond ((or (null? args)
-               (null? (cdr args)))
-           ;; args has at least two list elements
-           (wrong-number-of-args))
-          ((storage-class? (car args))
-           (if (null? (cddr args))
-               (wrong-number-of-args)
-               (process-args mutable? safe? (car args) (cadr args) (cddr args))))
-          (else
-           (process-args mutable? safe? #f (car args) (cdr args)))))
-
-  (define (process-args mutable? safe? storage-class k arrays)
-    (if (not (and (%%every array? arrays)
-                  (apply = (map %%array-dimension arrays))))
-        (apply error
-               (string-append "array-append: Expecting arrays of the same dimension after argument "
-                              (number->string (if storage-class 2 1))
-                              ": ")
-               args)
-        (let* ((argument-k             ;; index of k in argument list, beginning at 1
-                (if storage-class 2 1))
-               (number-of-arrays
-                (length arrays))
-               (domains
-                (map %%array-domain arrays))
-               (first-array
-                (car arrays))
-               (first-domain
-                (%%array-domain first-array))
-               (dim
-                (%%array-dimension first-array)))
-          (cond ((not (and (fixnum? k)
-                           (fx<= 0 k)
-                           (fx< k dim)))
-                 (apply error
-                        (string-append "array-append: Expecting an exact integer between 0 (inclusive)"
-                                       " and the dimension of the arrays (exclusive) as argument "
-                                       (number->string argument-k)
-                                       ": ")
-                        args))
-                ((not (%%every (lambda (d)
-                                 (let loop ((i 0))
-                                   (or (fx= i dim)
-                                       (and (or (fx= i k)
-                                                (and (fx= (%%interval-lower-bound first-domain i)
-                                                          (%%interval-lower-bound d            i))
-                                                     (fx= (%%interval-upper-bound first-domain i)
-                                                          (%%interval-upper-bound d            i))))
-                                            (loop (fx+ i 1))))))
-                               (cdr domains)))
-                 (apply error
-                        (string-append "array-append: Expecting arrays with the same upper and lower bounds (except for index "
-                                       (number->string k)
-                                       ") after argument "
-                                       (number->string argument-k)
-                                       ": ")
-                        args))
-                (else
-                 (let* ((storage-class
-                         (or storage-class                                  ;; it's given explicitly
-                             (and (%%every specialized-array? arrays)       ;; applies to all arrays
-                                  (%%every (lambda (a)
-                                             (eq? (%%array-storage-class a) ;; applies to all arrays but the first
-                                                  (%%array-storage-class first-array)))
-                                           (cdr arrays))
-                                  (%%array-storage-class (car arrays)))     ;; it's the same as all the argument arrays
-                             generic-storage-class))
-                        (domains
-                         (map %%array-domain arrays))
-                        (kth-sizes
-                         (map (lambda (domain)
-                                (- (%%interval-upper-bound domain k)    ;; may not be fixnums
-                                   (%%interval-lower-bound domain k)))
-                              domains))
-                        (kth-size
-                         (apply + kth-sizes))
-                        (result-lowers
-                         (let ((result (vector-copy (%%interval-lower-bounds first-domain))))
-                           (vector-set! result k 0)
-                           result))
-                        (result-uppers
-                         (let ((result (vector-copy (%%interval-upper-bounds first-domain))))
-                           (vector-set! result k kth-size)
-                           result))
+             (call-with-values
+                 (lambda ()
+                   (if (and (%%every specialized-array? arrays)
+                            (%%every (lambda (a)
+                                       (and (eq? (%%array-storage-class a)
+                                                 (%%array-storage-class first-array))
+                                            (eq? (not (%%array-setter a))    ;; booleanify the setter
+                                                 (not (%%array-setter first-array)))
+                                            (eq? (%%array-safe? a)
+                                                 (%%array-safe? first-array))))
+                                     (cdr arrays)))
+                       (values (or storage-class
+                                   (%%array-storage-class first-array))
+                               (if (boolean? mutable?)
+                                   mutable?
+                                   (not (not (%%array-setter first-array)))) ;; booleanify the setter
+                               (if (boolean? safe?)
+                                   safe?
+                                   (%%array-safe? first-array)))
+                       (values (or storage-class
+                                   generic-storage-class)
+                               (if (boolean? mutable?)
+                                   mutable?
+                                   (specialized-array-default-mutable?))
+                               (if (boolean? safe?)
+                                   safe?
+                                   (specialized-array-default-mutable?)))))
+               (lambda (storage-class mutable? safe?)
+                 (let* ((domain                         ;; the common domain of all the arrays
+                         (%%array-domain first-array))
+                        (domain-dimension
+                         (%%interval-dimension domain))
+                        (lowers
+                         (%%interval-lower-bounds->list domain))
+                        (uppers
+                         (%%interval-upper-bounds->list domain))
+                        (result-dimension
+                         (fx+ 1 domain-dimension))
                         (result-domain
-                         (%%finish-interval result-lowers result-uppers))
-                        (kth-offsets ;; one more than length of arrays
-                         (let loop ((result '(0))
-                                    (sizes kth-sizes))
-                           (if (null? sizes)
-                               (reverse result)
-                               (loop (cons (fx+ (car result)
-                                                (car sizes))
-                                           result)
-                                     (cdr sizes)))))
-                        (kth-translates
-                         (map (lambda (offset domain)
-                                (fx- offset
-                                     (%%interval-lower-bound domain k)))
-                              kth-offsets
-                              domains))
+                         (%%finish-interval
+                          (list->vector (append (take lowers k) (cons 0                (drop lowers k))))
+                          (list->vector (append (take uppers k) (cons number-of-arrays (drop uppers k))))))
                         (result-array
                          (%%make-specialized-array result-domain
                                                    storage-class
                                                    (storage-class-default storage-class)
                                                    safe?))
-                        ;; Will be used to extract suitable subarrays from result-array
-                        (extracted-lowers
-                         (vector-copy (%%interval-lower-bounds first-domain)))
-                        (extracted-uppers
-                         (vector-copy (%%interval-upper-bounds first-domain)))
-                        (translation    ;; will be used to translate the argument arrays in kth dimension
-                         (make-vector dim 0)))
-                   ;; What's left to do is copy the argument arrays to the result array
-                   ;; at the right offset.
-                   (let loop ((offsets kth-offsets)
-                              (translates kth-translates)
-                              (arrays arrays))
-                     (if (null? arrays)
-                         (begin
-                           (if (not mutable?)
-                               (%%array-setter-set! result-array #f))
-                           result-array)
-                         (begin
-                           ;; It's safe to reuse and modify the lower and upper bounds of
-                           ;; extracted-domain, because each extracted array has limited liveness
-                           (vector-set! extracted-lowers k (car offsets))
-                           (vector-set! extracted-uppers k (cadr offsets))
-                           (vector-set! translation k (car translates))
-                           (%%move-array-elements (%%array-extract result-array (%%finish-interval extracted-lowers extracted-uppers))
-                                                  (%%array-translate (car arrays) translation)
-                                                  "array-append: ")
-                           (loop (cdr offsets)
-                                 (cdr translates)
-                                 (cdr arrays)))))))))))
+                        (permutation   ;; the permutation that puts dimension k at the beginning
+                         (list->vector
+                          (cons k (remove (lambda (i) (fx= i k)) (iota result-dimension)))))
+                        (permuted-and-curried-result
+                         (%%array-curry (%%array-permute result-array permutation)
+                                        domain-dimension)))
+                   ;; copy each array argument to the associated place in stack
+                   (array-for-each (lambda (destination source)
+                                     (%%move-array-elements destination source "array-stack!: "))
+                                   permuted-and-curried-result
+                                   (list->array arrays (make-interval (vector number-of-arrays))))
+                   (if (not mutable?)
+                       (%%array-setter-set! result-array #f))
+                   result-array)))))))
+
+  (initial-parse args))
+
+(define (array-append . args) ;; (array-append [storage-class] k array1 array2 ...)
   
-  (initial-parse (specialized-array-default-mutable?)
-                 (specialized-array-default-safe?)
-                 args))
+  (define (wrong-number-of-args message)
+    (apply error
+           (string-append "array-append: Wrong number of arguments"
+                          message
+                          ": ")
+           args))
+  
+  (define (initial-parse args)
+    (cond ((or (null? args)
+               (null? (cdr args)))
+           ;; args has at least two list elements
+           (wrong-number-of-args ""))
+          ((not (storage-class? (car args)))
+           (process-args #f                                   ;; storage class
+                         'not-given                           ;; mutable?
+                         'not-given                           ;; safe?
+                         (car args)                           ;; k (maybe)
+                         (cdr args)))                         ;; arrays (maybe)
+          ((null? (cddr args))
+           (wrong-number-of-args " after seeing storage class"))
+          ((not (boolean? (cadr args)))
+           (process-args (car args)                           ;; storage class
+                         'not-given                           ;; mutable?
+                         'not-given                           ;; safe?
+                         (cadr args)                          ;; k (maybe)
+                         (cddr args)))                        ;; arrays (maybe)
+          ((null? (cdddr args))
+           (wrong-number-of-args " after seeing storage class and mutability"))
+          ((not (boolean? (caddr args)))
+           (process-args (car args)                           ;; storage class
+                         (cadr args)                          ;; mutable?
+                         'not-given                           ;; safe?
+                         (caddr args)                         ;; k (maybe)
+                         (cdddr args)))                       ;; arrays (maybe)
+          ((null? (cddddr args))
+           (wrong-number-of-args" after seeing storage class, mutability, and safety"))
+          (else
+           (process-args (car args)                           ;; storage class
+                         (cadr args)                          ;; mutable?
+                         (caddr args)                         ;; safe?
+                         (cadddr args)                        ;; k (maybe)
+                         (cddddr args)))))                    ;; arrays (maybe)
+
+  (define (process-args storage-class mutable? safe? k arrays)
+    (let ((argument-k                                         ;; index of k in argument list, beginning at 1
+           (cond ((boolean? safe?)               4)
+                 ((boolean? mutable?)            3)
+                 ((storage-class? storage-class) 2)
+                 (else                           1))))
+      (if (not (and (%%every array? arrays)
+                    (apply = (map %%array-dimension arrays))))
+          (apply error
+                 (string-append "array-append: Expecting arrays of the same dimension after argument "
+                                (number->string argument-k)
+                                ": ")
+                 args)
+          (let* ((domains
+                  (map %%array-domain arrays))
+                 (first-array
+                  (car arrays))
+                 (first-domain
+                  (%%array-domain first-array))
+                 (dim
+                  (%%array-dimension first-array)))
+            (cond ((not (and (fixnum? k)
+                             (fx<= 0 k)
+                             (fx< k dim)))
+                   (apply error
+                          (string-append "array-append: Expecting an exact integer between 0 (inclusive)"
+                                         " and the dimension of the arrays (exclusive) as argument "
+                                         (number->string argument-k)
+                                         ": ")
+                          args))
+                  ((not (%%every (lambda (d)
+                                   (let loop ((i 0))
+                                     (or (fx= i dim)
+                                         (and (or (fx= i k)
+                                                  (and (= (%%interval-lower-bound first-domain i)  ;; may not be fixnums
+                                                          (%%interval-lower-bound d            i))
+                                                       (= (%%interval-upper-bound first-domain i)
+                                                          (%%interval-upper-bound d            i))))
+                                              (loop (fx+ i 1))))))
+                                 (cdr domains)))
+                   (apply error
+                          (string-append "array-append: Expecting arrays with the same upper and lower bounds (except for index "
+                                         (number->string k)
+                                         ") after argument "
+                                         (number->string argument-k)
+                                         ": ")
+                          args))
+                  (else
+                   (call-with-values
+                       (lambda ()
+                         (if (and (%%every specialized-array? arrays)
+                                  (%%every (lambda (a)
+                                             (and (eq? (%%array-storage-class a)
+                                                       (%%array-storage-class first-array))
+                                                  (eq? (not (%%array-setter a))    ;; booleanify the setter
+                                                       (not (%%array-setter first-array)))
+                                                  (eq? (%%array-safe? a)
+                                                       (%%array-safe? first-array))))
+                                           (cdr arrays)))
+                             (values (or storage-class
+                                         (%%array-storage-class first-array))
+                                     (if (boolean? mutable?)
+                                         mutable?
+                                         (not (not (%%array-setter first-array)))) ;; booleanify the setter
+                                     (if (boolean? safe?)
+                                         safe?
+                                         (%%array-safe? first-array)))
+                             (values (or storage-class
+                                         generic-storage-class)
+                                     (if (boolean? mutable?)
+                                         mutable?
+                                         (specialized-array-default-mutable?))
+                                     (if (boolean? safe?)
+                                         safe?
+                                         (specialized-array-default-mutable?)))))
+                     (lambda (storage-class mutable? safe?)
+                       (let* ((domains
+                               (map %%array-domain arrays))
+                              (kth-sizes
+                               (map (lambda (domain)
+                                      (- (%%interval-upper-bound domain k)    ;; may not be fixnums
+                                         (%%interval-lower-bound domain k)))
+                                    domains))
+                              (kth-size
+                               (apply + kth-sizes))
+                              (result-lowers
+                               (let ((result (vector-copy (%%interval-lower-bounds first-domain))))
+                                 (vector-set! result k 0)
+                                 result))
+                              (result-uppers
+                               (let ((result (vector-copy (%%interval-upper-bounds first-domain))))
+                                 (vector-set! result k kth-size)
+                                 result))
+                              (result-domain
+                               (%%finish-interval result-lowers result-uppers))
+                              (kth-offsets ;; one more than length of arrays
+                               (let loop ((result '(0))
+                                          (sizes kth-sizes))
+                                 (if (null? sizes)
+                                     (reverse result)
+                                     (loop (cons (fx+ (car result)
+                                                      (car sizes))
+                                                 result)
+                                           (cdr sizes)))))
+                              (kth-translates
+                               (map (lambda (offset domain)
+                                      (fx- offset
+                                           (%%interval-lower-bound domain k)))
+                                    kth-offsets
+                                    domains))
+                              (result-array
+                               (%%make-specialized-array result-domain
+                                                         storage-class
+                                                         (storage-class-default storage-class)
+                                                         safe?))
+                              ;; Will be used to extract suitable subarrays from result-array
+                              (extracted-lowers
+                               (vector-copy (%%interval-lower-bounds first-domain)))
+                              (extracted-uppers
+                               (vector-copy (%%interval-upper-bounds first-domain)))
+                              (translation    ;; will be used to translate the argument arrays in kth dimension
+                               (make-vector dim 0)))
+                         ;; What's left to do is copy the argument arrays to the result array
+                         ;; at the right offset.
+                         (let loop ((offsets kth-offsets)
+                                    (translates kth-translates)
+                                    (arrays arrays))
+                           (if (null? arrays)
+                               (begin
+                                 (if (not mutable?)
+                                     (%%array-setter-set! result-array #f))
+                                 result-array)
+                               (begin
+                                 ;; It's safe to reuse and modify the lower and upper bounds of
+                                 ;; extracted-domain, because each extracted array has limited liveness
+                                 (vector-set! extracted-lowers k (car offsets))
+                                 (vector-set! extracted-uppers k (cadr offsets))
+                                 (vector-set! translation k (car translates))
+                                 (%%move-array-elements (%%array-extract result-array (%%finish-interval extracted-lowers extracted-uppers))
+                                                        (%%array-translate (car arrays) translation)
+                                                        "array-append: ")
+                                 (loop (cdr offsets)
+                                       (cdr translates)
+                                       (cdr arrays))))))))))))))
+  
+  (initial-parse args))
 
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
