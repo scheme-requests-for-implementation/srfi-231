@@ -4557,6 +4557,119 @@ that computes the componentwise products when we need them, the times are
                      (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class)))
       generic-storage-class)
 
+(test (myarray= (array-append
+                  0
+                  (list->array '(1 2
+                                   3 4)
+                               (make-interval '#(2 2)))
+                  (list->array '(5 6
+                                   7 8)
+                               (make-interval '#(2 2))))
+                 (list->array '(1 2
+                                  3 4
+                                  5 6
+                                  7 8)
+                              (make-interval '#(4 2))))
+      #t)
+
+(test (myarray= (array-append
+                  1
+                  (list->array '(1 2
+                                   3 4)
+                               (make-interval '#(2 2)))
+                  (list->array '(5 6
+                                   7 8)
+                               (make-interval '#(2 2))))
+                 (list->array '(1 2 5 6
+                                  3 4 7 8)
+                              (make-interval '#(2 4))))
+      #t)
+
+(define (my-array-append k array . arrays)
+  (let*-values (((arrays)                         ;; all array arguments
+                 (cons array arrays))
+                ((axis-subdividers kth-size)
+                 ;; compute lower and upper bounds of where
+                 ;; we'll copy each array argument, plus
+                 ;; the size of the kth axis of the result array
+                 (let loop ((result '(0))
+                            (arrays arrays))
+                   (if (null? arrays)
+                       (values (reverse result) (car result))
+                       (let ((interval (array-domain (car arrays))))
+                         (loop (cons (+ (car result)
+                                        (- (interval-upper-bound interval k)
+                                           (interval-lower-bound interval k)))
+                                     result)
+                               (cdr arrays))))))
+                ((lowers)                         ;; the domains of the arrays differ only in the kth axis
+                 (interval-lower-bounds->vector (array-domain array)))
+                ((uppers)
+                 (interval-upper-bounds->vector (array-domain array)))
+                ((result)                         ;; the result array
+                 (make-specialized-array
+                  (let ()
+                    (vector-set! lowers k 0)
+                    (vector-set! uppers k kth-size)
+                    (make-interval lowers uppers))))
+                ((translation)
+                 ;; a vector we'll use to align each argument
+                 ;; array into the proper subarray of the result
+                 (make-vector (array-dimension array) 0)))
+    (let loop ((arrays arrays)
+               (subdividers axis-subdividers))
+      (if (null? arrays)
+          ;; we've assigned every array to the appropriate subarray of result
+          result
+          (let ((array (car arrays)))
+            (vector-set! lowers k (car subdividers))
+            (vector-set! uppers k (cadr subdividers))
+            (vector-set! translation k (- (car subdividers)
+                                          (interval-lower-bound (array-domain array) k)))
+            (array-assign!
+             (array-extract result (make-interval lowers uppers))
+             (array-translate array translation))
+            (loop (cdr arrays)
+                  (cdr subdividers)))))))
+
+(test (myarray= (array-append
+                  0
+                  (list->array '(1 2
+                                   3 4)
+                               (make-interval '#(2 2)))
+                  (list->array '(5 6
+                                   7 8)
+                               (make-interval '#(2 2))))
+                 (my-array-append
+                  0
+                  (list->array '(1 2
+                                   3 4)
+                               (make-interval '#(2 2)))
+                  (list->array '(5 6
+                                   7 8)
+                               (make-interval '#(2 2)))))
+      #t)
+
+(test (myarray= (array-append
+                  1
+                  (list->array '(1 2
+                                   3 4)
+                               (make-interval '#(2 2)))
+                  (list->array '(5 6
+                                   7 8)
+                               (make-interval '#(2 2))))
+                 (my-array-append
+                  1
+                  (list->array '(1 2
+                                   3 4)
+                               (make-interval '#(2 2)))
+                  (list->array '(5 6
+                                   7 8)
+                               (make-interval '#(2 2)))))
+      #t)
+
+
+
 ;;; FIXME: Need to test the values of other optional arguments to array-append
 
 ;;; We steal some tests from Alex Shinn's test suite.

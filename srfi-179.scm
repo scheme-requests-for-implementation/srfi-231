@@ -379,6 +379,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-reverse" "array-reverse")END
                  (<a> href: "#array-sample" "array-sample")END
                  (<a> href: "#array-outer-product" "array-outer-product") END
+                 (<a> href: "#array-inner-product" "array-inner-product") END
                  (<a> href: "#array-map" "array-map")END
                  (<a> href: "#array-for-each" "array-for-each")END
                  (<a> href: "#array-foldl" "array-foldl")END
@@ -389,6 +390,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-rarrow-list" "array->list") END
                  (<a> href: "#list-rarrow-array" "list->array") END
                  (<a> href: "#array-assign!" "array-assign!") END
+                 (<a> href: "#array-append" "array-append") END
+                 (<a> href: "#array-stack" "array-stack") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
                  (<a> href: "#specialized-array-reshape" "specialized-array-reshape")
@@ -1384,8 +1387,19 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
      (<code>"(array-getter "(<var>'A)")")" will be called "(<code>"(array-volume "(<var>'B)")")" times; similarly "(<code>"(array-getter "(<var>'B)")")" will be called "(<code>"(array-volume "(<var>'A)")")" times. ")
 (<p> "This implies that if "(<code>"(array-getter "(<var>'A)")")" is expensive to compute (for example, if it's returning an array, as does "(<code>'array-curry)") then the elements of "(<code>(<var>'A))
      " should be pre-computed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
-     "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for matrix multiplication and "(<code>'inner-product)
+     "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for "(<code>'inner-product)
      " applies "(<code>'array-outer-product)" to curried arrays, so we apply "(<code>"array-copy")" to the arguments before passage to "(<code>'array-outer-product)".")
+
+(format-lambda-list '(array-inner-product A f g B))
+(<p> "Assumes that "(<code>(<var>'f))" and "(<code>(<var>'g))" are procedures of two arguments and "(<code>(<var>'A))" and "(<code>(<var>'B))" are arrays, with the upper and lower bounds of the last dimension of "(<code>(<var>'A))" the same as those of the first dimension of "(<code>(<var>'B))". Computes the equivalent of")
+(<pre>(<code>"(define (array-inner-product "(<var>"A f g B")")
+  (array-outer-product
+   (lambda ("(<var>"a b")")
+     (array-reduce "(<var>'f)" (array-map "(<var>"g a b")")))
+   (array-copy (array-curry "(<var>'A)" 1))
+   (array-copy (array-curry (array-rotate "(<var>'B)" 1) 1))))"))
+(<p> "We precompute and store the curried arrays using "(<code>'array-copy)" for efficiency reasons, as described in "(<a> href: "#array-outer-product" (<code>'array-outer-product))".")
+(<p> "It is an error if the arguments do not satisfy these constraints.")
 
 (format-lambda-list '(array-map f array #\. arrays))
 (<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain and "(<code>(<var> 'f))" is a procedure, then "(<code> 'array-map)"
@@ -1593,6 +1607,86 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
      "and assigns each value to the multi-index in "(<code>(<var>'destination))" in the same lexicographical order.")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
+
+(format-lambda-list '(array-stack #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
+(<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
+(<p> "Returns a specialized array equivalent to ")
+(<pre>(<code>"(array-copy
+ (make-array
+  (let (("(<var>'lowers)" (interval-lower-bounds->list (array-domain "(<var>'array)")))
+        ("(<var>'uppers)" (interval-upper-bounds->list (array-domain "(<var>'array)")))
+        ("(<var>'N)" (length (cons "(<var>"array arrays")"))))
+    (make-interval (append (take "(<var>"lowers k")") (cons 0 (drop "(<var>"lowers k")")))
+                   (append (take "(<var>"uppers k")") (cons "(<var>'N)" (drop "(<var>"uppers k")")))))
+  (let (("(<var>'getters)" (map array-getter (cons "(<var>"array arrays")"))))
+    (lambda indices
+      (let (("(<var>'i)" (list-ref "(<var>"indices k")")))
+        (apply (list-ref "(<var>"getters i")")
+               (append (take "(<var>"indices k")")
+                       (drop "(<var>'indices)" (+ "(<var>'k)" 1)))))))))"))
+(<p> "In other words we \"stack\" the argument arrays along a new "(<code>(<var>'k))"'th axis, the lower bound of which is set to 0.")
+(<p> "If all optional arguments are given, the resultant array has storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))".")
+(<p> "We determine the values of missing optional arguments as follows: If the argument arrays "(<i>'all)" have the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "It is an error if the arguments do not satisfy these constraints.")
+
+(format-lambda-list '(array-append #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
+(<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
+(<p> "This routine appends, or concatenates, the argument arrays along the "(<var>'k)"'th axis, with the lower bound of this axis set to 0.")
+(<p> "Returns a specialized array equivalent to the result of")
+(<pre>(<code>"(define (array-append k array . arrays)
+  (let*-values (((arrays)
+                 ;; all array arguments
+                 (cons array arrays))
+                ((axis-subdividers kth-size)
+                 ;; compute lower and upper bounds of where
+                 ;; we'll copy each array argument, plus
+                 ;; the size of the kth axis of the result array
+                 (let loop ((result '(0))
+                            (arrays arrays))
+                   (if (null? arrays)
+                       (values (reverse result) (car result))
+                       (let ((interval (array-domain (car arrays))))
+                         (loop (cons (+ (car result)
+                                        (- (interval-upper-bound interval k)
+                                           (interval-lower-bound interval k)))
+                                     result)
+                               (cdr arrays))))))
+                ((lowers)
+                 ;; the domains of the arrays differ only in the kth axis
+                 (interval-lower-bounds->vector (array-domain array)))
+                ((uppers)
+                 (interval-upper-bounds->vector (array-domain array)))
+                ((result)
+                 ;; the result array
+                 (make-specialized-array
+                  (let ()
+                    (vector-set! lowers k 0)
+                    (vector-set! uppers k kth-size)
+                    (make-interval lowers uppers))))
+                ((translation)
+                 ;; a vector we'll use to align each argument
+                 ;; array into the proper subarray of the result
+                 (make-vector (array-dimension array) 0)))
+    (let loop ((arrays arrays)
+               (subdividers axis-subdividers))
+      (if (null? arrays)
+          ;; we've assigned every array to the appropriate subarray of result
+          result
+          (let ((array (car arrays)))
+            ;; the lower and upper bounds in the kth axis of the result where we copy the next array
+            (vector-set! lowers k (car subdividers))
+            (vector-set! uppers k (cadr subdividers))
+            ;; the translation that aligns the next array with the subarray of the result
+            (vector-set! translation k (- (car subdividers)
+                                          (interval-lower-bound (array-domain array) k)))
+            (array-assign!
+             (array-extract result (make-interval lowers uppers))
+             (array-translate array translation))
+            (loop (cdr arrays)
+                  (cdr subdividers)))))))"))
+ (<p> "If all optional arguments are given, the resultant array has storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))".")
+(<p> "We determine the values of missing optional arguments as follows: If the argument arrays "(<i>'all)" have the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "It is an error if the arguments do not satisfy these constraints.")
 
 (format-lambda-list '(array-ref A i0 #\. i-tail))
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")

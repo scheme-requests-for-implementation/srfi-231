@@ -21,6 +21,10 @@
                                 (eq? (car obj)
                                      'format-global-variable))
                            (set! result (cons (cadadr obj) result)))
+                          ((and (not (null? obj))
+                                (eq? (car obj)
+                                     'format-parameter))
+                           (set! result (cons (cadadr obj) result)))
                           (else
                            (for-each process obj)))))
               (process obj)

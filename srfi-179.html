@@ -211,6 +211,7 @@
         <a href="#array-reverse">array-reverse</a>,
         <a href="#array-sample">array-sample</a>,
         <a href="#array-outer-product">array-outer-product</a>,
+        <a href="#array-inner-product">array-inner-product</a>,
         <a href="#array-map">array-map</a>,
         <a href="#array-for-each">array-for-each</a>,
         <a href="#array-foldl">array-foldl</a>,
@@ -221,6 +222,8 @@
         <a href="#array-rarrow-list">array-&gt;list</a>,
         <a href="#list-rarrow-array">list-&gt;array</a>,
         <a href="#array-assign!">array-assign!</a>,
+        <a href="#array-append">array-append</a>,
+        <a href="#array-stack">array-stack</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
         <a href="#specialized-array-reshape">specialized-array-reshape</a>.</dd></dl>
@@ -982,7 +985,17 @@ indexer:       (lambda multi-index
                   (apply (array-getter array2) (list-tail args (array-dimension array1))))))</code></pre>
     <p>This operation can be considered a partial inverse to <code>array-curry</code>.  It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Note: </b>You can see from the above definition that if <code><var>C</var></code> is <code>(array-outer-product <var>op</var> <var>A</var> <var>B</var>)</code>, then each call to <code>(array-getter <var>C</var>)</code> will call <code><var>op</var></code> as well as <code>(array-getter <var>A</var>)</code> and <code>(array-getter <var>B</var>)</code>.  This implies that if all elements of <code><var>C</var></code> are eventually accessed, then <code>(array-getter <var>A</var>)</code> will be called <code>(array-volume <var>B</var>)</code> times; similarly <code>(array-getter <var>B</var>)</code> will be called <code>(array-volume <var>A</var>)</code> times. </p>
-    <p>This implies that if <code>(array-getter <var>A</var>)</code> is expensive to compute (for example, if it's returning an array, as does <code>array-curry</code>) then the elements of <code><var>A</var></code> should be pre-computed if necessary and stored in a specialized array, typically using <code>array-copy</code>, before that specialized array is passed as an argument to <code>array-outer-product</code>.  In the examples below, the code for Gaussian elimination applies <code>array-outer-product</code> to shared specialized arrays, which are of course themselves specialized arrays; the code for matrix multiplication and <code>inner-product</code> applies <code>array-outer-product</code> to curried arrays, so we apply <code>array-copy</code> to the arguments before passage to <code>array-outer-product</code>.</p>
+    <p>This implies that if <code>(array-getter <var>A</var>)</code> is expensive to compute (for example, if it's returning an array, as does <code>array-curry</code>) then the elements of <code><var>A</var></code> should be pre-computed if necessary and stored in a specialized array, typically using <code>array-copy</code>, before that specialized array is passed as an argument to <code>array-outer-product</code>.  In the examples below, the code for Gaussian elimination applies <code>array-outer-product</code> to shared specialized arrays, which are of course themselves specialized arrays; the code for <code>inner-product</code> applies <code>array-outer-product</code> to curried arrays, so we apply <code>array-copy</code> to the arguments before passage to <code>array-outer-product</code>.</p>
+    <p><b>Procedure: </b><code><a id="array-inner-product">array-inner-product</a> <var>A</var> <var>f</var> <var>g</var> <var>B</var></code></p>
+    <p>Assumes that <code><var>f</var></code> and <code><var>g</var></code> are procedures of two arguments and <code><var>A</var></code> and <code><var>B</var></code> are arrays, with the upper and lower bounds of the last dimension of <code><var>A</var></code> the same as those of the first dimension of <code><var>B</var></code>. Computes the equivalent of</p>
+    <pre><code>(define (array-inner-product <var>A f g B</var>)
+  (array-outer-product
+   (lambda (<var>a b</var>)
+     (array-reduce <var>f</var> (array-map <var>g a b</var>)))
+   (array-copy (array-curry <var>A</var> 1))
+   (array-copy (array-curry (array-rotate <var>B</var> 1) 1))))</code></pre>
+    <p>We precompute and store the curried arrays using <code>array-copy</code> for efficiency reasons, as described in <a href="#array-outer-product"><code>array-outer-product</code></a>.</p>
+    <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Procedure: </b><code><a id="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain and <code><var>f</var></code> is a procedure, then <code>array-map</code>
       returns a new immutable array with the same domain and getter</p>
@@ -1136,6 +1149,84 @@ indexer:       (lambda multi-index
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and assigns each value to the multi-index in <code><var>destination</var></code> in the same lexicographical order.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
+    <p><b>Procedure: </b><code><a id="array-stack">array-stack</a> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ] <var>k</var> <var>array</var> . <var>arrays</var></code></p>
+    <p>Assumes that <code>(cons <var> array arrays</var>)</code> is a list of arrays with identical domains,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
+    <p>Returns a specialized array equivalent to </p>
+    <pre><code>(array-copy
+ (make-array
+  (let ((<var>lowers</var> (interval-lower-bounds-&gt;list (array-domain <var>array</var>)))
+        (<var>uppers</var> (interval-upper-bounds-&gt;list (array-domain <var>array</var>)))
+        (<var>N</var> (length (cons <var>array arrays</var>))))
+    (make-interval (append (take <var>lowers k</var>) (cons 0 (drop <var>lowers k</var>)))
+                   (append (take <var>uppers k</var>) (cons <var>N</var> (drop <var>uppers k</var>)))))
+  (let ((<var>getters</var> (map array-getter (cons <var>array arrays</var>))))
+    (lambda indices
+      (let ((<var>i</var> (list-ref <var>indices k</var>)))
+        (apply (list-ref <var>getters i</var>)
+               (append (take <var>indices k</var>)
+                       (drop <var>indices</var> (+ <var>k</var> 1)))))))))</code></pre>
+    <p>In other words we &quot;stack&quot; the argument arrays along a new <code><var>k</var></code>'th axis, the lower bound of which is set to 0.</p>
+    <p>If all optional arguments are given, the resultant array has storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code>.</p>
+    <p>We determine the values of missing optional arguments as follows: If the argument arrays <i>all</i> have the same storage class, mutability, <i>and</i> safety, then any missing optional arguments are assigned the associated values from <code><var>array</var></code>; otherwise, any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>It is an error if the arguments do not satisfy these constraints.</p>
+    <p><b>Procedure: </b><code><a id="array-append">array-append</a> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ] <var>k</var> <var>array</var> . <var>arrays</var></code></p>
+    <p>Assumes that <code>(cons <var> array arrays</var>)</code> is a list of arrays with domains that differ at most in the <code><var>k</var></code>'th axis,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
+    <p>This routine appends, or concatenates, the argument arrays along the <var>k</var>'th axis, with the lower bound of this axis set to 0.</p>
+    <p>Returns a specialized array equivalent to the result of</p>
+    <pre><code>(define (array-append k array . arrays)
+  (let*-values (((arrays)
+                 ;; all array arguments
+                 (cons array arrays))
+                ((axis-subdividers kth-size)
+                 ;; compute lower and upper bounds of where
+                 ;; we'll copy each array argument, plus
+                 ;; the size of the kth axis of the result array
+                 (let loop ((result '(0))
+                            (arrays arrays))
+                   (if (null? arrays)
+                       (values (reverse result) (car result))
+                       (let ((interval (array-domain (car arrays))))
+                         (loop (cons (+ (car result)
+                                        (- (interval-upper-bound interval k)
+                                           (interval-lower-bound interval k)))
+                                     result)
+                               (cdr arrays))))))
+                ((lowers)
+                 ;; the domains of the arrays differ only in the kth axis
+                 (interval-lower-bounds-&gt;vector (array-domain array)))
+                ((uppers)
+                 (interval-upper-bounds-&gt;vector (array-domain array)))
+                ((result)
+                 ;; the result array
+                 (make-specialized-array
+                  (let ()
+                    (vector-set! lowers k 0)
+                    (vector-set! uppers k kth-size)
+                    (make-interval lowers uppers))))
+                ((translation)
+                 ;; a vector we'll use to align each argument
+                 ;; array into the proper subarray of the result
+                 (make-vector (array-dimension array) 0)))
+    (let loop ((arrays arrays)
+               (subdividers axis-subdividers))
+      (if (null? arrays)
+          ;; we've assigned every array to the appropriate subarray of result
+          result
+          (let ((array (car arrays)))
+            ;; the lower and upper bounds in the kth axis of the result where we copy the next array
+            (vector-set! lowers k (car subdividers))
+            (vector-set! uppers k (cadr subdividers))
+            ;; the translation that aligns the next array with the subarray of the result
+            (vector-set! translation k (- (car subdividers)
+                                          (interval-lower-bound (array-domain array) k)))
+            (array-assign!
+             (array-extract result (make-interval lowers uppers))
+             (array-translate array translation))
+            (loop (cdr arrays)
+                  (cdr subdividers)))))))</code></pre>
+    <p>If all optional arguments are given, the resultant array has storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code>.</p>
+    <p>We determine the values of missing optional arguments as follows: If the argument arrays <i>all</i> have the same storage class, mutability, <i>and</i> safety, then any missing optional arguments are assigned the associated values from <code><var>array</var></code>; otherwise, any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>

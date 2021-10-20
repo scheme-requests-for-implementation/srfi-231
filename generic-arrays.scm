@@ -3885,9 +3885,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 (number->string argument-k)
                                 ": ")
                  args)
-          (let* ((domains
-                  (map %%array-domain arrays))
-                 (first-array
+          (let* ((first-array
                   (car arrays))
                  (first-domain
                   (%%array-domain first-array))
@@ -3911,7 +3909,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                        (= (%%interval-upper-bound first-domain i)
                                                           (%%interval-upper-bound d            i))))
                                               (loop (fx+ i 1))))))
-                                 (cdr domains)))
+                                 (cdr (map %%array-domain arrays))))
                    (apply error
                           (string-append "array-append: Expecting arrays with the same upper and lower bounds (except for index "
                                          (number->string k)
@@ -3920,8 +3918,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          ": ")
                           args))
                   (else
-                   (call-with-values
-                       (lambda ()
+                   (let*-values
+                       (((storage-class mutable? safe?)
                          (if (and (%%every specialized-array? arrays)
                                   (%%every (lambda (a)
                                              (and (eq? (%%array-storage-class a)
@@ -3947,75 +3945,58 @@ OTHER DEALINGS IN THE SOFTWARE.
                                      (if (boolean? safe?)
                                          safe?
                                          (specialized-array-default-mutable?)))))
-                     (lambda (storage-class mutable? safe?)
-                       (let* ((domains
-                               (map %%array-domain arrays))
-                              (kth-sizes
-                               (map (lambda (domain)
-                                      (- (%%interval-upper-bound domain k)    ;; may not be fixnums
-                                         (%%interval-lower-bound domain k)))
-                                    domains))
-                              (kth-size
-                               (apply + kth-sizes))
-                              (result-lowers
-                               (let ((result (vector-copy (%%interval-lower-bounds first-domain))))
-                                 (vector-set! result k 0)
-                                 result))
-                              (result-uppers
-                               (let ((result (vector-copy (%%interval-upper-bounds first-domain))))
-                                 (vector-set! result k kth-size)
-                                 result))
-                              (result-domain
-                               (%%finish-interval result-lowers result-uppers))
-                              (kth-offsets ;; one more than length of arrays
-                               (let loop ((result '(0))
-                                          (sizes kth-sizes))
-                                 (if (null? sizes)
-                                     (reverse result)
-                                     (loop (cons (fx+ (car result)
-                                                      (car sizes))
-                                                 result)
-                                           (cdr sizes)))))
-                              (kth-translates
-                               (map (lambda (offset domain)
-                                      (fx- offset
-                                           (%%interval-lower-bound domain k)))
-                                    kth-offsets
-                                    domains))
-                              (result-array
-                               (%%make-specialized-array result-domain
-                                                         storage-class
-                                                         (storage-class-default storage-class)
-                                                         safe?))
-                              ;; Will be used to extract suitable subarrays from result-array
-                              (extracted-lowers
-                               (vector-copy (%%interval-lower-bounds first-domain)))
-                              (extracted-uppers
-                               (vector-copy (%%interval-upper-bounds first-domain)))
-                              (translation    ;; will be used to translate the argument arrays in kth dimension
-                               (make-vector dim 0)))
-                         ;; What's left to do is copy the argument arrays to the result array
-                         ;; at the right offset.
-                         (let loop ((offsets kth-offsets)
-                                    (translates kth-translates)
+                        ((axis-subdividers kth-size)
+                         ;; compute lower and upper bounds of where
+                         ;; we'll copy each array argument, plus
+                         ;; the size of the kth axis of the result array
+                         (let loop ((result '(0))
                                     (arrays arrays))
                            (if (null? arrays)
-                               (begin
-                                 (if (not mutable?)
-                                     (%%array-setter-set! result-array #f))
-                                 result-array)
-                               (begin
-                                 ;; It's safe to reuse and modify the lower and upper bounds of
-                                 ;; extracted-domain, because each extracted array has limited liveness
-                                 (vector-set! extracted-lowers k (car offsets))
-                                 (vector-set! extracted-uppers k (cadr offsets))
-                                 (vector-set! translation k (car translates))
-                                 (%%move-array-elements (%%array-extract result-array (%%finish-interval extracted-lowers extracted-uppers))
-                                                        (%%array-translate (car arrays) translation)
-                                                        "array-append: ")
-                                 (loop (cdr offsets)
-                                       (cdr translates)
-                                       (cdr arrays))))))))))))))
+                               (values (reverse result) (car result))
+                               (let ((interval (array-domain (car arrays))))
+                                 (loop (cons (fx+ (car result)
+                                                  (- (interval-upper-bound interval k)
+                                                     (interval-lower-bound interval k)))
+                                             result)
+                                       (cdr arrays))))))
+                        ((lowers)
+                         ;; the domains of the arrays differ only in the kth axis
+                         (%%interval-lower-bounds->vector (array-domain first-array)))
+                        ((uppers)
+                         (%%interval-upper-bounds->vector (array-domain first-array)))
+                        ((result)
+                         ;; the result array
+                         (%%make-specialized-array
+                          (let ()
+                            (vector-set! lowers k 0)
+                            (vector-set! uppers k kth-size)
+                            (make-interval lowers uppers))
+                          storage-class
+                          (storage-class-default storage-class)
+                          safe?))
+                        ((translation)
+                         ;; a vector we'll use to align each argument
+                         ;; array into the proper subarray of the result
+                         (make-vector (array-dimension first-array) 0)))
+                     (let loop ((arrays arrays)
+                                (subdividers axis-subdividers))
+                       (if (null? arrays)
+                           ;; we've assigned every array to the appropriate subarray of result
+                           (begin
+                             (if (not mutable?)
+                                 (%%array-setter-set! result #f))
+                             result)
+                           (let ((array (car arrays)))
+                             (vector-set! lowers k (car subdividers))
+                             (vector-set! uppers k (cadr subdividers))
+                             (vector-set! translation k (- (car subdividers)
+                                                           (interval-lower-bound (array-domain array) k)))
+                             (%%move-array-elements
+                              (%%array-extract result (%%finish-interval lowers uppers))
+                              (%%array-translate array translation)
+                              "array-append: ")
+                             (loop (cdr arrays)
+                                   (cdr subdividers))))))))))))
   
   (initial-parse args))
 
