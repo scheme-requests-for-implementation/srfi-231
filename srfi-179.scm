@@ -1637,19 +1637,16 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
         (make-array
          (make-interval '#(4 10))
          list))
-       (columns                     ;; a 1-D array of the columns of A
-        (array-curry
-         (array-rotate A 1)         ;; transpose A
-         1))
        (columns_
-        (array-getter columns))
+        (array-getter                  ;; the getter of ...
+         (array-curry                  ;; a 1-D array of the columns of A
+          (array-rotate A 1)           ;; transpose A
+          1)))
        (B
         (apply
-         array-stack                ;; stack into a new 2-D array ...
-         1                          ;; along axis 1 (i.e., columns) ...
-         (map (lambda (j)           ;; the columns of A you want
-                (columns_ j))
-              '(1 2 5 8)))))
+         array-stack                  ;; stack into a new 2-D array ...
+         1                            ;; along axis 1 (i.e., columns) ...
+         (map columns_ '(1 2 5 8))))) ;; the columns of A you want
   (array-display B))
 
 ;;; Displays
