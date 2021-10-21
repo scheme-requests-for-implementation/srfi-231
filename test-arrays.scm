@@ -4829,4 +4829,24 @@ that computes the componentwise products when we need them, the times are
                 (array-stack 2 (tensor '((4 7) (2 6))) (identity-array 2)))
       #t)
 
+(let* ((A
+        (make-array (make-interval '#(4 10))
+                    list))
+       (A^T                         ;; Transpose A, rows of A^T are columns of A
+        (array-rotate A 1))
+       (A^T-rows                    ;; A^T-rows is a 1-D array of rows of A^T
+        (array-curry A^T 1))
+       (A^T-rows_                   ;; procedure to access the elements of A^T-rows
+        (array-getter A^T-rows))
+       (B^T
+        (apply
+         array-stack                ;; stack into a new 2-D array ...
+         0
+         (map (lambda (j)           ;; the rows of A^T you want
+                (A^T-rows_ j))
+              '(1 2 5 8))))
+       (B                           ;; transpose the result
+        (array-rotate B^T 1)))
+  (array-display B))
+
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))

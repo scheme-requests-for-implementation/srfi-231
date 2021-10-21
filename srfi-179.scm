@@ -101,6 +101,10 @@ MathJax.Hub.Config({
          (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
+         (<li> "Introduced new routines "
+               (<code>'array-inner-product)", "
+               (<code>'array-stack)", and "
+               (<code>'array-append)".")
          (<li> "A new set of \"Introductory remarks\" surveys some of the more important procedures in this SRFI.")
          )
         
@@ -1626,8 +1630,35 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                        (drop "(<var>'indices)" (+ "(<var>'k)" 1)))))))))"))
 (<p> "In other words we \"stack\" the argument arrays along a new "(<code>(<var>'k))"'th axis, the lower bound of which is set to 0.")
 (<p> "If all optional arguments are given, the resultant array has storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))".")
-(<p> "We determine the values of missing optional arguments as follows: If the argument arrays "(<i>'all)" have the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "We determine the values of missing optional arguments as follows: If the argument arrays are "(<i>'all)" specialized arrays with the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
+(<p> (<b> "Example: ")"Let's say we have a spreadsheet "(<code>(<var>'A))" and we want to make a new spreadsheet "(<code>(<var>'B))" with the same rows but with the data from only columns 1, 2, 5, and 8.  Using the routine "(<code>'array-display)" we define below, code to do this can look like:")
+(<pre>(<code>"(let* ((A
+        (make-array (make-interval '#(4 10))
+                    list))
+       (A^T                         ;; Transpose A, rows of A^T are columns of A
+        (array-rotate A 1))
+       (A^T-rows                    ;; A^T-rows is a 1-D array of rows of A^T
+        (array-curry A^T 1))
+       (A^T-rows_                   ;; procedure to access the elements of A^T-rows
+        (array-getter A^T-rows))
+       (B^T
+        (apply
+         array-stack                ;; stack into a new 2-D array ...
+         0
+         (map (lambda (j)           ;; the rows of A^T you want
+                (A^T-rows_ j))
+              '(1 2 5 8))))
+       (B                           ;; transpose the result
+        (array-rotate B^T 1)))
+  (array-display B))
+
+;;; Displays
+
+(0 1)   (0 2)   (0 5)   (0 8)
+(1 1)   (1 2)   (1 5)   (1 8)
+(2 1)   (2 2)   (2 5)   (2 8)
+(3 1)   (3 2)   (3 5)   (3 8)"))
 
 (format-lambda-list '(array-append #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
 (<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
@@ -1685,7 +1716,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
             (loop (cdr arrays)
                   (cdr subdividers)))))))"))
  (<p> "If all optional arguments are given, the resultant array has storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))".")
-(<p> "We determine the values of missing optional arguments as follows: If the argument arrays "(<i>'all)" have the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "We determine the values of missing optional arguments as follows: If the argument arrays are "(<i>'all)" specialized arrays with the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 
 (format-lambda-list '(array-ref A i0 #\. i-tail))
