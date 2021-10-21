@@ -1634,23 +1634,22 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 (<p> (<b> "Example: ")"Let's say we have a spreadsheet "(<code>(<var>'A))" and we want to make a new spreadsheet "(<code>(<var>'B))" with the same rows but with the data from only columns 1, 2, 5, and 8.  Using the routine "(<code>'array-display)" we define below, code to do this can look like:")
 (<pre>(<code>"(let* ((A
-        (make-array (make-interval '#(4 10))
-                    list))
-       (A^T                         ;; Transpose A, rows of A^T are columns of A
-        (array-rotate A 1))
-       (A^T-rows                    ;; A^T-rows is a 1-D array of rows of A^T
-        (array-curry A^T 1))
-       (A^T-rows_                   ;; procedure to access the elements of A^T-rows
-        (array-getter A^T-rows))
-       (B^T
+        (make-array
+         (make-interval '#(4 10))
+         list))
+       (columns                     ;; a 1-D array of the columns of A
+        (array-curry
+         (array-rotate A 1)         ;; transpose A
+         1))
+       (columns_
+        (array-getter columns))
+       (B
         (apply
          array-stack                ;; stack into a new 2-D array ...
-         0
-         (map (lambda (j)           ;; the rows of A^T you want
-                (A^T-rows_ j))
-              '(1 2 5 8))))
-       (B                           ;; transpose the result
-        (array-rotate B^T 1)))
+         1                          ;; along axis 1 (i.e., columns) ...
+         (map (lambda (j)           ;; the columns of A you want
+                (columns_ j))
+              '(1 2 5 8)))))
   (array-display B))
 
 ;;; Displays
