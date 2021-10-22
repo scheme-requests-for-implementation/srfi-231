@@ -4833,7 +4833,7 @@ that computes the componentwise products when we need them, the times are
         (make-array
          (make-interval '#(4 10))
          list))
-       (columns_
+       (column_
         (array-getter                  ;; the getter of ...
          (array-curry                  ;; a 1-D array of the columns of A
           (array-rotate A 1)           ;; transpose A
@@ -4842,7 +4842,15 @@ that computes the componentwise products when we need them, the times are
         (apply
          array-stack                  ;; stack into a new 2-D array ...
          1                            ;; along axis 1 (i.e., columns) ...
-         (map columns_ '(1 2 5 8))))) ;; the columns of A you want
+         (map column_ '(1 2 5 8)))))  ;; the columns of A you want
+  (array-display B))
+
+(let* ((A
+        (make-array
+         (make-interval '#(4 10))
+         list))
+       (B
+        (apply array-stack 1 (map (array-getter (array-curry (array-rotate A 1) 1))'(1 2 5 8)))))
   (array-display B))
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))

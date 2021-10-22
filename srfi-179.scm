@@ -1637,16 +1637,16 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
         (make-array
          (make-interval '#(4 10))
          list))
-       (columns_
+       (column_
         (array-getter                  ;; the getter of ...
          (array-curry                  ;; a 1-D array of the columns of A
-          (array-rotate A 1)           ;; transpose A
+          (array-rotate A 1)
           1)))
        (B
         (apply
          array-stack                  ;; stack into a new 2-D array ...
          1                            ;; along axis 1 (i.e., columns) ...
-         (map columns_ '(1 2 5 8))))) ;; the columns of A you want
+         (map column_ '(1 2 5 8)))))  ;; the columns of A you want
   (array-display B))
 
 ;;; Displays
@@ -1655,6 +1655,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (1 1)   (1 2)   (1 5)   (1 8)
 (2 1)   (2 2)   (2 5)   (2 8)
 (3 1)   (3 2)   (3 5)   (3 8)"))
+(<p>"In fact, because it is a generalized array, the only elements of "(<code>(<var>'A))" that are generated are the ones that are assigned as elements of "(<code>(<var>'B))". The result could also be computed in one line:")
+(<pre>(<code>"(apply array-stack 1 (map (array-getter (array-curry (array-rotate A 1) 1)) '(1 2 5 8)))"))
 
 (format-lambda-list '(array-append #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
 (<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
@@ -2730,7 +2732,7 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 ;;; 2
 "))
 (<h2> "Acknowledgments")
-(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
+(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner, and Alex Shin for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
  (<li> (<a> id: 'bawden href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "\"multi-dimensional arrays in R5RS?\"")
