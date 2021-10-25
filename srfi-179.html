@@ -108,7 +108,7 @@
       by the array's <i>setter</i>, accessed by the procedure <code>array-setter</code>.  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a &quot;pure&quot; procedure, i.e., the value it returns may not depend solely on the arguments passed to the getter.</p>
     <p>In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
       they may have hash tables or databases behind an implementation, one may read the values from a file, etc.</p>
-    <p>In this SRFI, Bawden-style arrays are called <i>specialized</i>. A specialized array is an example of a mutable array.</p>
+    <p>In this SRFI, Bawden-style arrays are called <i>specialized</i>. A specialized array may be either mutable or immutable.</p>
     <h3>Sharing generalized arrays</h3>
     <p>Even if an array $A$ is not a specialized array, then it could be &quot;shared&quot; by specifying a new interval $D_B$ as the domain of a new array $B$ and an affine map $T_{BA}:D_B\to D_A$.  Each call to $B$ would then be computed as $B(\vec i)=A(T_{BA}(\vec i))$.</p>
     <p>One could again &quot;share&quot; $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\to D_B$, and then each access $C(\vec i)=A(T_{BA}(T_{CB}(\vec i)))$.  The composition $T_{BA}\circ T_{CB}:D_C\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\to D_A$, and $C(\vec i)=A(T_{CA}(\vec i))$ can be computed with the overhead of computing a single affine transformation.</p>
@@ -1823,8 +1823,7 @@ Second-differences in the direction $k\times (1,-1)$:
 </pre>
     <p>You can see that with differences in the direction of only the first coordinate, the domains of the difference arrays get smaller in the first coordinate while staying the same in the second coordinate, and with differences in the diagonal directions, the domains of the difference arrays get smaller in both coordinates.</p>
     <p><b>Separable operators. </b>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the <a href="https://arxiv.org/abs/1210.1944">Fast Hyperbolic Wavelet Transform</a>.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can define the multidimensional transform as follows:</p>
-    <pre><code>
-(define (make-separable-transform 1D-transform)
+    <pre><code>(define (make-separable-transform 1D-transform)
   (lambda (a)
     (let ((n (array-dimension a)))
       (do ((d 0 (fx+ d 1)))
@@ -1913,8 +1912,7 @@ Initial image:
                       (array-&gt;list image))))
 </code></pre>
     <p>This yields: </p>
-    <pre>
-Initial image:
+    <pre>Initial image:
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
@@ -1964,8 +1962,7 @@ Reconstructed image:
                       (array-&gt;list image))))
 </code></pre>
     <p>This yields: </p>
-    <pre>
-Initial image:
+    <pre>Initial image:
 (#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
@@ -2139,15 +2136,8 @@ Reconstructed image:
 
 ;;; We'll define a brief, not-very-efficient matrix multiply procedure.
 
-(define (array-dot-product a b)
-  (array-foldl + 0 (array-map * a b)))
-
 (define (matrix-multiply a b)
-  (let ((a-rows
-         (array-copy (array-curry a 1)))
-        (b-columns
-         (array-copy (array-curry (array-rotate b 1) 1))))
-    (array-outer-product array-dot-product a-rows b-columns)))
+  (array-inner-product a + * b))
 
 ;;; We'll check that the product of the result of LU
 ;;; decomposition of A is again A.
@@ -2164,15 +2154,7 @@ Reconstructed image:
 ;;; 1/3     1/4     1/5     1/6
 ;;; 1/4     1/5     1/6     1/7
 </code></pre>
-    <p><b>Inner products. </b>One can define an APL-style inner product as</p>
-    <pre><code>(define (inner-product A f g B)
-  (array-outer-product
-   (lambda (a b)
-     (array-reduce f (array-map g a b)))
-   (array-copy (array-curry A 1))
-   (array-copy (array-curry (array-rotate B 1) 1))))
-</code></pre>
-    <p>This procedure differs from that found in APL in several ways: The arguments <code><var>A</var></code> and <code><var>B</var></code> must each have two or more dimensions, and the result is always an array, never a scalar.</p>
+    <p><b>Inner products. </b>Our <code>array-inner-product</code> procedure differs from that found in APL in several ways: The arguments <code><var>A</var></code> and <code><var>B</var></code> must each have two or more dimensions, and the result is always an array, never a scalar.</p>
     <p>We take some examples from the <a href="https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf">APLX Language Reference</a>:</p>
     <pre><code>;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm

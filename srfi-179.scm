@@ -260,7 +260,7 @@ Thus, two things are necessary to specify an array: an interval and a mapping th
 by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" procedure, i.e., the value it returns may not depend solely on the arguments passed to the getter.")
         (<p> "In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
 they may have hash tables or databases behind an implementation, one may read the values from a file, etc.")
-        (<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array is an example of a mutable array.")
+        (<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array may be either mutable or immutable.")
 
         (<h3> "Sharing generalized arrays")
         (<p> "Even if an array $A$ is not a specialized array, then it could be \"shared\" by specifying a new interval $D_B$ as the domain of "
@@ -2330,8 +2330,7 @@ Second-differences in the direction $k\\times (1,-1)$:
 
 
 (<p> (<b> "Separable operators. ")"Many multi-dimensional transforms in signal processing are "(<i> 'separable)", in that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the "(<a> href: "https://arxiv.org/abs/1210.1944" "Fast Hyperbolic Wavelet Transform")".  Each one-dimensional subdomain of the complete domain is called a "(<i> 'pencil)", and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can define the multidimensional transform as follows:")
-(<pre> (<code>"
-(define (make-separable-transform 1D-transform)
+(<pre> (<code>"(define (make-separable-transform 1D-transform)
   (lambda (a)
     (let ((n (array-dimension a)))
       (do ((d 0 (fx+ d 1)))
@@ -2422,8 +2421,7 @@ Second-differences in the direction $k\\times (1,-1)$:
                       (array->list image))))
 "))
 (<p> "This yields: ")
-(<pre>"
-Initial image:
+(<pre>"Initial image:
 (#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
@@ -2475,8 +2473,7 @@ Reconstructed image:
                       (array->list image))))
 "))
 (<p> "This yields: ")
-(<pre>"
-Initial image:
+(<pre>"Initial image:
 (#<##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
 
@@ -2658,15 +2655,8 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 
 ;;; We'll define a brief, not-very-efficient matrix multiply procedure.
 
-(define (array-dot-product a b)
-  (array-foldl + 0 (array-map * a b)))
-
 (define (matrix-multiply a b)
-  (let ((a-rows
-         (array-copy (array-curry a 1)))
-        (b-columns
-         (array-copy (array-curry (array-rotate b 1) 1))))
-    (array-outer-product array-dot-product a-rows b-columns)))
+  (array-inner-product a + * b))
 
 ;;; We'll check that the product of the result of LU
 ;;; decomposition of A is again A.
@@ -2683,17 +2673,7 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 ;;; 1/3     1/4     1/5     1/6
 ;;; 1/4     1/5     1/6     1/7
 "))
-(<p> (<b> "Inner products. ")"One can define an APL-style inner product as")
-(<pre>
- (<code>
-"(define (inner-product A f g B)
-  (array-outer-product
-   (lambda (a b)
-     (array-reduce f (array-map g a b)))
-   (array-copy (array-curry A 1))
-   (array-copy (array-curry (array-rotate B 1) 1))))
-"))
-(<p> "This procedure differs from that found in APL in several ways: The arguments "(<code>(<var>'A))" and "(<code>(<var>'B))" must each have two or more dimensions, and the result is always an array, never a scalar.")
+(<p> (<b> "Inner products. ")"Our "(<code>'array-inner-product)" procedure differs from that found in APL in several ways: The arguments "(<code>(<var>'A))" and "(<code>(<var>'B))" must each have two or more dimensions, and the result is always an array, never a scalar.")
 (<p> "We take some examples from the "(<a> href: "https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf" "APLX Language Reference")":")
 (<pre>
  (<code>
