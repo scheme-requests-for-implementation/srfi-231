@@ -276,7 +276,11 @@ they may have hash tables or databases behind an implementation, one may read th
         (<p> "If "(<code>(<var>'A))" is an array, then we generally define "(<code>(<var>'A_))" to be "(<code>"(array-getter "(<var>'A)")")" and  "(<code>(<var>'A!))" to be "(<code>"(array-setter "(<var>'A)")")".  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in "(<code>(<var>"!"))", while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the "(<a> href: "#Haar" "Haar transform")" example.")
 
 
-
+        (<h2> "Issues")
+        (<ul>
+         (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
+         (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
+         )
 
 
         (<h2> "Notes")

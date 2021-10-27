@@ -117,6 +117,11 @@
     <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, <code>array-tile</code>, <code>array-rotate</code> and <code>array-sample</code>,  and we provide relatively efficient implementations of these procedures for arrays of dimension no greater than four.</p>
     <h3>Notational convention</h3>
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
+    <h2>Issues</h2>
+    <ul>
+      <li>Should <a href="#specialized-array-default-mutable?"><code>specialized-array-default-mutable?</code></a> and <a href="#specialized-array-default-safe?"><code>specialized-array-default-safe?</code></a> be <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a> parameters or <a href="https://small.r7rs.org/attachment/r7rs.pdf">R7RS</a> parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?</li>
+      <li>Could <a href="#array-elements-in-order?"><code>array-elements-in-order?</code></a> have a better name or description?</li>
+    </ul>
     <h2>Notes</h2>
     <ul>
       <li><b>Relationship to <a href="https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
