@@ -119,7 +119,7 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#make-specialized-array"(<code>'make-specialized-array))": Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a "(<i>"specialized array")".")
          (<li> (<a> href: "#list-rarrow-array"(<code>'list->array))": Takes as arguments a list and a specification of valid indices, returns a specialized array.")
          )
-        (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data, they just change how the data are indexed to achieve their goal.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
+        (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
         (<ul>
          (<li> (<a> href: "#array-extract" (<code>'array-extract))
                ": Constructs a rectangular \"window\" or \"view\" into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.")
@@ -128,7 +128,7 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#array-translate" (<code>'array-translate))
                ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
          (<li> (<a> href: "#array-permute"(<code>'array-permute))
-               ": Swaps rows, columns, sheets, etc. of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.")
+               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.")
          (<li> (<a> href: "#array-rotate"(<code>'array-rotate))
                ": Permutes indices in a special way, pushing them off the left and adding them to the right, like $i\\ j\\to j\\ i$ (so transposing a matrix) or $i\\ j\\ k\\to j\\ k\\ i$")
          (<li> (<a> href: "#array-curry"(<code>"array-curry"))
@@ -154,7 +154,7 @@ MathJax.Hub.Config({
          (<li> (<a> href:"#array-assign!"(<code>'array-assign!))
                ": Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine "(<code>'array-map)", "(<code>'array-outer-product)", "(<code>'array-extract)", and "(<code>'array-assign!)" to do one step of the elimination.")
          (<li> (<a> href:"#array-stack"(<code>'array-stack))
-               ": Like taking the individually rendered frames of an animated movie and ordering them in time to make a complete video.  Can be considered a partial inverse to "(<code>'array-curry)".  Returns a specialized array.")
+               ": Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to "(<code>'array-curry)".  Returns a specialized array.")
          (<li> (<a> href:"#array-append"(<code>'array-append))
                ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.")
          (<li> (<a> href:"#array-foldl"(<code>'array-foldl))", "
@@ -200,7 +200,7 @@ MathJax.Hub.Config({
         (<h3> "Our extensions of Bawden-style arrays")
         (<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in one minor way that we find useful.")
         (<p> "We introduce the notion of a "(<i>"storage class")", an object that contains procedures that manipulate, store, check, etc., different types of values. "
-             "A "(<code>'generic-storage-class)" can manipulate any Scheme value, "
+             "The "(<code>'generic-storage-class)" can manipulate any Scheme value, "
              "whereas, e.g., a "(<code>'u1-storage-class)" can store only the values 0 and 1 in each element of a body.")
         (<p> "We also require that our affine maps be one-to-one, so that if $\\vec i\\neq\\vec j$ then $T(\\vec i)\\neq T(\\vec j)$.  Without this property, modifying "
              "the $\\vec i$th component of $A$ would cause the $\\vec j$th component to change.")
@@ -242,7 +242,7 @@ MathJax.Hub.Config({
                "$T_{BA}(\\vec i)_j=i_j\\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.) "
                "Then $T_{BA}$ is an affine one-to-one mapping, and we provide "(<code>'interval-scale)" and "(<code>'array-sample)" for these operations.")
          )
-        (<p> "We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these procedures are simply "
+        (<p> "We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these procedures are in some sense "
              "\"convenience\" procedures.  Second, because the composition of any number of affine mappings is again affine, accessing or changing the elements of a "
              "restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. "
              "Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending "
@@ -283,7 +283,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<ul>
          (<li> (<b> "Relationship to "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
                "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
-         (<li> (<b> "Indexers. ")"The argument "(<code>(<var> "new-domain->old-domain"))" to "(<code> 'specialized-array-share)" is, conceptually, a multi-valued array.")
+         (<li> (<b> "Indexers. ")"The argument "(<code>(<var> "new-domain->old-domain"))" to "(<code> 'specialized-array-share)" is, conceptually, the getter of a multi-valued array.")
          (<li> (<b> "Source of procedure names. ")"The procedure "(<code> 'array-curry)" gets its name from the" #\newline
                (<a> href: "https://en.wikipedia.org/wiki/Currying" "curry operator")
                " in programming" (string (integer->char 8212)) "we are currying the getter of the array and keeping careful track of the domains." #\newline
@@ -419,7 +419,7 @@ where the "(<i>"lower bounds")"
 $l_0,\\ldots,l_{d-1}$
 and the "(<i>"upper bounds")"
 $u_0,\\ldots,u_{d-1}$
-are specified multi-indices of exact integers.  The positive integer $d$ is the "(<i>"dimension")"
+are exact integers.  The positive integer $d$ is the "(<i>"dimension")"
 of the interval.  It is required that
 $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
         (<p> "Intervals are a data type distinct from other Scheme data types.")
@@ -528,53 +528,42 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
         (<blockquote> "$[l_{d-\\text{right-dimension}},u_{d-\\text{right-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$")
         (<p> "This procedure, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.")
         (<p> "More precisely, if "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'right-dimension))" is an exact integer that satisfies "
-             (<code> "0 < "(<var> 'right-dimension)" < "(<var>'d))" then "(<code> 'interval-projections)" returns two intervals:")
-        (<pre>
-         (<code> "
-(values
- (make-interval
-  (vector (interval-lower-bound "(<var>'interval)" 0)
-          ...
-          (interval-lower-bound "(<var>'interval)"
-                                (- "(<var>'d)" "(<var>'right-dimension)" 1)))
-  (vector (interval-upper-bound "(<var>'interval)" 0)
-          ...
-          (interval-upper-bound "(<var>'interval)"
-                                (- "(<var>'d)" "(<var>'right-dimension)" 1))))
- (make-interval
-  (vector (interval-lower-bound "(<var>'interval)"
-                                (- "(<var>'d)" "(<var>'right-dimension)"))
-          ...
-          (interval-lower-bound "(<var>'interval)"
-                                (- "(<var>'d)" 1)))
-  (vector (interval-upper-bound "(<var>'interval)"
-                                (- "(<var>'d)" "(<var>'right-dimension)"))
-          ...
-          (interval-upper-bound "(<var>'interval)"
-                                (- "(<var>'d)" 1)))))"))
-(<p> "It is an error to call "(<code> 'interval-projections)" if its arguments do not satisfy these conditions.")
+             (<code> "0 < "(<var> 'right-dimension)" < "(<var>'d))" then "(<code> 'interval-projections)" returns two intervals that we define using "(<code>'take)" and "(<code>'drop)" from "(<a> href: "https://srfi.schemers.org/srfi-1/srfi-1.html" "SRFI 1")" by:")
+        (<pre>(<code>"(let ((left-dimension
+       (- (interval-dimension interval right-dimension)))
+      (lowers
+       (interval-lower-bounds->list interval))
+      (uppers
+       (interval-upper-bounds->list interval)))
+  (values
+   (make-interval
+    (list->vector (take lowers left-dimension))
+    (list->vector (take uppers left-dimension)))
+   (make-interval
+    (list->vector (drop lowers left-dimension))
+    (list->vector (drop uppers left-dimension)))))"))
+        (<p> "It is an error to call "(<code> 'interval-projections)" if its arguments do not satisfy these conditions.")
 
 
-(format-lambda-list '(interval-for-each f interval))
-(<p> "This procedure assumes that "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'f))" is a procedure whose domain includes elements of "(<code>(<var> 'interval))".  It is an error to call
+        (format-lambda-list '(interval-for-each f interval))
+        (<p> "This procedure assumes that "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'f))" is a procedure whose domain includes elements of "(<code>(<var> 'interval))".  It is an error to call
 "(<code> 'interval-for-each)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'f))" do not satisfy these conditions.")
-(<p>  (<code> 'interval-for-each)" calls "(<code>(<var> 'f))" with each multi-index of "(<code>(<var> 'interval))" as arguments, all in lexicographical order.")
-
-
-
-(format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
-(<p> "If "(<code>(<var> 'interval))" is an interval with
+        (<p>  (<code> 'interval-for-each)" calls "(<code>(<var> 'f))" with each multi-index of "(<code>(<var> 'interval))" as arguments, all in lexicographical order.")
+        
+        
+        
+        (format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
+        (<p> "If "(<code>(<var> 'interval))" is an interval with
 lower bounds $\\ell_0,\\dots,\\ell_{d-1}$ and
 upper bounds $u_0,\\dots,u_{d-1}$, and "
-(<code>(<var> "lower-diffs"))" is a vector of exact integers $L_0,\\dots,L_{d-1}$ and "
-(<code>(<var> "upper-diffs"))" is a vector of exact integers $U_0,\\dots,U_{d-1}$, then "
-(<code>"interval-dilate")" returns a new interval with
+             (<code>(<var> "lower-diffs"))" is a vector of exact integers $L_0,\\dots,L_{d-1}$ and "
+             (<code>(<var> "upper-diffs"))" is a vector of exact integers $U_0,\\dots,U_{d-1}$, then "
+             (<code>"interval-dilate")" returns a new interval with
 lower bounds $\\ell_0+L_0,\\dots,\\ell_{d-1}+L_{d-1}$ and
 upper bounds $u_0+U_0,\\dots,u_{d-1}+U_{d-1}$, as long as this is a
 nonempty interval.  It is an error if the arguments do not satisfy these conditions.")
-(<p> "Examples:")
-(<pre>(<code>
-"(interval=
+        (<p> "Examples:")
+(<pre>(<code>"(interval=
  (interval-dilate (make-interval '#(100 100))
                   '#(1 1) '#(1 1))
  (make-interval '#(1 1) '#(101 101))) => #t
@@ -640,9 +629,11 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
       " "
       (<var>'intervals)
       ")")". Returns")
-(<pre>(<code>
-"(make-interval (list->vector (apply append (map interval-lower-bounds->list (cons interval intervals))))
-               (list->vector (apply append (map interval-upper-bounds->list (cons interval intervals)))))"))
+(<pre>(<code>"(make-interval
+ (list->vector
+  (apply append (map interval-lower-bounds->list (cons interval intervals))))
+ (list->vector
+  (apply append (map interval-upper-bounds->list (cons interval intervals)))))"))
 (<p> "It is an error if any argument is not an interval.")
 
 (<h2> "Storage classes")
@@ -891,7 +882,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (<pre>
  (<code>
 "  (define (make-u16-array interval)
-    (make-specialized-array interval u16-storage-class #f))
+    (make-specialized-array interval u16-storage-class 0 #f))
 "))
 (<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(3 3)))")".")
 
@@ -909,7 +900,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (<p> "It is an error to call any of these procedures if "(<code>(<var> 'array))" is not a specialized array.")
 
 (format-lambda-list '(array-elements-in-order? A))
-(<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))" are in order and stored adjacently in "(<code>"(array-body "(<var>'A)")")" and "(<code>'#f)" otherwise.")
+(<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))" are stored in "(<code>"(array-body "(<var>'A)")")" with increasing and consecutive indices, and "(<code>'#f)" otherwise.")
 (<p> "It is an error if "(<code>(<var>'A))" is not a specialized array.")
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
@@ -1008,8 +999,7 @@ indexer:       (lambda multi-index
 (define B (array-curry A 1))
 
 (define A_ (array-getter A))
-(define B_ (array-getter B))
-  "))
+(define B_ (array-getter B))"))
 (<p> "so")
 (<pre>
  (<code>
@@ -1149,7 +1139,7 @@ $$
 
 
 (format-lambda-list '(array-translate array translation))
-(<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'translation))" is a valid translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain "(<code>"(interval-translate (array-domain array) translation)")".")
+(<p> "Assumes that "(<code>(<var>'array))" is an array, "(<code>(<var>'translation))" is a translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain "(<code>"(interval-translate (array-domain array) translation)")".")
 (<p> "If "(<code>(<var>'array))" is a specialized array, returns a new specialized array")
 (<pre>
  (<code>
@@ -1222,7 +1212,7 @@ $$
 
 
 (<p> "Again employing this same pseudo-code, if "(<code>(<var>'array))" is not a specialized array, but is
-a mutable-array, then "(<code>'array-permute)" returns the new mutable")
+a mutable array, then "(<code>'array-permute)" returns the new mutable array")
 (<pre>(<code>
 "(make-array (interval-permute (array-domain "(<var>'array)") "(<unprotected>"&pi;")")
             (lambda multi-index
@@ -1376,26 +1366,24 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 
 (format-lambda-list '(array-outer-product op array1 array2))
 (<p> "Implements the outer product of "(<code>(<var>'array1))" and "(<code>(<var>'array2))" with the operator "(<code>(<var>'op))", similar to the APL function with the same name.")
-(<p> "Assume that "(<code>(<var>'array1))" and "(<code>(<var>'array2))" are arrays and that "(<code>(<var>'op))" is a procedure of two arguments. Assume that "
-     (<code>"(list-tail l n)")" returns the list remaining after the first "(<code>(<var>'n))" items of the list "(<code>(<var>'l))" have been removed, and "
-     (<code>"(list-take l n)")" returns a new list consisting of the first "(<code>(<var>'n))" items of the list "(<code>(<var>'l))". Then "(<code>(<var>'array-outer-product))" returns the immutable array")
+(<p> "Assume that "(<code>(<var>'array1))" and "(<code>(<var>'array2))" are arrays and that "(<code>(<var>'op))" is a procedure of two arguments.  Using "(<code>'take)" and "(<code>'drop)" from "(<a> href: "https://srfi.schemers.org/srfi-1/srfi-1.html" "SRFI 1")", "(<code>(<var>'array-outer-product))" returns the immutable array")
 (<pre>(<code>
 "(make-array (interval-cartesian-product (array-domain array1)
                                         (array-domain array2))
             (lambda args
-              (op (apply (array-getter array1) (list-take args (array-dimension array1)))
-                  (apply (array-getter array2) (list-tail args (array-dimension array1))))))"))
+              (op (apply (array-getter array1) (take args (array-dimension array1)))
+                  (apply (array-getter array2) (drop args (array-dimension array1))))))"))
 (<p> "This operation can be considered a partial inverse to "(<code>'array-curry)".  It is an error if the arguments do not satisfy these assumptions.")
 (<p> (<b> "Note: ")"You can see from the above definition that if "(<code>(<var>'C))" is "(<code>"(array-outer-product "(<var>'op)" "(<var>'A)" "(<var>'B)")")", then each call to "(<code>"(array-getter "(<var>'C)")")
      " will call "(<code>(<var>'op))" as well as "(<code>"(array-getter "(<var>'A)")")" and "(<code>"(array-getter "(<var>'B)")")".  This implies that if all elements of "(<code>(<var>'C))" are eventually accessed, then "
      (<code>"(array-getter "(<var>'A)")")" will be called "(<code>"(array-volume "(<var>'B)")")" times; similarly "(<code>"(array-getter "(<var>'B)")")" will be called "(<code>"(array-volume "(<var>'A)")")" times. ")
 (<p> "This implies that if "(<code>"(array-getter "(<var>'A)")")" is expensive to compute (for example, if it's returning an array, as does "(<code>'array-curry)") then the elements of "(<code>(<var>'A))
      " should be pre-computed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
-     "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for "(<code>'inner-product)
+     "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for "(<code>'array-inner-product)
      " applies "(<code>'array-outer-product)" to curried arrays, so we apply "(<code>"array-copy")" to the arguments before passage to "(<code>'array-outer-product)".")
 
 (format-lambda-list '(array-inner-product A f g B))
-(<p> "Assumes that "(<code>(<var>'f))" and "(<code>(<var>'g))" are procedures of two arguments and "(<code>(<var>'A))" and "(<code>(<var>'B))" are arrays, with the upper and lower bounds of the last dimension of "(<code>(<var>'A))" the same as those of the first dimension of "(<code>(<var>'B))". Computes the equivalent of")
+(<p> "Assumes that "(<code>(<var>'f))" and "(<code>(<var>'g))" are procedures of two arguments and "(<code>(<var>'A))" and "(<code>(<var>'B))" are arrays, with the upper and lower bounds of the last axis of "(<code>(<var>'A))" the same as those of the first axis of "(<code>(<var>'B))". Computes the equivalent of")
 (<pre>(<code>"(define (array-inner-product "(<var>"A f g B")")
   (array-outer-product
    (lambda ("(<var>"a b")")
@@ -1487,7 +1475,7 @@ calls")
 (<pre>
  (<code>
 "(foldl "(<var>'op)" " (<var>'id)" (array->list "(<var> 'array)"))"))
-(<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure.")
+(<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure of two variables.")
 
 (format-lambda-list '(array-foldr op id array))
 (<p> "This procedure is analagous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
@@ -1501,7 +1489,7 @@ calls")
 (<pre>
  (<code>
 "(foldr "(<var>'op)" " (<var>'id)" (array->list "(<var> 'array)"))"))
-(<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure.")
+(<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure of two variables.")
 
 (<p> (<b>"Note: ")"Both "(<code>'array-foldl)" and "(<code>'array-foldr)" are implemented using tail-recursive algorithms in the sample implementation.")
 
@@ -1536,7 +1524,7 @@ calls")
   (car box))
 "))
 (<p> "The implementation is allowed to use the associativity of "(<code>(<var>'op))" to reorder the computations in "(<code>'array-reduce)". It is an error if the arguments do not satisfy these conditions.")
-(<p> "As an example, we consider the finite sum:
+(<p> (<b>"Example: ")"We consider the finite sum:
 $$
 S_m=\\sum_{k=1}^m \\frac 1{k^2}.
 $$
@@ -1614,7 +1602,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(array-stack #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
 (<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
-(<p> "Returns a specialized array equivalent to ")
+(<p> "Returns a specialized array equivalent to ("(<code>'take)" and "(<code>'drop)" are from "(<a> href: "https://srfi.schemers.org/srfi-1/srfi-1.html" "SRFI 1")")")
 (<pre>(<code>"(array-copy
  (make-array
   (let (("(<var>'lowers)" (interval-lower-bounds->list (array-domain "(<var>'array)")))
@@ -1655,7 +1643,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (1 1)   (1 2)   (1 5)   (1 8)
 (2 1)   (2 2)   (2 5)   (2 8)
 (3 1)   (3 2)   (3 5)   (3 8)"))
-(<p>"In fact, because it is a generalized array, the only elements of "(<code>(<var>'A))" that are generated are the ones that are assigned as elements of "(<code>(<var>'B))". The result could also be computed in one line:")
+(<p>"In fact, because "(<code>(<var>'A))" is a generalized array, the only elements of "(<code>(<var>'A))" that are generated are the ones that are assigned as elements of "(<code>(<var>'B))". The result could also be computed in one line:")
 (<pre>(<code>"(apply array-stack 1 (map (array-getter (array-curry (array-rotate A 1) 1)) '(1 2 5 8)))"))
 
 (format-lambda-list '(array-append #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
@@ -1667,9 +1655,9 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                  ;; all array arguments
                  (cons array arrays))
                 ((axis-subdividers kth-size)
-                 ;; compute lower and upper bounds of where
-                 ;; we'll copy each array argument, plus
-                 ;; the size of the kth axis of the result array
+                 ;; compute lower and upper bounds of where along the
+                 ;; k'th axis we'll copy each array argument, plus
+                 ;; the total size of the kth axis of the result array
                  (let loop ((result '(0))
                             (arrays arrays))
                    (if (null? arrays)
@@ -1908,9 +1896,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (<h2> "Implementation")
 (<p> "We provide an implementation in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
-in the implementation are: DSSSL-style optional and keyword arguments; a
-unique object to indicate absent arguments; "(<code>"define-structure")";
-and "(<code>"define-macro")".")
+in the implementation are "(<code>"define-structure")" and "(<code>"define-macro")".")
 (<p> "There is a "(<a> href: (string-append "https://github.com/scheme-requests-for-implementation/srfi-" SRFI) "git repository")" of this document, a sample implementation, a test file, and other materials.")
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
@@ -1954,7 +1940,7 @@ of arrays and the arrays themselves.")
 (<h2> "Other examples")
 (<p> "Image processing applications provided significant motivation for this SRFI.")
 (<p> (<b> "Manipulating images in PGM format. ")"On a system with eight-bit chars, one
-can write procedures to read and write greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
+can write procedures to read and write greyscale images in the PGM format of the "(<a> href: "http://netpbm.sourceforge.net/" "Netpbm package")" as follows.  The  lexicographical
 order in "(<code>'array-copy)" guarantees the the correct order of execution of the input procedures:")
 
 (<pre>
@@ -2016,10 +2002,10 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
 
       (port-settings-set! port '(buffering: #f))
 
-      (let* ((header (read-pgm-object port))
+      (let* ((header  (read-pgm-object port))
              (columns (read-pgm-object port))
-             (rows (read-pgm-object port))
-             (greys (read-pgm-object port)))
+             (rows    (read-pgm-object port))
+             (greys   (read-pgm-object port)))
 
         ;; Now we switch back to buffering
         ;; to speed things up.
@@ -2509,7 +2495,7 @@ matrix $U$ so that $A=LU$ as follows. (We assume \"pivoting\" isn't needed.) For
 $$
 \\begin{pmatrix} u_{11}&u_{12}&u_{13}\\\\ \\ell_{21}&u_{22}&u_{23}\\\\ \\ell_{31}&\\ell_{32}&u_{33}\\end{pmatrix}.
 $$
-The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<code>'array-extract)", and "(<code>'array-outer-product)".")
+The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<code>'array-extract)", and "(<code>'array-outer-product)".")
 (<pre>
  (<code>
 "(define (LU-decomposition A)
@@ -2655,8 +2641,8 @@ The code uses "(<code>'array-assign!)", "(<code>'specialized-array-share)", "(<c
 
 ;;; We'll define a brief, not-very-efficient matrix multiply procedure.
 
-(define (matrix-multiply a b)
-  (array-inner-product a + * b))
+(define (matrix-multiply A B)
+  (array-inner-product A + * B))
 
 ;;; We'll check that the product of the result of LU
 ;;; decomposition of A is again A.
