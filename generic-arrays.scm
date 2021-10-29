@@ -1828,6 +1828,68 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    ;; must be mutable
                                      safe?))))))
 
+(define %%storage-class-compatibility-alist
+  ;; An a-list of compatible storage-classes;
+  ;; in each list, members of the first storage class can be
+  ;; stored without error in all storage classes in the list.
+  (list
+   (list generic-storage-class)
+   (list u1-storage-class
+         generic-storage-class
+         u8-storage-class
+         u16-storage-class
+         u32-storage-class
+         u64-storage-class
+         s8-storage-class
+         s16-storage-class
+         s32-storage-class
+         s64-storage-class)
+   (list u8-storage-class
+         generic-storage-class
+         u16-storage-class
+         u32-storage-class
+         u64-storage-class
+         s16-storage-class
+         s32-storage-class
+         s64-storage-class)
+   (list u16-storage-class
+         generic-storage-class
+         u32-storage-class
+         u64-storage-class
+         s32-storage-class
+         s64-storage-class)
+   (list u32-storage-class
+         generic-storage-class
+         u64-storage-class
+         s64-storage-class)
+   (list u64-storage-class
+         generic-storage-class)
+   (list s8-storage-class
+         generic-storage-class
+         s16-storage-class
+         s32-storage-class
+         s64-storage-class)
+   (list s16-storage-class
+         generic-storage-class
+         s32-storage-class
+         s64-storage-class)
+   (list s32-storage-class
+         generic-storage-class
+         s64-storage-class)
+   (list s64-storage-class
+         generic-storage-class)
+   (list f32-storage-class
+         generic-storage-class
+         f64-storage-class)
+   (list f64-storage-class    ;; the checker for these classes are the same, no point in checking
+         f32-storage-class    ;; going from f64-storage-class to f32-storage-class
+         generic-storage-class)
+   (list c64-storage-class
+         generic-storage-class
+         c128-storage-class)
+   (list c128-storage-class   ;; the checker for these classes are the same, no point in checking
+         c64-storage-class    ;; going from c128-storage-class to c64-storage-class
+         generic-storage-class)))
 
 ;;; We consolidate all moving of array elements to the following procedure.
 
@@ -1949,8 +2011,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                           domain))
                        "In order, no checks needed, generic-storage-class")
                       ((and (specialized-array? source)
-                            (eq? destination-storage-class
-                                 (%%array-storage-class source)))
+                            (let ((compatibility-list
+                                   (assq (%%array-storage-class source)
+                                         %%storage-class-compatibility-alist)))
+                              (and compatibility-list
+                                   (memq destination-storage-class
+                                         compatibility-list))))
                        ;; No checks needed
                        (let ((setter (storage-class-setter destination-storage-class))
                              (body (%%array-body destination)))
@@ -2061,8 +2127,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (%%array-setter destination))
                  (getter
                   (%%array-getter source))
+                 (destination-storage-class
+                  (%%array-storage-class destination))
                  (checker
-                  (storage-class-checker (%%array-storage-class destination)))
+                  (storage-class-checker destination-storage-class))
                  (domain
                   (%%array-domain destination)))
             (cond ((not (%%interval= domain (%%array-domain source)))
@@ -2070,11 +2138,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                            caller
                            "Arrays must have the same domains: ")
                           destination source))
-                  ((or (eq? (%%array-storage-class destination)
-                            generic-storage-class)
-                       (and (specialized-array? source)
-                            (eq? (%%array-storage-class destination)
-                                 (%%array-storage-class source))))
+                  ((and (specialized-array? source)
+                        (let ((compatibility-list
+                               (assq (%%array-storage-class source)
+                                     %%storage-class-compatibility-alist)))
+                          (and compatibility-list
+                               (memq destination-storage-class
+                                     compatibility-list))))
                    ;; no checks needed
                    (%%interval-for-each
                     (case (%%interval-dimension domain)
@@ -2140,11 +2210,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                          (let ((item (apply getter multi-index)))
                            (if (checker item)
                                (apply setter item multi-index)
-                               (error
+                               (apply
+                                error
                                 (string-append
                                  caller
                                  "Not all elements of the source can be stored in destination: ")
-                                destination source multi-index item))))))
+                                destination source (append multi-index (list item))))))))
                     domain)
                    "Out of order, checks needed"))))
       ;; destination is not a specialized array, so checks,
@@ -3755,7 +3826,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     args))
             ((not (and (fixnum? k)
                        (fx<= 0 k)
-                       (fx<= k number-of-arrays)))
+                       (fx<= k (array-dimension first-array))))
              (apply error
                     (string-append "array-stack: Expecting an exact integer between 0 (inclusive) "
                                    "and the dimension of the arrays (inclusive) as argument "
@@ -3918,8 +3989,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          ": ")
                           args))
                   (else
-                   (let*-values
-                       (((storage-class mutable? safe?)
+                   (call-with-values
+                       (lambda ()
                          (if (and (%%every specialized-array? arrays)
                                   (%%every (lambda (a)
                                              (and (eq? (%%array-storage-class a)
@@ -3945,58 +4016,58 @@ OTHER DEALINGS IN THE SOFTWARE.
                                      (if (boolean? safe?)
                                          safe?
                                          (specialized-array-default-mutable?)))))
-                        ((axis-subdividers kth-size)
-                         ;; compute lower and upper bounds of where
-                         ;; we'll copy each array argument, plus
-                         ;; the size of the kth axis of the result array
-                         (let loop ((result '(0))
-                                    (arrays arrays))
-                           (if (null? arrays)
-                               (values (reverse result) (car result))
-                               (let ((interval (array-domain (car arrays))))
-                                 (loop (cons (fx+ (car result)
-                                                  (- (interval-upper-bound interval k)
-                                                     (interval-lower-bound interval k)))
-                                             result)
-                                       (cdr arrays))))))
-                        ((lowers)
-                         ;; the domains of the arrays differ only in the kth axis
-                         (%%interval-lower-bounds->vector (array-domain first-array)))
-                        ((uppers)
-                         (%%interval-upper-bounds->vector (array-domain first-array)))
-                        ((result)
-                         ;; the result array
-                         (%%make-specialized-array
-                          (let ()
-                            (vector-set! lowers k 0)
-                            (vector-set! uppers k kth-size)
-                            (make-interval lowers uppers))
-                          storage-class
-                          (storage-class-default storage-class)
-                          safe?))
-                        ((translation)
-                         ;; a vector we'll use to align each argument
-                         ;; array into the proper subarray of the result
-                         (make-vector (array-dimension first-array) 0)))
-                     (let loop ((arrays arrays)
-                                (subdividers axis-subdividers))
-                       (if (null? arrays)
-                           ;; we've assigned every array to the appropriate subarray of result
-                           (begin
-                             (if (not mutable?)
-                                 (%%array-setter-set! result #f))
-                             result)
-                           (let ((array (car arrays)))
-                             (vector-set! lowers k (car subdividers))
-                             (vector-set! uppers k (cadr subdividers))
-                             (vector-set! translation k (- (car subdividers)
-                                                           (interval-lower-bound (array-domain array) k)))
-                             (%%move-array-elements
-                              (%%array-extract result (%%finish-interval lowers uppers))
-                              (%%array-translate array translation)
-                              "array-append: ")
-                             (loop (cdr arrays)
-                                   (cdr subdividers))))))))))))
+                     (lambda (storage-class mutable? safe?)
+                       (call-with-values
+                           (lambda ()
+                             (let loop ((result '(0))
+                                        (arrays arrays))
+                               (if (null? arrays)
+                                   (values (reverse result) (car result))
+                                   (let ((interval (array-domain (car arrays))))
+                                     (loop (cons (fx+ (car result)
+                                                      (- (interval-upper-bound interval k)
+                                                         (interval-lower-bound interval k)))
+                                                 result)
+                                           (cdr arrays))))))
+                         (lambda (axis-subdividers kth-size)
+                           (let* ((lowers
+                                   ;; the domains of the arrays differ only in the kth axis
+                                   (%%interval-lower-bounds->vector (array-domain first-array)))
+                                  (uppers
+                                   (%%interval-upper-bounds->vector (array-domain first-array)))
+                                  (result
+                                   ;; the result array
+                                   (%%make-specialized-array
+                                    (let ()
+                                      (vector-set! lowers k 0)
+                                      (vector-set! uppers k kth-size)
+                                      (make-interval lowers uppers))
+                                    storage-class
+                                    (storage-class-default storage-class)
+                                    safe?))
+                                  (translation
+                                   ;; a vector we'll use to align each argument
+                                   ;; array into the proper subarray of the result
+                                   (make-vector (array-dimension first-array) 0)))
+                             (let loop ((arrays arrays)
+                                        (subdividers axis-subdividers))
+                               (if (null? arrays)
+                                   ;; we've assigned every array to the appropriate subarray of result
+                                   (begin
+                                     (if (not mutable?)
+                                         (%%array-setter-set! result #f))
+                                     result)
+                                   (let ((array (car arrays)))
+                                     (vector-set! lowers k (car subdividers))
+                                     (vector-set! uppers k (cadr subdividers))
+                                     (vector-set! translation k (- (car subdividers)
+                                                                   (interval-lower-bound (array-domain array) k)))
+                                     (%%move-array-elements
+                                      (%%array-extract result (%%finish-interval lowers uppers))
+                                      (%%array-translate array translation)
+                                      "array-append: ")
+                                     (loop (cdr arrays)
+                                           (cdr subdividers))))))))))))))))
   
   (initial-parse args))
 

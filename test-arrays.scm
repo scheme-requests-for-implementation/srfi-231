@@ -62,7 +62,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define failed-tests 0)
 (set! failed-tests failed-tests)
 
-
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
           (result (call-with-current-continuation
@@ -1173,6 +1172,24 @@ OTHER DEALINGS IN THE SOFTWARE.
                              "")
       "Arrays must have the same domains: ")
 
+(define storage-class-names
+  (list (list u1-storage-class 'u1-storage-class)
+        (list u8-storage-class 'u8-storage-class)
+        (list u16-storage-class 'u16-storage-class)
+        (list u32-storage-class 'u32-storage-class)
+        (list u64-storage-class 'u64-storage-class)
+        (list s8-storage-class 's8-storage-class)
+        (list s16-storage-class 's16-storage-class)
+        (list s32-storage-class 's32-storage-class)
+        (list s64-storage-class 's64-storage-class)
+        (list f32-storage-class 'f32-storage-class)
+        (list f64-storage-class 'f64-storage-class)
+        (list c64-storage-class 'c64-storage-class)
+        (list c128-storage-class 'c128-storage-class)
+         ))
+
+
+
 (do ((d 1 (fx+ d 1)))
     ((= d 6))
   (let* ((uppers-list
@@ -1281,6 +1298,79 @@ OTHER DEALINGS IN THE SOFTWARE.
         (test (myarray= destination source)
               #t)
         ))))
+
+(define extreme-values-alist
+  (list
+   (list u1-storage-class 0 1)
+   (list u8-storage-class 0 (expt 2 8))
+   (list u16-storage-class 0 (expt 2 16))
+   (list u32-storage-class 0 (expt 2 32))
+   (list u64-storage-class 0 (expt 2 64))
+   (list s8-storage-class (- (expt 2 (- 8 1))) (- (expt 2 (- 8 1)) 1))
+   (list s16-storage-class (- (expt 2 (- 16 1))) (- (expt 2 (- 16 1)) 1))
+   (list s32-storage-class (- (expt 2 (- 32 1))) (- (expt 2 (- 32 1)) 1))
+   (list s64-storage-class (- (expt 2 (- 64 1))) (- (expt 2 (- 64 1)) 1))
+   (list generic-storage-class)
+   (list f32-storage-class)
+   (list f64-storage-class)
+   (list c64-storage-class)
+   (list c128-storage-class)))
+
+(next-test-random-source-state!)
+
+(do ((d 1 (fx+ d 1)))
+    ((= d 6))
+  (let* ((uppers-list
+          (iota d 2))
+         (domain
+          (make-interval (list->vector uppers-list)))
+         (reversed-domain
+          (make-interval (list->vector (reverse uppers-list)))))
+    (do ((i 0 (fx+ i 1)))
+        ;; distribute "tests" results over five dimensions
+        ((= i (quotient random-tests 5)))
+      (let* ((destination-storage-class-and-initializer
+              (random-storage-class-and-initializer))
+             (destination-storage-class
+              (car destination-storage-class-and-initializer))
+             (destination-initializer
+              (cadr destination-storage-class-and-initializer))
+             (source-storage-class-and-initializer
+              (random-storage-class-and-initializer))
+             (source-storage-class
+              (car source-storage-class-and-initializer))
+             (source-initializer
+              (cadr source-storage-class-and-initializer))
+             (source
+              (array-copy (make-array domain
+                                      source-initializer)
+                          source-storage-class))
+             (destination
+              (make-specialized-array domain
+                                      destination-storage-class))
+             (destination-checker
+              (storage-class-checker destination-storage-class)))
+        (if (array-every destination-checker source)
+            (test (or (and (eq? source-storage-class c128-storage-class)      ;; Even though any c128 element can be stored in a c64 array,
+                           (eq? destination-storage-class c64-storage-class)) ;; they won't compare equal.
+                      (and (eq? source-storage-class f64-storage-class)       ;; Ditto for f64 and f32.
+                           (eq? destination-storage-class f32-storage-class))
+                      (let ((%%move-result (%%move-array-elements destination source "test: ")))
+                        (and (equal? (cond ((and (eq? destination-storage-class source-storage-class)
+                                                 (not (eq? destination-storage-class u1-storage-class))) ;; No block copy
+                                            "Block copy")
+                                           ((eq? destination-storage-class generic-storage-class)
+                                            "In order, no checks needed, generic-storage-class")
+                                           ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
+                                            "In order, no checks needed")
+                                           (else
+                                            "In order, checks needed"))
+                                     %%move-result)
+                             (myarray= destination
+                                       source))))
+                  #t)
+            (test (array-assign! destination source)
+                  "array-assign!: Not all elements of the source can be stored in destination: "))))))
 
 (next-test-random-source-state!)
 
@@ -4585,52 +4675,54 @@ that computes the componentwise products when we need them, the times are
                               (make-interval '#(2 4))))
       #t)
 
-(define (my-array-append k array . arrays)
-  (let*-values (((arrays)                         ;; all array arguments
-                 (cons array arrays))
-                ((axis-subdividers kth-size)
-                 ;; compute lower and upper bounds of where
-                 ;; we'll copy each array argument, plus
-                 ;; the size of the kth axis of the result array
-                 (let loop ((result '(0))
-                            (arrays arrays))
-                   (if (null? arrays)
-                       (values (reverse result) (car result))
-                       (let ((interval (array-domain (car arrays))))
-                         (loop (cons (+ (car result)
-                                        (- (interval-upper-bound interval k)
-                                           (interval-lower-bound interval k)))
-                                     result)
-                               (cdr arrays))))))
-                ((lowers)                         ;; the domains of the arrays differ only in the kth axis
-                 (interval-lower-bounds->vector (array-domain array)))
-                ((uppers)
-                 (interval-upper-bounds->vector (array-domain array)))
-                ((result)                         ;; the result array
-                 (make-specialized-array
-                  (let ()
-                    (vector-set! lowers k 0)
-                    (vector-set! uppers k kth-size)
-                    (make-interval lowers uppers))))
-                ((translation)
-                 ;; a vector we'll use to align each argument
-                 ;; array into the proper subarray of the result
-                 (make-vector (array-dimension array) 0)))
-    (let loop ((arrays arrays)
-               (subdividers axis-subdividers))
-      (if (null? arrays)
-          ;; we've assigned every array to the appropriate subarray of result
-          result
-          (let ((array (car arrays)))
-            (vector-set! lowers k (car subdividers))
-            (vector-set! uppers k (cadr subdividers))
-            (vector-set! translation k (- (car subdividers)
-                                          (interval-lower-bound (array-domain array) k)))
-            (array-assign!
-             (array-extract result (make-interval lowers uppers))
-             (array-translate array translation))
-            (loop (cdr arrays)
-                  (cdr subdividers)))))))
+(define (my-array-append k . arrays)              ;; call with at least one array
+  (call-with-values
+      (lambda ()
+        ;; compute lower and upper bounds of where
+        ;; we'll copy each array argument, plus
+        ;; the size of the kth axis of the result array
+        (let loop ((result '(0))
+                   (arrays arrays))
+          (if (null? arrays)
+              (values (reverse result) (car result))
+              (let ((interval (array-domain (car arrays))))
+                (loop (cons (+ (car result)
+                               (- (interval-upper-bound interval k)
+                                  (interval-lower-bound interval k)))
+                            result)
+                      (cdr arrays))))))
+    (lambda (axis-subdividers kth-size)
+      (let* ((array
+              (car arrays))
+             (lowers                         ;; the domains of the arrays differ only in the kth axis
+              (interval-lower-bounds->vector (array-domain array)))
+             (uppers
+              (interval-upper-bounds->vector (array-domain array)))
+             (result                         ;; the result array
+              (make-specialized-array
+               (let ()
+                 (vector-set! lowers k 0)
+                 (vector-set! uppers k kth-size)
+                 (make-interval lowers uppers))))
+             (translation
+              ;; a vector we'll use to align each argument
+              ;; array into the proper subarray of the result
+              (make-vector (array-dimension array) 0)))
+        (let loop ((arrays arrays)
+                   (subdividers axis-subdividers))
+          (if (null? arrays)
+              ;; we've assigned every array to the appropriate subarray of result
+              result
+              (let ((array (car arrays)))
+                (vector-set! lowers k (car subdividers))
+                (vector-set! uppers k (cadr subdividers))
+                (vector-set! translation k (- (car subdividers)
+                                              (interval-lower-bound (array-domain array) k)))
+                (array-assign!
+                 (array-extract result (make-interval lowers uppers))
+                 (array-translate array translation))
+                (loop (cdr arrays)
+                      (cdr subdividers)))))))))
 
 (test (myarray= (array-append
                   0
@@ -4807,6 +4899,56 @@ that computes the componentwise products when we need them, the times are
       generic-storage-class)
 
 ;;; FIXME: Need to test the values of other optional arguments to array-append
+
+(define (myarray-stack k . arrays)
+  (let* ((array
+          (car arrays))
+         (domain
+          (array-domain array))
+         (lowers
+          (interval-lower-bounds->list domain))
+         (uppers
+          (interval-upper-bounds->list domain))
+         (new-domain
+          (make-interval
+           (list->vector (append (take lowers k) (cons 0 (drop lowers k))))
+           (list->vector (append (take uppers k) (cons (length arrays) (drop uppers k))))))
+         (getters
+          (list->vector (map %%array-getter arrays))))
+    (make-array new-domain
+                (lambda args
+                  (apply
+                   (vector-ref getters (list-ref args k))
+                   (append (take args k)
+                           (drop args (+ k 1))))))))
+
+(do ((d 1 (fx+ d 1)))
+    ((= d 6))
+  (let* ((uppers-list
+          (iota d 2))
+         (domain
+          (make-interval (list->vector uppers-list))))
+    (do ((i 0 (fx+ i 1)))
+        ;; distribute "tests" results over five dimensions
+        ((= i (quotient random-tests 5)))
+      (let* ((arrays
+              (map (lambda (ignore)
+                     (array-copy
+                      (make-array domain
+                                  (lambda args
+                                    (random 256)))
+                      u8-storage-class))
+                   (iota (random 1 5))))
+             (k
+              (random (+ d 1))))
+        (myarray= (apply array-stack k arrays)
+                  (apply myarray-stack k arrays))
+        (test (myarray= (apply array-stack k arrays)
+                        (apply myarray-stack k arrays))
+              #t)))))
+
+(next-test-random-source-state!)
+
 
 (test (array-storage-class
        (array-stack 1
