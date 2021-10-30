@@ -1296,20 +1296,20 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define extreme-values-alist
   (list
-   (list u1-storage-class 0 1)
-   (list u8-storage-class 0 (expt 2 8))
-   (list u16-storage-class 0 (expt 2 16))
-   (list u32-storage-class 0 (expt 2 32))
-   (list u64-storage-class 0 (expt 2 64))
-   (list s8-storage-class (- (expt 2 (- 8 1))) (- (expt 2 (- 8 1)) 1))
+   (list u1-storage-class  0 (- (expt 2 1) 1))
+   (list u8-storage-class  0 (- (expt 2 8) 1))
+   (list u16-storage-class 0 (- (expt 2 16) 1))
+   (list u32-storage-class 0 (- (expt 2 32) 1))
+   (list u64-storage-class 0 (- (expt 2 64) 1))
+   (list s8-storage-class  (- (expt 2 (- 8 1)))  (- (expt 2 (- 8 1)) 1))
    (list s16-storage-class (- (expt 2 (- 16 1))) (- (expt 2 (- 16 1)) 1))
    (list s32-storage-class (- (expt 2 (- 32 1))) (- (expt 2 (- 32 1)) 1))
    (list s64-storage-class (- (expt 2 (- 64 1))) (- (expt 2 (- 64 1)) 1))
-   (list generic-storage-class)
-   (list f32-storage-class)
-   (list f64-storage-class)
-   (list c64-storage-class)
-   (list c128-storage-class)))
+   (list generic-storage-class    'a)
+   (list f32-storage-class       1.0)
+   (list f64-storage-class       1.0)
+   (list c64-storage-class  1.0+1.0i)
+   (list c128-storage-class 1.0+1.0i)))
 
 (next-test-random-source-state!)
 
@@ -1343,19 +1343,29 @@ OTHER DEALINGS IN THE SOFTWARE.
              (destination
               (make-specialized-array domain
                                       destination-storage-class))
+             (destination
+              (if (zero? (random 2))
+                  (array-reverse destination)
+                  destination))
              (destination-checker
               (storage-class-checker destination-storage-class)))
         (if (array-every destination-checker source)
-            (test (let ((%%move-result (%%move-array-elements destination source "test: ")))
-                    (and (equal? (cond ((and (eq? destination-storage-class source-storage-class)
-                                             (not (eq? destination-storage-class u1-storage-class))) ;; No block copy
-                                        "Block copy")
-                                       ((eq? destination-storage-class generic-storage-class)
-                                        "In order, no checks needed, generic-storage-class")
-                                       ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
-                                        "In order, no checks needed")
-                                       (else
-                                        "In order, checks needed"))
+            (test (let ((%%move-result
+                         (%%move-array-elements destination source "test: ")))
+                    (and (equal? (if (array-elements-in-order? destination)
+                                     (cond ((and (eq? destination-storage-class source-storage-class)
+                                                 (storage-class-copier destination-storage-class))
+                                            "Block copy")
+                                           ((eq? destination-storage-class generic-storage-class)
+                                            "In order, no checks needed, generic-storage-class")
+                                           ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
+                                            "In order, no checks needed")
+                                           (else
+                                            "In order, checks needed"))
+                                     (cond ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
+                                            "Out of order, no checks needed")
+                                           (else
+                                            "Out of order, checks needed")))
                                  %%move-result)
                          (myarray= destination
                                    source
