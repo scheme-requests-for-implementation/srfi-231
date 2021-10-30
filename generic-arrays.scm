@@ -2114,11 +2114,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                                        (begin
                                          (setter body index item)
                                          (set! index (fx+ index 1)))
-                                       (error
+                                       (apply
+                                        error
                                         (string-append
                                          caller
                                          "Not all elements of the source can be stored in destination: ")
-                                        destination source multi-index item)))))))
+                                        destination source (append multi-index (list item)))))))))
                           domain))
                        "In order, checks needed"))))
           ;; the elements of destination are not in order.
