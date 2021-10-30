@@ -789,15 +789,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
-(define (myarray= array1 array2)
+(define (myarray= array1 array2 #!optional (compare equal?))
   (and (interval= (array-domain array1)
                   (array-domain array2))
-       (array-foldl (lambda (result vs)
-                      (and (equal? (car vs)
-                                   (cadr vs))
-                           result))
-                    #t
-                    (array-map list array1 array2))))
+       (array-every compare array1 array2)))
 
 (pp "array body, indexer, storage-class, and safe? error tests")
 
@@ -1351,23 +1346,26 @@ OTHER DEALINGS IN THE SOFTWARE.
              (destination-checker
               (storage-class-checker destination-storage-class)))
         (if (array-every destination-checker source)
-            (test (or (and (eq? source-storage-class c128-storage-class)      ;; Even though any c128 element can be stored in a c64 array,
-                           (eq? destination-storage-class c64-storage-class)) ;; they won't compare equal.
-                      (and (eq? source-storage-class f64-storage-class)       ;; Ditto for f64 and f32.
-                           (eq? destination-storage-class f32-storage-class))
-                      (let ((%%move-result (%%move-array-elements destination source "test: ")))
-                        (and (equal? (cond ((and (eq? destination-storage-class source-storage-class)
-                                                 (not (eq? destination-storage-class u1-storage-class))) ;; No block copy
-                                            "Block copy")
-                                           ((eq? destination-storage-class generic-storage-class)
-                                            "In order, no checks needed, generic-storage-class")
-                                           ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
-                                            "In order, no checks needed")
-                                           (else
-                                            "In order, checks needed"))
-                                     %%move-result)
-                             (myarray= destination
-                                       source))))
+            (test (let ((%%move-result (%%move-array-elements destination source "test: ")))
+                    (and (equal? (cond ((and (eq? destination-storage-class source-storage-class)
+                                             (not (eq? destination-storage-class u1-storage-class))) ;; No block copy
+                                        "Block copy")
+                                       ((eq? destination-storage-class generic-storage-class)
+                                        "In order, no checks needed, generic-storage-class")
+                                       ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
+                                        "In order, no checks needed")
+                                       (else
+                                        "In order, checks needed"))
+                                 %%move-result)
+                         (myarray= destination
+                                   source
+                                   (if (or (and (eq? source-storage-class c128-storage-class)
+                                                (eq? destination-storage-class c64-storage-class))
+                                           (and (eq? source-storage-class f64-storage-class)
+                                                (eq? destination-storage-class f32-storage-class)))
+                                       (lambda (x y)
+                                         (< (magnitude (- x y)) 1e-5))
+                                       equal?))))
                   #t)
             (test (array-assign! destination source)
                   "array-assign!: Not all elements of the source can be stored in destination: "))))))
