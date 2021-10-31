@@ -1160,7 +1160,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (%%move-array-elements (make-specialized-array (make-interval '#(2 2)))
                              (make-array (make-interval '#(1 5)) list)
                              "")
-      "Arrays must have the same volume: ")
+      "Arrays must have the same domains: ")
 
 (test (%%move-array-elements (make-array (make-interval '#(2 2)) list list) ;; not a valid setter
                              (make-array (make-interval '#(1 4)) list)
@@ -1190,9 +1190,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (let* ((uppers-list
           (iota d 2))
          (domain
-          (make-interval (list->vector uppers-list)))
-         (reversed-domain
-          (make-interval (list->vector (reverse uppers-list)))))
+          (make-interval (list->vector uppers-list))))
     (do ((i 0 (fx+ i 1)))
         ;; distribute "tests" results over five dimensions
         ((= i (quotient random-tests 5)))
@@ -1208,19 +1206,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                            (lambda args
                              (initializer)))
                storage-class))
-             (rotated-specialized-source
-              (array-rotate specialized-source (- d 1)))
-             (specialized-reversed-source
-              (array-copy
-               (make-array reversed-domain
-                           (lambda args
-                             (initializer)))
-               storage-class))
              (specialized-destination
               (make-specialized-array domain
-                                      storage-class))
-             (specialized-reversed-destination
-              (make-specialized-array reversed-domain
                                       storage-class))
              (source
               (make-array domain
@@ -1228,32 +1215,14 @@ OTHER DEALINGS IN THE SOFTWARE.
              (destination
               (make-array (array-domain specialized-destination)
                           (array-getter specialized-destination)
-                          (array-setter specialized-destination)))
-             (rotated-specialized-source
-              (array-rotate specialized-source (- d 1)))
-             (rotated-source
-              (array-rotate source (- d 1)))
-             (reversed-source
-              (make-array reversed-domain
-                          (array-getter specialized-reversed-source)))
-             (reversed-destination
-              (make-array reversed-domain
-                          (array-getter specialized-reversed-source)
-                          (array-setter specialized-reversed-source))))
+                          (array-setter specialized-destination))))
         ;; specialized-to-specialized, use fast copy
         (test (%%move-array-elements specialized-destination specialized-source "test: ")
-              (if (equal? storage-class u1-storage-class)
-                  ;; no copier
+              (if (not (storage-class-copier storage-class))
                   "In order, no checks needed"
                   "Block copy"))
         (test (myarray= specialized-source specialized-destination)
               #t)
-        ;; fast copying between specialized of the same volume
-        (test (%%move-array-elements specialized-destination specialized-reversed-source "test: ")
-              (if (equal? storage-class u1-storage-class)
-                  ;; no copier
-                  "In order, no checks needed"
-                  "Block copy"))
         ;; copy to adjacent elements of destination, checking needed
         (test (%%move-array-elements specialized-destination source "test: ")
               (if (equal? storage-class generic-storage-class)
@@ -1261,29 +1230,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                   "In order, checks needed"))
         (test (myarray= source specialized-destination)
               #t)
-        ;; copy to adjacent elements of destination, no checking needed
-        ;; arrays of different shapes
-        (test (%%move-array-elements specialized-destination rotated-specialized-source "test: ")
-              (if (and (array-elements-in-order? rotated-specialized-source) ;; one dimension
-                       (not (equal? storage-class u1-storage-class)))
-                  "Block copy"
-                  (if (equal? storage-class generic-storage-class)
-                      "In order, no checks needed, generic-storage-class"
-                      "In order, no checks needed")))
-        (test (array->list rotated-specialized-source)
-              (array->list specialized-destination))
-        ;; copy to adjacent elements of destination, checking needed
-        ;; arrays of different shapes
-        (test (%%move-array-elements specialized-destination rotated-source "test: ")
-              (if (equal? storage-class generic-storage-class)
-                  "In order, no checks needed, generic-storage-class"
-                  "In order, checks needed"))
-        (test (array->list rotated-source)
-              (array->list specialized-destination))
         ;; copy to non-adjacent elements of destination, no checking needed
         (test (%%move-array-elements (array-reverse specialized-destination) specialized-source "test: ")
               (if (array-elements-in-order? (array-reverse specialized-destination))
-                  "Out of order, no checks needed"
+                  "In order, no checks needed"
                   "Out of order, no checks needed" ))
         (test (myarray= specialized-source (array-reverse specialized-destination))
               #t)

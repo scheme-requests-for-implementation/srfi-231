@@ -1935,9 +1935,11 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; We check that the elements we move to the destination are OK for the
   ;; destination because if we don't catch errors here they can be very tricky to find.
   
-  (if (not (= (%%interval-volume (%%array-domain source))
-              (%%interval-volume (%%array-domain destination))))
-      (error (string-append caller "Arrays must have the same volume: ")
+  (if (not (%%interval= (%%array-domain source)
+                        (%%array-domain destination)))
+      (error (string-append
+              caller
+              "Arrays must have the same domains: ")
              destination source))
   
   (if (specialized-array? destination)
@@ -2123,7 +2125,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                           domain))
                        "In order, checks needed"))))
           ;; the elements of destination are not in order.
-          ;; so we need the domains to be the same.
           (let* ((setter
                   (%%array-setter destination))
                  (getter
@@ -2134,12 +2135,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (storage-class-checker destination-storage-class))
                  (domain
                   (%%array-domain destination)))
-            (cond ((not (%%interval= domain (%%array-domain source)))
-                   (error (string-append
-                           caller
-                           "Arrays must have the same domains: ")
-                          destination source))
-                  ((and (specialized-array? source)
+            (cond ((and (specialized-array? source)
                         (let ((compatibility-list
                                (assq (%%array-storage-class source)
                                      %%storage-class-compatibility-alist)))
@@ -4287,11 +4283,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                            (fx* (vector-ref olddims    (fx+ ok 1))
                                                 (vector-ref oldstrides (fx+ ok 1)))))
                                  (if copy-on-failure?
-                                     (%!array-copy array
-                                                   (%%array-storage-class array)
-                                                   new-domain
-                                                   (mutable-array? array)
-                                                   (array-safe? array))
+                                     (specialized-array-reshape
+                                      (%!array-copy array
+                                                    (%%array-storage-class array)
+                                                    domain
+                                                    (mutable-array? array)
+                                                    (array-safe? array))
+                                      new-domain)
                                      (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
                                  (loop-3 (fx+ ok 1)))
                              (begin
