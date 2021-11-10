@@ -48,7 +48,23 @@ OTHER DEALINGS IN THE SOFTWARE.
   (##namespace
    ("srfi/179#"
     ;; Internal SRFI 179 procedures that are either tested or called here.
-    %%compose-indexers make-%%array %%every %%interval->basic-indexer %%interval-lower-bounds %%interval-upper-bounds %%move-array-elements %%permutation-invert %%vector-every %%vector-permute %%vector-permute->list %%order-unknown %%compute-array-elements-in-order? %%array-domain %%array-indexer %%array-elements-in-order?))
+    %%compose-indexers
+    make-%%array
+    %%every
+    %%interval->basic-indexer
+    %%interval-lower-bounds
+    %%interval-upper-bounds
+    %%move-array-elements
+    %%permutation-invert
+    %%vector-every
+    %%vector-permute
+    %%vector-permute->list
+    %%order-unknown
+    %%compute-array-elements-in-order?
+    %%array-domain
+    %%array-indexer
+    %%array-getter
+    %%array-elements-in-order?))
   )
 
 (declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))

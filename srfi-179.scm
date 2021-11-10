@@ -1900,7 +1900,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (<h2> "Implementation")
 (<p> "We provide an implementation in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
-in the implementation are "(<code>"define-structure")" and "(<code>"define-macro")".")
+in the implementation are "(<code>"define-structure")", "(<code>"define-macro")", and DSSSL optional arguments.")
 (<p> "There is a "(<a> href: (string-append "https://github.com/scheme-requests-for-implementation/srfi-" SRFI) "git repository")" of this document, a sample implementation, a test file, and other materials.")
 (<h2> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
@@ -2702,7 +2702,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 ;;; 2
 "))
 (<h2> "Acknowledgments")
-(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner, and Alex Shin for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
+(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner, and Alex Shinn for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
  (<li> (<a> id: 'bawden href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "\"multi-dimensional arrays in R5RS?\"")
