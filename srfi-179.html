@@ -39,6 +39,8 @@
       <li>The SRFI 179 procedures <code>array-fold</code> and <code>array-fold-right</code> have been replaced by <code>array-foldl</code> and <code>array-foldr</code>, which follow the definition of the left and right folds in <a href="https://ocaml.org/api/List.html">Ocaml</a> and <a href="https://wiki.haskell.org/Fold">Haskell</a>. The left folds of Ocaml and Haskell differ from the (left) fold of <a href="https://srfi.schemers.org/srfi-1/">SRFI 1</a>, so <code>array-foldl</code> from this SRFI has different semantics to <code>array-fold</code> from SRFI 179.</li>
       <li><code>array-assign!</code> now requires that the source and destination have the same domain. Use <code>specialized-array-reshape</code> on the destination array to mimic the SRFI 179 version.</li>
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
+      <li>Procedures that generate useful permutations have been added: <code>index-rotate</code>, <code>index-first</code>, and <code>index-last</code>.</li>
+      <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li>Introduced new routines <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
@@ -56,8 +58,7 @@
       <li><a href="#array-extract"><code>array-extract</code></a>: Constructs a rectangular &quot;window&quot; or &quot;view&quot; into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.</li>
       <li><a href="#array-tile"><code>array-tile</code></a>: Builds an array of subarrays of the original array, like breaking a large matrix into smaller matrices for block matrix operations.</li>
       <li><a href="#array-translate"><code>array-translate</code></a>: Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.</li>
-      <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.</li>
-      <li><a href="#array-rotate"><code>array-rotate</code></a>: Permutes indices in a special way, pushing them off the left and adding them to the right, like $i\ j\to j\ i$ (so transposing a matrix) or $i\ j\ k\to j\ k\ i$</li>
+      <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary routines <code>index-rotate</code>, <code>index-first</code>,  and <code>index-last</code> create commonly used permutations of a certain type.</li>
       <li><a href="#array-curry"><code>array-curry</code></a>: Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at a collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.</li>
       <li><a href="#array-reverse"><code>array-reverse</code></a>: Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.</li>
       <li><a href="#array-sample"><code>array-sample</code></a>: Accesses every second (or third, etc.) row or column, or both, of an array.</li>
@@ -92,7 +93,7 @@
       <li><b>Restricting the domain of an array: </b>  If the domain of $B$, $D_B$, is a subset of the domain of $A$, then $T_{BA}(\vec i)=\vec i$ is a one-to-one affine mapping.  We define <code>array-extract</code> to define this common operation; it's like looking at a rectangular sub-part of a spreadsheet. We use it to extract the common part of overlapping domains of three arrays in an image processing example below. </li>
       <li><b>Tiling an array: </b>For various reasons (parallel processing, optimizing cache localization, GPU programming, etc.) one may wish to process a large array as a number of subarrays of the same dimensions, which we call <i>tiling</i> the array.  The procedure <code>array-tile</code> returns a new array, each entry of which is a subarray extracted (in the sense of <code>array-extract</code>) from the input array.</li>
       <li><b>Translating the domain of an array: </b>If $\vec d$ is a vector of integers, then $T_{BA}(\vec i)=\vec i-\vec d$ is a one-to-one affine map of $D_B=\{\vec i+\vec d\mid \vec i\in D_A\}$ onto $D_A$. We call $D_B$ the <i>translate</i> of $D_A$, and we define <code>array-translate</code> to provide this operation.</li>
-      <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. (The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.) We also provide <code>array-rotate</code> for the special permutations that rotate the axes. For example, in three dimensions we have the following three rotations: $i\ j\ k\to j\ k\ i$; $i\ j\ k\to k\ i\ j$; and the trivial (identity) rotation $i\ j\ k\to i\ j\ k$.  The three-dimensional permutations that are not rotations are $i\ j\ k\to i\ k\ j$; $i\ j\ k\to j\ i\ k$; and $i\ j\ k\to k\ j\ i$.</li>
+      <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. Several procedures build commonly used permutations: <code>(index-rotate <var>n</var> <var>k</var>)</code> rotates <code><var>n</var></code> indices <code><var>k</var></code> places to the left; <code>(index-first <var>n</var> <var>k</var>)</code> moves the $k$th of $n$ indices to be the first index, leaving the others in order; and <code>(index-last <var>n</var> <var>k</var>)</code> moves the $k$th of $n$ indices to be the last index, again leaving the others in order.</li>
       <li><b>Currying an array: </b>Let's denote the cross product of two intervals $\text{Int}_1$ and $\text{Int}_2$ by $\text{Int}_1\times\text{Int}_2$; if $\vec j=(j_0,\ldots,j_{r-1})\in \text{Int}_1$ and $\vec i=(i_0,\ldots,i_{s-1})\in \text{Int}_2$, then $\vec j\times\vec i$, which we define to be $(j_0,\ldots,j_{r-1},i_0,\ldots,i_{s-1})$, is in $\text{Int}_1\times\text{Int}_2$. If $D_A=\text{Int}_1\times\text{Int}_2$ and $\vec j\in\text{Int}_1$, then $T_{BA}(\vec i)=\vec j\times\vec i$ is a one-to-one affine mapping from $D_B=\text{Int}_2$ into $D_A$.  For each vector $\vec j$ we can compute a new array in this way; we provide <code>array-curry</code> for this operation, which returns an array whose domain is $\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\text{Int}_2$. Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.</li>
       <li><b>Traversing some indices in a multi-index in reverse order: </b>Consider an array $A$ with domain $D_A=[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for &quot;flip?&quot;). Then define $T_{BA}:D_B\to D_A$ by $i_j\to i_j$ if $F_j$ is <code>#f</code> and $i_j\to u_j+l_j-1-i_j$ if  $F_j$ is <code>#t</code>. In other words,  we reverse the ordering of the $j$th coordinate of $\vec i$ if and only if $F_j$ is true. $T_{BA}$ is an affine mapping from $D_B\to D_A$, which defines a new array $B$, and we can provide <code>array-reverse</code> for this operation. Applying <code>array-reverse</code> to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).</li>
       <li><b>Uniformly sampling an array: </b>Assume that $A$ is an array with domain $[0,u_1)\times\cdots\times[0,u_{d-1})$ (i.e., an interval all of whose lower bounds are zero). We'll also assume the existence of vector $S$ of scale factors, which are positive exact integers. Let $D_B$ be a new interval with $j$th lower bound equal to zero and $j$th upper bound equal to $\operatorname{ceiling}(u_j/S_j)$ and let $T_{BA}(\vec i)_j=i_j\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.) Then $T_{BA}$ is an affine one-to-one mapping, and we provide <code>interval-scale</code> and <code>array-sample</code> for these operations.</li>
@@ -114,7 +115,7 @@
     <p>One could again &quot;share&quot; $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\to D_B$, and then each access $C(\vec i)=A(T_{BA}(T_{CB}(\vec i)))$.  The composition $T_{BA}\circ T_{CB}:D_C\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\to D_A$, and $C(\vec i)=A(T_{CA}(\vec i))$ can be computed with the overhead of computing a single affine transformation.</p>
     <p>So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the procedure <code>specialized-array-share</code>, not a more general <code>array-share</code>.</p>
     <p>Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote <code>(array-getter <var>A</var>)</code> by <code><var>A_</var></code>, then if <code><var>B</var></code> is the result of <code>array-extract</code> applied to <code><var>A</var></code>, then <code>(array-getter <var>B</var>)</code> is simply <code><var>A_</var></code>.  Similarly, if <code><var>A</var></code> is a two-dimensional array, and <code><var>B</var></code> is derived from <code><var>A</var></code> by applying the permutation $\pi((i,j))=(j,i)$, then <code>(array-getter <var>B</var>)</code> is <code>(lambda (i j) (<var>A_</var> j i))</code>.  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from <code><var>A_</var></code>, at least for arrays of small dimension.</p>
-    <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, <code>array-tile</code>, <code>array-rotate</code> and <code>array-sample</code>,  and we provide relatively efficient implementations of these procedures for arrays of dimension no greater than four.</p>
+    <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, <code>array-tile</code>, and <code>array-sample</code>,  and we provide relatively efficient implementations of these procedures for arrays of dimension no greater than four.</p>
     <h3>Notational convention</h3>
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
     <h2>Issues</h2>
@@ -137,9 +138,12 @@
     </ul>
     <h2>Specification</h2>
     <dl>
-      <dt>Miscellaneous Functions</dt>
+      <dt>Miscellaneous Procedures</dt>
       <dd><a href="#translation?">translation?</a>,
-        <a href="#permutation?">permutation?</a>.</dd>
+        <a href="#permutation?">permutation?</a>,
+        <a href="#index-rotate">index-rotate</a>,
+        <a href="#index-first">index-first</a>,
+        <a href="#index-last">index-last</a>.</dd>
       <dt>Intervals</dt>
       <dd><a href="#make-interval">make-interval</a>,
         <a href="#interval?">interval?</a>,
@@ -160,7 +164,6 @@
         <a href="#interval-intersect">interval-intersect</a>,
         <a href="#interval-translate">interval-translate</a>,
         <a href="#interval-permute">interval-permute</a>,
-        <a href="#interval-rotate">interval-rotate</a>,
         <a href="#interval-scale">interval-scale</a>,
         <a href="#interval-cartesian-product">interval-cartesian-product</a>.</dd>
       <dt>Storage Classes</dt>
@@ -213,7 +216,6 @@
         <a href="#array-tile">array-tile</a>,
         <a href="#array-translate">array-translate</a>,
         <a href="#array-permute">array-permute</a>,
-        <a href="#array-rotate">array-rotate</a>,
         <a href="#array-reverse">array-reverse</a>,
         <a href="#array-sample">array-sample</a>,
         <a href="#array-outer-product">array-outer-product</a>,
@@ -233,15 +235,41 @@
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
         <a href="#specialized-array-reshape">specialized-array-reshape</a>.</dd></dl>
-    <h2>Miscellaneous Functions</h2>
+    <h2>Preliminary notes</h2>
+    <p>We use <code>take</code> and <code>drop</code> from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a> to define various procedures.</p>
+    <h2>Miscellaneous Procedures</h2>
     <p>This document refers to <i>translations</i> and <i>permutations</i>.
        A translation is a vector of exact integers.  A permutation of dimension $n$
-      is a vector whose entries are the exact integers $0,1,\ldots,n-1$, each occurring once, in any order.</p>
+      is a vector whose entries are the exact integers $0,1,\ldots,n-1$, each occurring once, in any order.
+      We also provide three procedures that return useful permutations.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a id="translation?">translation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a translation, and <code>#f</code> otherwise.</p>
     <p><b>Procedure: </b><code><a id="permutation?">permutation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a permutation, and <code>#f</code> otherwise.</p>
+    <p><b>Procedure: </b><code><a id="index-rotate">index-rotate</a> <var>n</var> <var>k</var></code></p>
+    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).   Returns a permutation that rotates <var>n</var> indices <var>k</var> places to the left:</p>
+    <pre><code>(define (index-rotate n k)
+  (let ((identity-permutation (iota n)))
+    (list-&gt;vector (append (drop identity-permutation k)
+                          (take identity-permutation k)))))</code></pre>
+    <p>For example, <code>(index-rotate 5 3)</code> returns <code>'#(3 4 0 1 2)</code>.It is an error of the arguments do not satisfy these conditions</p>
+    <p><b>Procedure: </b><code><a id="index-first">index-first</a> <var>n</var> <var>k</var></code></p>
+    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation that moves index <var>k</var> of <var>n</var> indices (with count beginning at 0) to be first and leaves the other indices in order:</p>
+    <pre><code>(define (index-first n k)
+  (let ((identity-permutation (iota n)))
+    (list-&gt;vector (cons k
+                        (append (take identity-permutation k)
+                                (drop identity-permutation (fx+ k 1)))))))</code></pre>
+    <p>For example, <code>(index-first 5 3)</code> returns <code>'#(2 0 1 3 4)</code>. It is an error if the arguments do not satisfy these conditions</p>
+    <p><b>Procedure: </b><code><a id="index-last">index-last</a> <var>n</var> <var>k</var></code></p>
+    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation that moves index <var>k</var> of <var>n</var> indices (with count beginning at 0) to be last and leaves the other indices in order:</p>
+    <pre><code>(define (index-last n k)
+  (let ((identity-permutation (iota n)))
+    (list-&gt;vector (append (take identity-permutation k)
+                          (drop identity-permutation (fx+ k 1))
+                          (list k)))))</code></pre>
+    <p>For example, <code>(index-last 5 3)</code> returns <code>'#(0 1 3 4 2)</code>.It is an error if the arguments do not satisfy these conditions</p>
     <h2>Intervals</h2>
     <p>An interval represents the set of all multi-indices of exact integers
       $i_0,\ldots,i_{d-1}$
@@ -332,7 +360,7 @@
     <blockquote>$[l_{d-\text{right-dimension}},u_{d-\text{right-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$
     </blockquote>
     <p>This procedure, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.</p>
-    <p>More precisely, if <code><var>interval</var></code> is an interval and <code><var>right-dimension</var></code> is an exact integer that satisfies <code>0 &lt; <var>right-dimension</var> &lt; <var>d</var></code> then <code>interval-projections</code> returns two intervals that we define using <code>take</code> and <code>drop</code> from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a> by:</p>
+    <p>More precisely, if <code><var>interval</var></code> is an interval and <code><var>right-dimension</var></code> is an exact integer that satisfies <code>0 &lt; <var>right-dimension</var> &lt; <var>d</var></code> then <code>interval-projections</code> returns two intervals:</p>
     <pre><code>(let ((left-dimension
        (- (interval-dimension interval right-dimension)))
       (lowers
@@ -400,9 +428,6 @@
     <p>For example, if the argument interval represents $[0,4)\times[0,8)\times[0,21)\times [0,16)$ and the
       permutation is <code>#(3 0 1 2)</code>, then the result of <code>(interval-permute <var>interval</var> <var>permutation</var>)</code> will be
       the representation of $[0,16)\times [0,4)\times[0,8)\times[0,21)$.</p>
-    <p><b>Procedure: </b><code><a id="interval-rotate">interval-rotate</a> <var>interval</var> <var>dim</var></code></p>
-    <p>Informally, <code>(interval-rotate <var>interval</var> <var>dim</var>)</code> rotates the axes of <code><var>interval</var></code> <code><var>dim</var></code> places to the left.</p>
-    <p>More precisely, <code>(interval-rotate <var>interval</var> <var>dim</var>)</code> assumes that <code><var>interval</var></code> is an interval and <code><var>dim</var></code> is an exact integer between 0 (inclusive) and <code>(interval-dimension <var>interval</var>)</code> (exclusive).  It computes the permutation <code>(vector <var>dim</var> ... (- (interval-dimension <var>interval</var>) 1) 0 ... (- <var>dim</var> 1))</code> (unless <code><var>dim</var></code> is zero, in which case it constructs the identity permutation) and returns <code>(interval-permute <var>interval</var> <var>permutation</var>)</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="interval-scale">interval-scale</a> <var>interval</var> <var>scales</var></code></p>
     <p>If <code><var>interval</var></code> is a $d$-dimensional interval $[0,u_1)\times\cdots\times[0,u_{d-1})$ with all lower bounds zero, and <code><var>scales</var></code> is a length-$d$ vector of positive exact integers, which we'll denote by $\vec s$, then <code>interval-scale</code> returns the interval $[0,\operatorname{ceiling}(u_1/s_1))\times\cdots\times[0,\operatorname{ceiling}(u_{d-1}/s_{d-1}))$.</p>
     <p>It is an error if  <code><var>interval</var></code> and <code><var>scales</var></code> do not satisfy this condition.</p>
@@ -867,9 +892,6 @@ indexer:       (lambda multi-index
               (apply (array-getter <var>array</var>)
                      (&pi;<sup>-1</sup> multi-index))))</code></pre>
     <p>It is an error to call <code>array-permute</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a id="array-rotate">array-rotate</a> <var>array</var> <var>dim</var></code></p>
-    <p>Informally, <code>(array-rotate <var>array</var> <var>dim</var>)</code> rotates the axes of <code><var>array</var></code> <code><var>dim</var></code> places to the left.</p>
-    <p>More precisely, <code>(array-rotate <var>array</var> <var>dim</var>)</code> assumes that <code><var>array</var></code> is an array and <code><var>dim</var></code> is an exact integer between 0 (inclusive) and <code>(array-dimension <var>array</var>)</code> (exclusive).  It computes the permutation <code>(vector <var>dim</var> ... (- (array-dimension <var>array</var>) 1) 0 ... (- <var>dim</var> 1))</code> (unless <code><var>dim</var></code> is zero, in which case it constructs the identity permutation) and returns <code>(array-permute <var>array</var> <var>permutation</var>)</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="array-reverse">array-reverse</a> <var>array</var> #!optional <var>flip?</var></code></p>
     <p>We assume that <code><var>array</var></code> is an array and <code><var>flip?</var></code>, if given, is a vector of booleans whose length is the same as the dimension of <code><var>array</var></code>.  If <code><var>flip?</var></code> is not given, it is set to a vector with length the same as the dimension of <code><var>array</var></code>, all of whose elements are <code>#t</code>.</p>
     <p><code>array-reverse</code> returns a new array  that is specialized,  mutable, or immutable according to whether <code><var>array</var></code> is specialized, mutable, or immutable, respectively.  Informally, if <code>(vector-ref <var>flip?</var> k)</code> is true, then the ordering of multi-indices in the k'th coordinate direction is reversed, and is left undisturbed otherwise.</p>
@@ -976,7 +998,7 @@ indexer:       (lambda multi-index
     <p>It is an error if <code><var>array</var></code> and <code><var>scales</var></code> don't satisfy these requirements.</p>
     <p><b>Procedure: </b><code><a id="array-outer-product">array-outer-product</a> <var>op</var> <var>array1</var> <var>array2</var></code></p>
     <p>Implements the outer product of <code><var>array1</var></code> and <code><var>array2</var></code> with the operator <code><var>op</var></code>, similar to the APL function with the same name.</p>
-    <p>Assume that <code><var>array1</var></code> and <code><var>array2</var></code> are arrays and that <code><var>op</var></code> is a procedure of two arguments.  Using <code>take</code> and <code>drop</code> from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>, <code><var>array-outer-product</var></code> returns the immutable array</p>
+    <p>Assume that <code><var>array1</var></code> and <code><var>array2</var></code> are arrays and that <code><var>op</var></code> is a procedure of two arguments.  <code><var>array-outer-product</var></code> returns the immutable array</p>
     <pre><code>(make-array (interval-cartesian-product (array-domain array1)
                                         (array-domain array2))
             (lambda args
@@ -992,7 +1014,7 @@ indexer:       (lambda multi-index
    (lambda (<var>a b</var>)
      (array-reduce <var>f</var> (array-map <var>g a b</var>)))
    (array-copy (array-curry <var>A</var> 1))
-   (array-copy (array-curry (array-rotate <var>B</var> 1) 1))))</code></pre>
+   (array-copy (array-curry (array-permute <var>B</var> (index-rotate (array-dimension <var>B</var>) 1)))))</code></pre>
     <p>We precompute and store the curried arrays using <code>array-copy</code> for efficiency reasons, as described in <a href="#array-outer-product"><code>array-outer-product</code></a>.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Procedure: </b><code><a id="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
@@ -1150,7 +1172,7 @@ indexer:       (lambda multi-index
     <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
     <p><b>Procedure: </b><code><a id="array-stack">array-stack</a> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ] <var>k</var> <var>array</var> . <var>arrays</var></code></p>
     <p>Assumes that <code>(cons <var> array arrays</var>)</code> is a list of arrays with identical domains,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
-    <p>Returns a specialized array equivalent to (<code>take</code> and <code>drop</code> are from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>)</p>
+    <p>Returns a specialized array equivalent to</p>
     <pre><code>(array-copy
  (make-array
   (let ((<var>lowers</var> (interval-lower-bounds-&gt;list (array-domain <var>array</var>)))
@@ -1176,7 +1198,7 @@ indexer:       (lambda multi-index
        (column_
         (array-getter                  ;; the getter of ...
          (array-curry                  ;; a 1-D array of the columns of A
-          (array-rotate A 1)
+          (array-permute A '#(1 0))
           1)))
        (B
         (apply
@@ -1191,8 +1213,8 @@ indexer:       (lambda multi-index
 (1 1)   (1 2)   (1 5)   (1 8)
 (2 1)   (2 2)   (2 5)   (2 8)
 (3 1)   (3 2)   (3 5)   (3 8)</code></pre>
-    <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one line:</p>
-    <pre><code>(apply array-stack 1 (map (array-getter (array-curry (array-rotate A 1) 1)) '(1 2 5 8)))</code></pre>
+    <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one (rather long) line:</p>
+    <pre><code>(apply array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
     <p><b>Procedure: </b><code><a id="array-append">array-append</a> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ] <var>k</var> <var>array</var> . <var>arrays</var></code></p>
     <p>Assumes that <code>(cons <var> array arrays</var>)</code> is a list of arrays with domains that differ at most in the <code><var>k</var></code>'th axis,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
     <p>This routine appends, or concatenates, the argument arrays along the <var>k</var>'th axis, with the lower bound of this axis set to 0.</p>
@@ -1281,7 +1303,7 @@ indexer:       (lambda multi-index
 ;;; (1 0)   (1 1)   (1 2)   (1 3)
 ;;; (2 0)   (2 1)   (2 2)   (2 3)
 
-(array-display (array-rotate A 1))
+(array-display (array-permute A '#(1 0)))
 
 ;;; Displays
 
@@ -1431,7 +1453,8 @@ indexer:       (lambda multi-index
     <p>We provide an implementation in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
       in the implementation are <code>define-structure</code>, <code>define-macro</code>, and DSSSL optional arguments.</p>
     <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-XXX">git repository</a> of this document, a sample implementation, a test file, and other materials.</p>
-    <h2>Relationship to other SRFIs</h2>
+    <h2>Relationship to other array libraries</h2>
+    <h3>Other SRFIs</h3>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
       specialized arrays.  Many of the procedures in these previous SRFIs  have corresponding forms in this SRFI.  For example, from <a href="https://srfi.schemers.org/srfi-63/">SRFI 63</a>, we can
@@ -1451,15 +1474,27 @@ indexer:       (lambda multi-index
       <dd><code>(let ((A_ (array-getter A))) ... (A_ k1 ...) ... )</code> or <code>(array-ref A k1 ...)</code></dd>
       <dt><code>(array-set! A obj k1 ...)</code></dt>
       <dd><code>(let ((A! (array-setter A))) ... (A! obj k1 ...) ...)</code> or <code>(array-set! A obj k1 ...)</code></dd></dl>
-    <p>At the same time, this SRFI has some special features:</p>
+    <h3>Racket's array library</h3>
+    <p>Racket has an extensive <a href="https://docs.racket-lang.org/math/array.html">array library</a>, written by Neil Toronto, as part of its &quot;Math Library&quot;.  We give a superficial comparison of some aspects of Racket's library with this proposal:</p>
     <ul>
-      <li>Intervals, used as the domains of arrays in this SRFI, are useful
-        objects in their own rights, with their own procedures.  We make a sharp distinction between the domains
-        of arrays and the arrays themselves.</li>
-      <li>Intervals can have nonzero lower bounds in each dimension.</li>
-      <li>Intervals cannot be empty.</li>
-      <li>Arrays must have a getter, but may have no setter.</li>
-      <li>There are many predefined array transformations: <code>array-extract</code>, <code>array-tile</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-rotate</code>, <code>array-sample</code>, <code>array-reverse</code>.</li>
+      <li>Racket's library allows zero-dimensional arrays, which are simply a Scheme value; this proposal does not.</li>
+      <li>Racket's library has what it calls <a href="https://docs.racket-lang.org/math/array_broadcasting.html">broadcasting</a> and <a href="https://docs.racket-lang.org/math/array_slicing.html">slicing</a>; this proposal lacks these features as primitives.</li>
+      <li>Racket's <a href="https://docs.racket-lang.org/math/array_nonstrict.html">nonstrict arrays</a> correspond to our &quot;generalized arrays&quot;.</li>
+      <li>Racket's arrays axes are indexed from zero; this SRFI allows nonzero lower bounds. Thus Racket's library has no need for array-translate.</li>
+      <li>Racket's <a href="https://docs.racket-lang.org/math/array_pointwise.html">array-map</a> is similar to the one in this proposal, except that ours always returns a generalized array.</li>
+      <li>Racket's <a href="https://docs.racket-lang.org/math/array_transform.html">array-axis-ref</a> can be implemented in this SRFI with array-permute and array-curry. Racket's array-axis-permute is similar to our array-permute.  Both have array-reshape and array-append.  Racket's array-flatten is the same as (list-&gt;vector (array-&gt;list array)) in this proposal.</li>
+      <li>Racket's <a href="https://docs.racket-lang.org/math/array_fold.html">array-axis-fold</a> can be implemented in this SRFI as
+        <pre><code>(define (array-axis-fold arr k f init)
+  (array-map (lambda (pencil)
+               (array-foldl f init pencil))
+             (array-curry
+              (array-permute arr (index-last (array-dimension arr) k))
+              1)))</code></pre>If one wants what Racket calls a &quot;strict&quot; array as a result, apply array-copy to the result.  One can define Racket's &quot;*-axis-*&quot; routines similarly.</li>
+      <li>Racket's library has specialized mathematical array operations for many math procedures; this library does not.</li>
+      <li>Racket's library has <a href="https://docs.racket-lang.org/math/array_subtypes.html">flonum and complex flonum arrays</a>; this library has similar features, including for various other homogenous storage types, and is extendible.</li>
+      <li>Racket has many routines to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.</li>
+      <li>I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.</li>
+      <li>I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.</li>
     </ul>
     <h2>Other examples</h2>
     <p>Image processing applications provided significant motivation for this SRFI.</p>
@@ -1826,7 +1861,7 @@ Second-differences in the direction $k\times (1,-1)$:
           ((fx= d n))
         (array-for-each
          1D-transform
-         (array-curry (array-rotate a d) 1))))))
+         (array-curry (array-permute a (index-last n d)) 1))))))
 </code></pre>
     <p>Here we have cycled through all rotations, putting each axis in turn at the end, and then applied <code>1D-transform</code> to each of the pencils along that axis.</p>
     <p>Wavelet transforms in particular are calculated by recursively applying a transform to an array and then downsampling the array; the inverse transform recursively downsamples and then applies a transform.  So we define the following primitives: </p>

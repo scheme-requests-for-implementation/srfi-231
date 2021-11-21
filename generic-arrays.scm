@@ -177,15 +177,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (declare (inline))
 
-#|
-
-;;; Now a cached field of %%interval
-
-(define (%%interval-dimension interval)
-  (vector-length (%%interval-lower-bounds interval)))
-
-|#
-
 (define (%%interval-lower-bound interval i)
   (vector-ref (%%interval-lower-bounds interval) i))
 
@@ -293,7 +284,55 @@ OTHER DEALINGS IN THE SOFTWARE.
                         (vector-set! permutation-range p_i #t)
                         (loop (fx+ i 1))))))))))
 
+(define (index-rotate n k)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-rotate: The first argument is not a positive fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k)
+                   (fx< k n)))
+         (error "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+        (else
+         (%%index-rotate n k))))
 
+(define (%%index-rotate n k)
+  (let ((identity-permutation (iota n)))
+    (list->vector (append (drop identity-permutation k)
+                          (take identity-permutation k)))))
+
+(define (index-last n k)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-last: The first argument is not a positive fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k)
+                   (fx< k n)))
+         (error "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+        (else
+         (%%index-last n k))))
+
+(define (%%index-last n k)
+  (let ((identity-permutation (iota n)))
+    (list->vector (append (take identity-permutation k)
+                          (drop identity-permutation (fx+ k 1))
+                          (list k)))))
+
+(define (index-first n k)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-first: The first argument is not a positive fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k)
+                   (fx< k n)))
+         (error "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+        (else
+         (%%index-first n k))))
+
+(define (%%index-first n k)
+  (let ((identity-permutation (iota n)))
+    (list->vector (cons k
+                        (append (take identity-permutation k)
+                                (drop identity-permutation (fx+ k 1)))))))
 
 (define (%%vector-permute vector permutation)
   (let* ((n (vector-length vector))
@@ -2811,50 +2850,6 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-permute array permutation))))
 
-(define (%%rotation->permutation k size)
-  
-  ;; Generates a permutation that rotates
-  ;; 0 1 ... size-1
-  ;; left by k units.
-  
-  (let ((result (make-vector size)))
-    (let left-loop ((i 0)
-                    (j k))
-      (if (fx< j size)
-          (begin
-            (vector-set! result i j)
-            (left-loop (fx+ i 1)
-                       (fx+ j 1)))
-          (let right-loop ((i i)
-                           (j 0))
-            (if (fx< i size)
-                (begin
-                  (vector-set! result i j)
-                  (right-loop (fx+ i 1)
-                              (fx+ j 1)))
-                result))))))
-
-(define (interval-rotate interval dim)
-  (if (not (interval? interval))
-      (error "interval-rotate: The first argument is not an interval: " interval dim)
-      (let ((d (%%interval-dimension interval)))
-        (if (not (and (fixnum? dim)
-                      (fx< -1 dim d)))
-            (error "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): " interval dim)
-            (%%interval-permute interval (%%rotation->permutation dim d))))))
-
-(define (%%array-rotate array dim)
-  (%%array-permute array (%%rotation->permutation dim (%%array-dimension array))))
-
-(define (array-rotate array dim)
-  (if (not (array? array))
-      (error "array-rotate: The first argument is not an array: " array dim)
-      (let ((d (%%array-dimension array)))
-        (if (not (and (fixnum? dim)
-                      (fx< -1 dim d)))
-            (error "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): " array dim)
-            (%%array-rotate array dim)))))
-
 (define-macro (setup-reversed-getters-and-setters)
 
   (define (make-symbol . args)
@@ -3726,7 +3721,7 @@ OTHER DEALINGS IN THE SOFTWARE.
    (lambda (a b)
      (%%array-reduce f (%%array-map g a (list b))))
    (array-copy (%%array-curry A 1))
-   (array-copy (%%array-curry (%%array-rotate B 1) 1))))
+   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
 
 (define (array-inner-product A f g B)
   (cond ((not (array? A))
@@ -3873,16 +3868,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                          (%%finish-interval
                           (list->vector (append (take lowers k) (cons 0                (drop lowers k))))
                           (list->vector (append (take uppers k) (cons number-of-arrays (drop uppers k))))))
+                        (result-dimension
+                         (fx+ 1 domain-dimension))
                         (result-array
                          (%%make-specialized-array result-domain
                                                    storage-class
                                                    (storage-class-default storage-class)
                                                    safe?))
-                        (permutation   ;; the permutation that puts dimension k at the beginning
-                         (list->vector
-                          (cons k (remove (lambda (i) (fx= i k)) (iota result-dimension)))))
                         (permuted-and-curried-result
-                         (%%array-curry (%%array-permute result-array permutation)
+                         (%%array-curry (%%array-permute result-array (%%index-first result-dimension k))
                                         domain-dimension)))
                    ;; copy each array argument to the associated place in stack
                    (array-for-each (lambda (destination source)
@@ -4038,7 +4032,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     (let ()
                                       (vector-set! lowers k 0)
                                       (vector-set! uppers k kth-size)
-                                      (make-interval lowers uppers))
+                                      (make-interval lowers uppers))  ;; copies lowers and uppers
                                     storage-class
                                     (storage-class-default storage-class)
                                     safe?))

@@ -1136,7 +1136,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           ;; compute and cache the result, in order
           (array-elements-in-order? array))
          (rotated-array
-          (array-rotate array 1))
+          (array-permute array (index-rotate (array-dimension array) 1)))
          (ignore  ;; compute and cache the results
           ;; possibly not in order
           (array-elements-in-order? rotated-array))
@@ -2038,7 +2038,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       (array-foldl 2x2-multiply (matrix 1 0 0 1) A_2))
 
 (test (equal? (array-reduce 2x2-multiply A_2)
-              (array-reduce 2x2-multiply (array-rotate A_2 1)))
+              (array-reduce 2x2-multiply (array-permute A_2 (index-rotate (array-dimension A_2) 1))))
       #f)
 
 (define A_3 (make-array (make-interval '#(1 1 1) '#(3 5 4))
@@ -2056,7 +2056,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       (array-foldl 2x2-multiply (matrix 1 0 0 1) A_3))
 
 (test (equal? (array-reduce 2x2-multiply A_3)
-              (array-reduce 2x2-multiply (array-rotate A_3 1)))
+              (array-reduce 2x2-multiply (array-permute A_3 (index-rotate (array-dimension A_3) 1))))
       #f)
 
 (define A_4 (make-array (make-interval '#(1 1 1 1) '#(3 2 4 3))
@@ -2074,7 +2074,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       (array-foldl 2x2-multiply (matrix 1 0 0 1) A_4))
 
 (test (equal? (array-reduce 2x2-multiply A_4)
-              (array-reduce 2x2-multiply (array-rotate A_4 1)))
+              (array-reduce 2x2-multiply (array-permute A_4 (index-rotate (array-dimension A_4) 1))))
       #f)
 
 (define A_5 (make-array (make-interval '#(1 1 1 1 1) '#(3 2 4 3 3))
@@ -2090,7 +2090,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 (test (equal? (array-reduce 2x2-multiply A_5)
-              (array-reduce 2x2-multiply (array-rotate A_5 1)))
+              (array-reduce 2x2-multiply (array-permute A_5 (index-rotate (array-dimension A_5) 1))))
       #f)
 
 (pp "Some array-curry tests.")
@@ -2383,6 +2383,16 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "interval and array translation tests")
 
+(test (translation? '()) #f)
+
+(test (translation? '#()) #t)
+
+(test (translation? '#(a)) #f)
+
+(test (translation? '#(1.0)) #f)
+
+(test (translation? '#(1 2)) #t)
+
 (let ((int (make-interval '#(0 0) '#(10 10)))
       (translation '#(10 -2)))
   (test (interval-translate 'a 10)
@@ -2504,6 +2514,80 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "interval and array permutation tests")
 
+(test (index-first 'a 'b)
+      "index-first: The first argument is not a positive fixnum: ")
+
+(test (index-first 1. 'b)
+      "index-first: The first argument is not a positive fixnum: ")
+
+(test (index-first -1 2)
+      "index-first: The first argument is not a positive fixnum: ")
+
+(test (index-first 1 'a)
+      "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-first 2 1.0)
+      "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-first 2 2)
+      "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-first 2 -1)
+      "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-last 'a 'b)
+      "index-last: The first argument is not a positive fixnum: ")
+
+(test (index-last 1. 'b)
+      "index-last: The first argument is not a positive fixnum: ")
+
+(test (index-last -1 2)
+      "index-last: The first argument is not a positive fixnum: ")
+
+(test (index-last 1 'a)
+      "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-last 2 1.0)
+      "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-last 2 2)
+      "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-last 2 -1)
+      "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-rotate 'a 'b)
+      "index-rotate: The first argument is not a positive fixnum: ")
+
+(test (index-rotate 1. 'b)
+      "index-rotate: The first argument is not a positive fixnum: ")
+
+(test (index-rotate -1 2)
+      "index-rotate: The first argument is not a positive fixnum: ")
+
+(test (index-rotate 1 'a)
+      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-rotate 2 1.0)
+      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-rotate 2 2)
+      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-rotate 2 -1)
+      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+;;; Minimal testing of index-*
+
+(test (index-first 5 3)
+      '#(3 0 1 2 4))
+
+(test (index-last 5 3)
+       '#(0 1 2 4 3))
+
+(test (index-rotate 5 3)
+      '#(3 4 0 1 2))
+
 (let ((int (make-interval '#(0 0) '#(10 10)))
       (permutation '#(1 0)))
   (test (interval-permute 'a 10)
@@ -2529,6 +2613,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 (vector-permute upper-bounds permutation))))))
 
 (next-test-random-source-state!)
+
+(test (permutation? 'a) #f)
+(test (permutation? '#()) #t)
+(test (permutation? '#(1.0)) #f)
+(test (permutation? '#(1 1)) #f)
+(test (permutation? '#(1 2)) #f)
+(test (permutation? '#(1 2 0)) #t)
 
 (let* ((specialized-array (array-copy (make-array (make-interval '#(0 0) '#(10 12))
                                                                 list)))
@@ -2683,95 +2774,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
-(pp "array-rotate  and interval-rotate tests")
-
-;;; because array-rotate is built using the array-permute infrastructure, we
-;;; won't test as much
-
-(test (array-rotate 1 1)
-      "array-rotate: The first argument is not an array: ")
-
-(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 'a)
-      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
-
-(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 1.)
-      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
-
-(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 1/2)
-      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
-
-(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) -1)
-      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
-
-(test (array-rotate (make-array (make-interval '#(0 0) '#(2 3)) list) 4)
-      "array-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the array-dimension of the first argument (exclusive): ")
-
-(test (interval-rotate 1 1)
-      "interval-rotate: The first argument is not an interval: ")
-
-(test (interval-rotate (make-interval '#(0 0) '#(2 3)) 'a)
-      "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): ")
-
-(test (interval-rotate (make-interval '#(0 0) '#(2 3)) 1.)
-      "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): ")
-
-(test (interval-rotate (make-interval '#(0 0) '#(2 3)) 37)
-      "interval-rotate: The second argument is not an exact integer betweeen 0 (inclusive) and the interval-dimension of the first argument (exclusive): ")
-
-(for-each (lambda (n)
-            (let* ((upper-bounds (make-vector n 2))
-                   (lower-bounds (make-vector n 0))
-                   (domain (make-interval lower-bounds upper-bounds))
-                   (A (array-copy (make-array domain list)))
-                   (immutable-A
-                    (let ((A (array-copy A))) ;; copy A
-                      (make-array domain
-                                  (array-getter A))))
-                   (mutable-A
-                    (let ((A (array-copy A))) ;; copy A
-                      (make-array domain
-                                  (array-getter A)
-                                  (array-setter A)))))
-              (for-each (lambda (dim)
-                          (let ((permutation
-                                 (list->vector
-                                  (append
-                                   (local-iota dim n)
-                                   (local-iota 0 dim)))))
-                          (let ((rA
-                                 (array-rotate A dim))
-                                (pA
-                                 (array-permute A permutation)))
-                            (if (not (and (specialized-array? rA)
-                                          (specialized-array? pA)
-                                          (myarray= rA pA)))
-                                (begin
-                                  (error "blah rotate specialized")
-                                  (pp 'crap))))
-                          (let ((rA
-                                 (array-rotate immutable-A dim))
-                                (pA
-                                 (array-permute immutable-A permutation)))
-                            (if (not (and (array? rA)
-                                          (array? pA)
-                                          (myarray= rA pA)))
-                                (begin
-                                  (error "blah rotate immutable")
-                                  (pp 'crap))))
-                          (let ((rA
-                                 (array-rotate mutable-A dim))
-                                (pA
-                                 (array-permute mutable-A permutation)))
-                            (if (not (and (mutable-array? rA)
-                                          (mutable-array? pA)
-                                          (myarray= rA pA)))
-                                (begin
-                                  (error "blah rotate mutable")
-                                  (pp 'crap))))
-                          (test (interval-rotate (array-domain A) dim)
-                                (array-domain (array-rotate mutable-A dim)))))
-                        (iota n))))
-          (iota 5 1))
 
 (pp "interval-intersect tests")
 
@@ -3280,15 +3282,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (make-array (make-interval '#(0 0) '#(2 1)) values))
       "array-assign: The destination and source do not have the same domains: ")
 
-(test (array-assign! (array-rotate (array-copy (make-array (make-interval '#(2 3))
+(test (array-assign! (array-permute (array-copy (make-array (make-interval '#(2 3))
                                                            list ))
-                                   1)
+                                    '#(1 0))
                      (make-array (make-interval '#(2 3)) list))
       "array-assign: The destination and source do not have the same domains: ")
 
 (let ((destination (make-specialized-array (make-interval '#(3 2))))  ;; elements in order
-      (source (array-rotate (make-array (make-interval '#(3 2)) list) ;; not the same interval, but same volume
-                            1)))
+      (source (array-permute (make-array (make-interval '#(3 2)) list) ;; not the same interval, but same volume
+                             '#(1 0))))
   (test (array-assign! destination source)
         "array-assign: The destination and source do not have the same domains: "))
 
@@ -4161,7 +4163,7 @@ that computes the componentwise products when we need them, the times are
           ((fx= d n))
         (array-for-each
          1D-transform
-         (array-curry (array-rotate a d) 1))))))
+         (array-curry (array-permute a (index-last n d)) 1))))))
 
 (define (recursively-apply-transform-and-downsample transform)
   (lambda (a)
@@ -4425,7 +4427,7 @@ that computes the componentwise products when we need them, the times are
 
 (array-display A)
 
-(array-display (array-rotate A 1))
+(array-display (array-permute A '#(1 0)))
 
 (array-display (specialized-array-reshape A (make-interval '#(4 3))))
 
@@ -4952,7 +4954,7 @@ that computes the componentwise products when we need them, the times are
        (column_
         (array-getter                  ;; the getter of ...
          (array-curry                  ;; a 1-D array of the columns of A
-          (array-rotate A 1)           ;; transpose A
+          (array-permute A '#(1 0))
           1)))
        (B
         (apply
@@ -4966,7 +4968,7 @@ that computes the componentwise products when we need them, the times are
          (make-interval '#(4 10))
          list))
        (B
-        (apply array-stack 1 (map (array-getter (array-curry (array-rotate A 1) 1))'(1 2 5 8)))))
+        (apply array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))))
   (array-display B))
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))

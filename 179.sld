@@ -3,6 +3,9 @@
     ;; Miscellaneous Functions
     translation?
     permutation?
+    index-rotate
+    index-first
+    index-last
 
     ;; Intervals
     make-interval
@@ -21,7 +24,6 @@
     interval-intersect
     interval-translate
     interval-permute
-    interval-rotate
     interval-scale
     interval-cartesian-product
 
@@ -75,7 +77,6 @@
     array-tile
     array-translate
     array-permute
-    array-rotate
     array-reverse
     array-sample
     array-outer-product
