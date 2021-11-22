@@ -284,6 +284,71 @@ OTHER DEALINGS IN THE SOFTWARE.
                         (vector-set! permutation-range p_i #t)
                         (loop (fx+ i 1))))))))))
 
+(define-macro (macro-make-index-tables)
+  `(begin
+     (define index-rotates
+       ',(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (k)
+                         (list->vector
+                          (let ((identity-permutation (iota n)))
+                            (append (drop identity-permutation k)
+                                    (take identity-permutation k)))))
+                       (iota n))))
+               (iota 5))))
+
+     (define index-firsts
+       ',(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (k)
+                         (list->vector
+                          (let ((identity-permutation (iota n)))
+                            (cons k
+                                  (append (take identity-permutation k)
+                                          (drop identity-permutation (fx+ k 1)))))))
+                       (iota n))))
+               (iota 5))))
+
+     (define index-lasts
+       ',(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (k)
+                         (list->vector
+                          (let ((identity-permutation (iota n)))
+                            (append (take identity-permutation k)
+                                    (drop identity-permutation (fx+ k 1))
+                                    (list k)))))
+                       (iota n))))
+               (iota 5))))))
+
+(macro-make-index-tables)
+
+(define (%%index-rotate n k)
+  (if (fx< n 5)
+      (vector-ref (vector-ref index-rotates n) k)
+      (let ((identity-permutation (iota n)))
+        (list->vector (append (drop identity-permutation k)
+                              (take identity-permutation k))))))
+
+(define (%%index-first n k)
+  (if (fx< n 5)
+      (vector-ref (vector-ref index-firsts n) k)
+      (let ((identity-permutation (iota n)))
+        (list->vector (cons k
+                            (append (take identity-permutation k)
+                                    (drop identity-permutation (fx+ k 1))))))))
+
+(define (%%index-last n k)
+  (if (fx< n 5)
+      (vector-ref (vector-ref index-lasts n) k)
+      (let ((identity-permutation (iota n)))
+        (list->vector (append (take identity-permutation k)
+                              (drop identity-permutation (fx+ k 1))
+                              (list k))))))
+
 (define (index-rotate n k)
   (cond ((not (and (fixnum? n)
                    (fxpositive? n)))
@@ -294,28 +359,6 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
         (else
          (%%index-rotate n k))))
-
-(define (%%index-rotate n k)
-  (let ((identity-permutation (iota n)))
-    (list->vector (append (drop identity-permutation k)
-                          (take identity-permutation k)))))
-
-(define (index-last n k)
-  (cond ((not (and (fixnum? n)
-                   (fxpositive? n)))
-         (error "index-last: The first argument is not a positive fixnum: " n k))
-        ((not (and (fixnum? k)
-                   (fx<= 0 k)
-                   (fx< k n)))
-         (error "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
-        (else
-         (%%index-last n k))))
-
-(define (%%index-last n k)
-  (let ((identity-permutation (iota n)))
-    (list->vector (append (take identity-permutation k)
-                          (drop identity-permutation (fx+ k 1))
-                          (list k)))))
 
 (define (index-first n k)
   (cond ((not (and (fixnum? n)
@@ -328,11 +371,16 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%index-first n k))))
 
-(define (%%index-first n k)
-  (let ((identity-permutation (iota n)))
-    (list->vector (cons k
-                        (append (take identity-permutation k)
-                                (drop identity-permutation (fx+ k 1)))))))
+(define (index-last n k)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-last: The first argument is not a positive fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k)
+                   (fx< k n)))
+         (error "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+        (else
+         (%%index-last n k))))
 
 (define (%%vector-permute vector permutation)
   (let* ((n (vector-length vector))
