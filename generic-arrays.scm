@@ -286,7 +286,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define-macro (macro-make-index-tables)
   `(begin
-     (define index-rotates
+     (define %%index-rotates
        ',(list->vector
           (map (lambda (n)
                  (list->vector
@@ -298,7 +298,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (iota n))))
                (iota 5))))
 
-     (define index-firsts
+     (define %%index-firsts
        ',(list->vector
           (map (lambda (n)
                  (list->vector
@@ -311,7 +311,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (iota n))))
                (iota 5))))
 
-     (define index-lasts
+     (define %%index-lasts
        ',(list->vector
           (map (lambda (n)
                  (list->vector
@@ -328,14 +328,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%index-rotate n k)
   (if (fx< n 5)
-      (vector-ref (vector-ref index-rotates n) k)
+      (vector-ref (vector-ref %%index-rotates n) k)
       (let ((identity-permutation (iota n)))
         (list->vector (append (drop identity-permutation k)
                               (take identity-permutation k))))))
 
 (define (%%index-first n k)
   (if (fx< n 5)
-      (vector-ref (vector-ref index-firsts n) k)
+      (vector-ref (vector-ref %%index-firsts n) k)
       (let ((identity-permutation (iota n)))
         (list->vector (cons k
                             (append (take identity-permutation k)
@@ -343,7 +343,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%index-last n k)
   (if (fx< n 5)
-      (vector-ref (vector-ref index-lasts n) k)
+      (vector-ref (vector-ref %%index-lasts n) k)
       (let ((identity-permutation (iota n)))
         (list->vector (append (take identity-permutation k)
                               (drop identity-permutation (fx+ k 1))
