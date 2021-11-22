@@ -261,7 +261,7 @@
     (list-&gt;vector (cons k
                         (append (take identity-permutation k)
                                 (drop identity-permutation (fx+ k 1)))))))</code></pre>
-    <p>For example, <code>(index-first 5 3)</code> returns <code>'#(2 0 1 3 4)</code>. It is an error if the arguments do not satisfy these conditions</p>
+    <p>For example, <code>(index-first 5 3)</code> returns <code>'#(3 0 1 2 4)</code>. It is an error if the arguments do not satisfy these conditions</p>
     <p><b>Procedure: </b><code><a id="index-last">index-last</a> <var>n</var> <var>k</var></code></p>
     <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation that moves index <var>k</var> of <var>n</var> indices (with count beginning at 0) to be last and leaves the other indices in order:</p>
     <pre><code>(define (index-last n k)
@@ -269,7 +269,7 @@
     (list-&gt;vector (append (take identity-permutation k)
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))</code></pre>
-    <p>For example, <code>(index-last 5 3)</code> returns <code>'#(0 1 3 4 2)</code>.It is an error if the arguments do not satisfy these conditions</p>
+    <p>For example, <code>(index-last 5 3)</code> returns <code>'#(0 1 2 4 3)</code>.It is an error if the arguments do not satisfy these conditions</p>
     <h2>Intervals</h2>
     <p>An interval represents the set of all multi-indices of exact integers
       $i_0,\ldots,i_{d-1}$

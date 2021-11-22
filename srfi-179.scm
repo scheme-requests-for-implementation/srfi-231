@@ -433,7 +433,7 @@ We also provide three procedures that return useful permutations.")
     (list->vector (cons k
                         (append (take identity-permutation k)
                                 (drop identity-permutation (fx+ k 1)))))))"))
-        (<p> "For example, "(<code>"(index-first 5 3)")" returns "(<code>"'#(2 0 1 3 4)")". It is an error if the arguments do not satisfy these conditions")
+        (<p> "For example, "(<code>"(index-first 5 3)")" returns "(<code>"'#(3 0 1 2 4)")". It is an error if the arguments do not satisfy these conditions")
         (format-lambda-list '(index-last n k))
         (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation that moves index "(<var>'k)" of "(<var>'n)" indices (with count beginning at 0) to be last and leaves the other indices in order:")
         (<pre>(<code>
@@ -442,7 +442,7 @@ We also provide three procedures that return useful permutations.")
     (list->vector (append (take identity-permutation k)
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))"))
-        (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 3 4 2)")".It is an error if the arguments do not satisfy these conditions")
+        (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 2 4 3)")".It is an error if the arguments do not satisfy these conditions")
 
 (<h2> "Intervals")
         (<p> "An interval represents the set of all multi-indices of exact integers
