@@ -1350,13 +1350,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "array-copy error tests")
 
-(test (array-copy 'a 'a 'a 'a)
+(test (array-copy (make-array (make-interval '#(4)) list) u8-storage-class #t 'a)
       "array-copy: The fourth argument is not a boolean: ")
 
-(test (array-copy 'a 'a 'a)
+(test (array-copy (make-array (make-interval '#(4)) list) u8-storage-class 'a #t)
       "array-copy: The third argument is not a boolean: ")
 
-(test (array-copy 'a 'a)
+(test (array-copy (make-array (make-interval '#(4)) list) 'u8-storage-class #t #t)
       "array-copy: The second argument is not a storage-class: ")
 
 (test (array-copy 'a)

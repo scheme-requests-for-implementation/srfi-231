@@ -2375,7 +2375,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     
     (define (three-args array result-storage-class mutable? safe?)
       (if (not (boolean? mutable?))
-          (error "array-copy: The third argument is not a boolean: " safe?)
+          (error "array-copy: The third argument is not a boolean: " mutable?)
           (two-args array
                     result-storage-class
                     mutable?
