@@ -1855,65 +1855,67 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 #t)))         ;; new arrays are always in order
 
 (define make-specialized-array
-  (case-lambda
-   ((interval)
-    (cond ((not (interval? interval))
-           (error "make-specialized-array: The first argument is not an interval: "
-                  interval))
-          (else
-           (%%make-specialized-array interval
-                                     generic-storage-class
-                                     (storage-class-default generic-storage-class)
-                                   ;; must be mutable
-                                     (specialized-array-default-safe?)))))
-   ((interval storage-class)
-    (cond ((not (interval? interval))
-           (error "make-specialized-array: The first argument is not an interval: "
-                  interval storage-class))
-          ((not (storage-class? storage-class))
-           (error "make-specialized-array: The second argument is not a storage-class: "
-                  interval storage-class))
-          (else
-           (%%make-specialized-array interval
-                                     storage-class
-                                     (storage-class-default storage-class)
-                                   ;; must be mutable
-                                     (specialized-array-default-safe?)))))
-   ((interval storage-class initial-value)
-    (cond ((not (interval? interval))
-           (error "make-specialized-array: The first argument is not an interval: "
-                  interval storage-class initial-value))
-          ((not (storage-class? storage-class))
-           (error "make-specialized-array: The second argument is not a storage-class: "
-                  interval storage-class initial-value))
-          ((not ((storage-class-checker storage-class) initial-value))
-           (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
-                  interval storage-class initial-value))
-          (else
-           (%%make-specialized-array interval
-                                     storage-class
-                                     initial-value
-                                   ;; must be mutable
-                                     (specialized-array-default-safe?)))))
-   ((interval storage-class initial-value safe?)
-    (cond ((not (interval? interval))
-           (error "make-specialized-array: The first argument is not an interval: "
-                  interval storage-class initial-value safe?))
-          ((not (storage-class? storage-class))
-           (error "make-specialized-array: The second argument is not a storage-class: "
-                  interval storage-class initial-value safe?))
-          ((not ((storage-class-checker storage-class) initial-value))
-           (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
-                  interval storage-class initial-value safe?))
-          ((not (boolean? safe?))
-           (error "make-specialized-array: The fourth argument is not a boolean: "
-                  interval storage-class initial-value safe?))
-          (else
-           (%%make-specialized-array interval
-                                     storage-class
-                                     initial-value
-                                   ;; must be mutable
-                                     safe?))))))
+  (let ()
+    (define (one-arg interval storage-class initial-value safe?)
+      (cond ((not (interval? interval))
+             (error "make-specialized-array: The first argument is not an interval: "
+                    interval))
+            (else
+             (%%make-specialized-array interval
+                                       storage-class
+                                       initial-value
+                                       safe?))))
+    (define (two-args interval storage-class initial-value safe?)
+      (cond ((not (storage-class? storage-class))
+             (error "make-specialized-array: The second argument is not a storage-class: "
+                    interval storage-class))
+            (else
+             (one-arg interval
+                      storage-class
+                      (storage-class-default storage-class)
+                      safe?))))
+    (define (three-args interval storage-class initial-value safe?)
+      (cond ((not (storage-class? storage-class))
+             (error "make-specialized-array: The second argument is not a storage-class: "
+                    interval storage-class initial-value))
+            ((not ((storage-class-checker storage-class) initial-value))
+             (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
+                    interval storage-class initial-value))
+            (else
+             (one-arg interval           ;; calls one-arg directly, not two-args
+                      storage-class
+                      initial-value
+                      safe?))))
+    (define (four-args interval storage-class initial-value safe?)
+      (cond ((not (boolean? safe?))
+             (error "make-specialized-array: The fourth argument is not a boolean: "
+                    interval storage-class initial-value safe?))
+            (else
+             (three-args interval
+                         storage-class
+                         initial-value
+                         safe?))))
+    (case-lambda
+     ((interval)
+      (one-arg interval
+               generic-storage-class
+               (storage-class-default generic-storage-class)
+               (specialized-array-default-safe?)))
+     ((interval storage-class)
+      (two-args interval
+                storage-class
+                'ignore
+                (specialized-array-default-safe?)))
+     ((interval storage-class initial-value)
+      (three-args interval
+                  storage-class
+                  initial-value
+                  (specialized-array-default-safe?)))
+     ((interval storage-class initial-value safe?)
+      (four-args interval
+                 storage-class
+                 initial-value
+                 safe?)))))
 
 (define %%storage-class-compatibility-alist
   ;; An a-list of compatible storage-classes;
