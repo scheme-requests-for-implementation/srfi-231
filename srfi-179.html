@@ -120,6 +120,7 @@
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
     <h2>Issues</h2>
     <ul>
+      <li>Should eager comprehensions in the style of <a href="https://srfi.schemers.org/srfi-42/">SRFI 42</a> be added to this SRFI, as <a href="https://srfi-email.schemers.org/srfi-179/msg/18428002/">suggested</a> by Jens Axel S&#248;gaard?  My opinion is yes, but I would need major help in designing and implementing such things.</li>
       <li>Should <a href="#specialized-array-default-mutable?"><code>specialized-array-default-mutable?</code></a> and <a href="#specialized-array-default-safe?"><code>specialized-array-default-safe?</code></a> be <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a> parameters or <a href="https://small.r7rs.org/attachment/r7rs.pdf">R7RS</a> parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?</li>
       <li>Could <a href="#array-elements-in-order?"><code>array-elements-in-order?</code></a> have a better name or description?</li>
     </ul>
@@ -241,7 +242,7 @@
     <p>This document refers to <i>translations</i> and <i>permutations</i>.
        A translation is a vector of exact integers.  A permutation of dimension $n$
       is a vector whose entries are the exact integers $0,1,\ldots,n-1$, each occurring once, in any order.
-      We also provide three procedures that return useful permutations.</p>
+      We provide three procedures that return useful permutations.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a id="translation?">translation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a translation, and <code>#f</code> otherwise.</p>
@@ -253,23 +254,23 @@
   (let ((identity-permutation (iota n)))
     (list-&gt;vector (append (drop identity-permutation k)
                           (take identity-permutation k)))))</code></pre>
-    <p>For example, <code>(index-rotate 5 3)</code> returns <code>'#(3 4 0 1 2)</code>.It is an error of the arguments do not satisfy these conditions</p>
+    <p>For example, <code>(index-rotate 5 3)</code> returns <code>'#(3 4 0 1 2)</code>. It is an error of the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="index-first">index-first</a> <var>n</var> <var>k</var></code></p>
-    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation that moves index <var>k</var> of <var>n</var> indices (with count beginning at 0) to be first and leaves the other indices in order:</p>
+    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation of length <var>n</var> that moves index <var>k</var> (with count beginning at 0) to be first and leaves the other indices in order:</p>
     <pre><code>(define (index-first n k)
   (let ((identity-permutation (iota n)))
     (list-&gt;vector (cons k
                         (append (take identity-permutation k)
                                 (drop identity-permutation (fx+ k 1)))))))</code></pre>
-    <p>For example, <code>(index-first 5 3)</code> returns <code>'#(3 0 1 2 4)</code>. It is an error if the arguments do not satisfy these conditions</p>
+    <p>For example, <code>(index-first 5 3)</code> returns <code>'#(3 0 1 2 4)</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="index-last">index-last</a> <var>n</var> <var>k</var></code></p>
-    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation that moves index <var>k</var> of <var>n</var> indices (with count beginning at 0) to be last and leaves the other indices in order:</p>
+    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation of length <var>n</var> that moves index <var>k</var> (with count beginning at 0) to be last and leaves the other indices in order:</p>
     <pre><code>(define (index-last n k)
   (let ((identity-permutation (iota n)))
     (list-&gt;vector (append (take identity-permutation k)
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))</code></pre>
-    <p>For example, <code>(index-last 5 3)</code> returns <code>'#(0 1 2 4 3)</code>.It is an error if the arguments do not satisfy these conditions</p>
+    <p>For example, <code>(index-last 5 3)</code> returns <code>'#(0 1 2 4 3)</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <h2>Intervals</h2>
     <p>An interval represents the set of all multi-indices of exact integers
       $i_0,\ldots,i_{d-1}$
@@ -1863,7 +1864,7 @@ Second-differences in the direction $k\times (1,-1)$:
          1D-transform
          (array-curry (array-permute a (index-last n d)) 1))))))
 </code></pre>
-    <p>Here we have cycled through all rotations, putting each axis in turn at the end, and then applied <code>1D-transform</code> to each of the pencils along that axis.</p>
+    <p>Here we put each axis in turn at the end and then apply <code>1D-transform</code> to each of the pencils along that axis.</p>
     <p>Wavelet transforms in particular are calculated by recursively applying a transform to an array and then downsampling the array; the inverse transform recursively downsamples and then applies a transform.  So we define the following primitives: </p>
     <pre><code>(define (recursively-apply-transform-and-downsample transform)
   (lambda (a)

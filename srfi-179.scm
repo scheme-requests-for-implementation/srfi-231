@@ -277,6 +277,7 @@ they may have hash tables or databases behind an implementation, one may read th
 
         (<h2> "Issues")
         (<ul>
+         (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
          (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
          )
@@ -411,7 +412,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<p> "This document refers to "(<i> 'translations)" and "(<i> 'permutations)".
  A translation is a vector of exact integers.  A permutation of dimension $n$
 is a vector whose entries are the exact integers $0,1,\\ldots,n-1$, each occurring once, in any order.
-We also provide three procedures that return useful permutations.")
+We provide three procedures that return useful permutations.")
         (<h3> "Procedures")
         (format-lambda-list '(translation? object))
         (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a translation, and "(<code> '#f)" otherwise.")
@@ -424,25 +425,25 @@ We also provide three procedures that return useful permutations.")
   (let ((identity-permutation (iota n)))
     (list->vector (append (drop identity-permutation k)
                           (take identity-permutation k)))))"))
-        (<p> "For example, "(<code>"(index-rotate 5 3)")" returns "(<code>"'#(3 4 0 1 2)")".It is an error of the arguments do not satisfy these conditions")
+        (<p> "For example, "(<code>"(index-rotate 5 3)")" returns "(<code>"'#(3 4 0 1 2)")". It is an error of the arguments do not satisfy these conditions.")
         (format-lambda-list '(index-first n k))
-        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation that moves index "(<var>'k)" of "(<var>'n)" indices (with count beginning at 0) to be first and leaves the other indices in order:")
+        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation of length "(<var>'n)" that moves index "(<var>'k)" (with count beginning at 0) to be first and leaves the other indices in order:")
         (<pre>(<code>
 "(define (index-first n k)
   (let ((identity-permutation (iota n)))
     (list->vector (cons k
                         (append (take identity-permutation k)
                                 (drop identity-permutation (fx+ k 1)))))))"))
-        (<p> "For example, "(<code>"(index-first 5 3)")" returns "(<code>"'#(3 0 1 2 4)")". It is an error if the arguments do not satisfy these conditions")
+        (<p> "For example, "(<code>"(index-first 5 3)")" returns "(<code>"'#(3 0 1 2 4)")". It is an error if the arguments do not satisfy these conditions.")
         (format-lambda-list '(index-last n k))
-        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation that moves index "(<var>'k)" of "(<var>'n)" indices (with count beginning at 0) to be last and leaves the other indices in order:")
+        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation of length "(<var>'n)" that moves index "(<var>'k)" (with count beginning at 0) to be last and leaves the other indices in order:")
         (<pre>(<code>
 "(define (index-last n k)
   (let ((identity-permutation (iota n)))
     (list->vector (append (take identity-permutation k)
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))"))
-        (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 2 4 3)")".It is an error if the arguments do not satisfy these conditions")
+        (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 2 4 3)")". It is an error if the arguments do not satisfy these conditions.")
 
 (<h2> "Intervals")
         (<p> "An interval represents the set of all multi-indices of exact integers
@@ -2362,7 +2363,7 @@ Second-differences in the direction $k\\times (1,-1)$:
          1D-transform
          (array-curry (array-permute a (index-last n d)) 1))))))
 "))
-(<p> "Here we have cycled through all rotations, putting each axis in turn at the end, and then applied "(<code>'1D-transform)" to each of the pencils along that axis.")
+(<p> "Here we put each axis in turn at the end and then apply "(<code>'1D-transform)" to each of the pencils along that axis.")
 (<p> "Wavelet transforms in particular are calculated by recursively applying a transform to an array and then downsampling the array; the inverse transform recursively downsamples and then applies a transform.  So we define the following primitives: ")
 (<pre>(<code>
 "(define (recursively-apply-transform-and-downsample transform)
