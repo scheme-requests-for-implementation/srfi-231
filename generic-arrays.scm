@@ -101,7 +101,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; requires vector-map, vector-copy function
 
-;;; requires append-vectors function
+;;; requires vector-concatenate function
 
 ;;; requires exact-integer? function
 
@@ -463,8 +463,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%interval-cartesian-product intervals)
   ;; Even if there is only one interval, its lower and upper bounds have already been copied.
-  (%%finish-interval (append-vectors (map %%interval-lower-bounds intervals))
-                     (append-vectors (map %%interval-upper-bounds intervals))))
+  (%%finish-interval (vector-concatenate (map %%interval-lower-bounds intervals))
+                     (vector-concatenate (map %%interval-upper-bounds intervals))))
 
 (define (interval-cartesian-product interval #!rest intervals)
   (let ((intervals (cons interval intervals)))
