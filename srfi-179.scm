@@ -280,6 +280,12 @@ they may have hash tables or databases behind an implementation, one may read th
          (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
          (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
+         (<li> "The naming convention is not entirely uniform; most array functions begin with "(<code>'array-)" but there are also "
+               (<ul>
+                (<li> (<code>'make-array)", "(<code>'make-interval)", "(<code>'make-storage-class)", and "(<code>'make-specialized-array))
+                (<li> (<code>'mutable-array?)))
+               "All other operations begin with the name of the objects that they take as arguments, or that they return.  The question is whether we should change these few names.")
+                
          )
 
 

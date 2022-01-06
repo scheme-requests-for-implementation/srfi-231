@@ -657,6 +657,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (make-array (make-interval '#(3) '#(4)) 1)
       "make-array: The second argument is not a procedure: ")
 
+(test (make-array 1 values values)
+      "make-array: The first argument is not an interval: ")
+
+(test (make-array (make-interval '#(3) '#(4)) 1 values)
+      "make-array: The second argument is not a procedure: ")
+
+(test (make-array (make-interval '#(3) '#(4)) list 1)
+      "make-array: The third argument is not a procedure: ")
+
 (pp "array result tests")
 
 (let ((getter (lambda args 1.)))
@@ -830,6 +839,9 @@ OTHER DEALINGS IN THE SOFTWARE.
       "make-specialized-array: The first argument is not an interval: ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) 'a)
+      "make-specialized-array: The second argument is not a storage-class: ")
+
+(test (make-specialized-array (make-interval '#(0) '#(10)) 'a 1)
       "make-specialized-array: The second argument is not a storage-class: ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) u16-storage-class 'a)
@@ -3141,6 +3153,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "array-reverse tests")
 
+(test (array-reverse 'a)
+      "array-reverse: The argument is not an array: ")
+
 (test (array-reverse 'a 'a)
       "array-reverse: The first argument is not an array: ")
 
@@ -3623,6 +3638,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (specialized-array-reshape A-ref (make-interval '#(5)))
       "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: ")
+
+(test (specialized-array-reshape A-ref (make-interval '#(100)) 'a)
+      "specialized-array-reshape: The third argument is not a boolean: ")
 
 (let ((array (array-copy (make-array (make-interval '#(2 1 3 1)) list))))
   (test (array->list array)

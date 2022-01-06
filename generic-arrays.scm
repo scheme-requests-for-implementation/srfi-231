@@ -2306,39 +2306,33 @@ OTHER DEALINGS IN THE SOFTWARE.
                    "Out of order, checks needed"))))
       ;; destination is not a specialized array, so checks,
       ;; if any, are built into the setter.
-      (let ((domain (%%array-domain destination)))
-        (if (not (%%interval= domain (%%array-domain source)))
-            (error (string-append
-                    caller
-                    "Arrays must have the same domains: ")
-                   destination source)
-            (let* ((setter
-                    (%%array-setter destination))
-                   (getter
-                    (%%array-getter source))
-                   (domain
-                    (%%array-domain destination)))
-              (%%interval-for-each
-               (case (%%interval-dimension domain)
-                 ((1) (lambda (i)
-                        (setter (getter i)
-                                i)))
-                 ((2) (lambda (i j)
-                        (setter (getter i j)
-                                i j)))
-                 ((3) (lambda (i j k)
-                        (setter (getter i j k)
-                                i j k)))
-                 ((4) (lambda (i j k l)
-                        (setter (getter i j k l)
-                                i j k l)))
-                 (else
-                  (lambda multi-index
-                    (apply setter
-                           (apply getter multi-index)
-                           multi-index))))
-               domain)
-              "Destination not specialized array"))))
+      (let ((setter
+             (%%array-setter destination))
+            (getter
+             (%%array-getter source))
+            (domain
+             (%%array-domain destination)))
+        (%%interval-for-each
+         (case (%%interval-dimension domain)
+           ((1) (lambda (i)
+                  (setter (getter i)
+                          i)))
+           ((2) (lambda (i j)
+                  (setter (getter i j)
+                          i j)))
+           ((3) (lambda (i j k)
+                  (setter (getter i j k)
+                          i j k)))
+           ((4) (lambda (i j k l)
+                  (setter (getter i j k l)
+                          i j k l)))
+           (else
+            (lambda multi-index
+              (apply setter
+                     (apply getter multi-index)
+                     multi-index))))
+         domain)
+        "Destination not specialized array"))
   ;; %%move-array-elements returns a string that designates
   ;; the copying method it used.
   ;; Calling functions should return something useful.
