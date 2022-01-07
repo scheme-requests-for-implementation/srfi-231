@@ -1,5 +1,5 @@
 #|
-SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
+SRFI 231: Nonempty Intervals and Generalized Arrays (Updated)
 
 Copyright 2016, 2018, 2020, 2021 Bradley J Lucier.
 All Rights Reserved.
@@ -29,7 +29,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 |#
 
-;;; A test program for SRFI 179:
+;;; A test program for SRFI 231:
 ;;; Nonempty Intervals and Generalized Arrays (Updated)
 
 (begin
@@ -39,15 +39,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 '(begin
   ;; To run test-arrays.scm as an R7RS module in Gambit,
   ;; take the following steps:
-  ;; 1. Put generic-arrays.scm and 179.sld in new directory ./srfi/179.
+  ;; 1. Put generic-arrays.scm and 231.sld in new directory ./srfi/231.
   ;; 2. Uncomment this "begin".
   ;; 3. Run "gsi . test-arrays".
   
-  (import (srfi 179))
+  (import (srfi 231))
   
   (##namespace
-   ("srfi/179#"
-    ;; Internal SRFI 179 procedures that are either tested or called here.
+   ("srfi/231#"
+    ;; Internal SRFI 231 procedures that are either tested or called here.
     %%compose-indexers
     make-%%array
     %%every

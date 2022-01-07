@@ -1,6 +1,6 @@
 (include "html-lib.scm")
 
-(define SRFI "XXX") ;; must be a string
+(define SRFI "231") ;; must be a string
 
 (define (format-lambda-list lst #!optional id)
   (let ((name (car lst))
@@ -25,7 +25,7 @@
        (<code> (<a> id: name name))))
 
 (with-output-to-file
-    "srfi-179.html"
+    "srfi-231.html"
   (lambda()
     (html-display
      (list
@@ -93,13 +93,13 @@ MathJax.Hub.Config({
          (<li> "Separate "(<b>"the procedures that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the procedures that actually do the work")" ("(<code>'array-copy)", "(<code>'array-assign!)", "(<code>'array-foldl)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
-        (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
+        (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-231/" "SRFI 231")" in the following ways:")
         (<ul>
          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
-         (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
-         (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
+         (<li> "The SRFI 231 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 231.")
+         (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 231 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
          (<li> "Procedures that generate useful permutations have been added: "(<code>'index-rotate)", "(<code>'index-first)", and "(<code>'index-last)".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
@@ -277,7 +277,7 @@ they may have hash tables or databases behind an implementation, one may read th
 
         (<h2> "Issues")
         (<ul>
-         (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
+         (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-231/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
          (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
          (<li> "The naming convention is not entirely uniform; most array functions begin with "(<code>'array-)" but there are also "

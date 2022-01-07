@@ -1,4 +1,4 @@
-* SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
+* SRFI 231: Nonempty Intervals and Generalized Arrays (Updated)
 
 ** by Bradley J. Lucier
 
@@ -6,15 +6,15 @@
 
 keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]], [[https://srfi.schemers.org/?keywords=numbers][Numbers]]
 
-This repository hosts [[https://srfi.schemers.org/srfi-179/][SRFI 179]]: Nonempty Intervals and Generalized Arrays (Updated), a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+This repository hosts [[https://srfi.schemers.org/srfi-231/][SRFI 231]]: Nonempty Intervals and Generalized Arrays (Updated), a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
 
 This SRFI is in /draft/ status.
 
 See also [[https://srfi.schemers.org/srfi-122/][SRFI 122: Nonempty Intervals and Generalized Arrays]] and [[https://srfi.schemers.org/srfi-164/][SRFI 164: Enhanced multi-dimensional Arrays]].
 
-The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-179/srfi-179.html][SRFI Document]].
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-231/srfi-231.html][SRFI Document]].
 
-If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-179/][join the SRFI-179 mailing list]] and send your message there.
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-231/][join the SRFI-231 mailing list]] and send your message there.
 
 Thank you.
 

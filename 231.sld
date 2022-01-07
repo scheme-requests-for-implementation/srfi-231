@@ -1,4 +1,4 @@
-(define-library (srfi 179)
+(define-library (srfi 231)
   (export
     ;; Miscellaneous Functions
     translation?

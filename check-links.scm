@@ -1,5 +1,5 @@
 (define srfi-names
-  (with-input-from-file "srfi-179.scm"
+  (with-input-from-file "srfi-231.scm"
     (lambda ()
       (let loop ((obj (read)))
         (if (not (and (list? obj)
@@ -31,7 +31,7 @@
               result))))))
 
 (define links
-  (with-input-from-file "srfi-179.scm"
+  (with-input-from-file "srfi-231.scm"
     (lambda ()
       (let loop ((obj (read)))
         (if (not (and (list? obj)

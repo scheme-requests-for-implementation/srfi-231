@@ -40,14 +40,14 @@
 (set! code-names (append other-names code-names))
 
 (define sld-names
-  (with-input-from-file "179.sld"
+  (with-input-from-file "231.sld"
     (lambda ()
       (let* ((sld (read))
              (exports (cdaddr sld)))
         exports))))
 
 (define srfi-names
-  (with-input-from-file "srfi-179.scm"
+  (with-input-from-file "srfi-231.scm"
     (lambda ()
       (let loop ((obj (read)))
         (if (not (and (list? obj)

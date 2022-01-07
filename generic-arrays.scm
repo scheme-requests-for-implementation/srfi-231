@@ -1,5 +1,5 @@
 #|
-SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
+SRFI 231: Nonempty Intervals and Generalized Arrays (Updated)
 
 Copyright 2016, 2018, 2020, 2021 Bradley J Lucier.
 All Rights Reserved.
