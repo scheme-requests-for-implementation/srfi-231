@@ -34,7 +34,7 @@
        lang: 'en
        (<head>
         (<meta> charset: "utf-8")
-        (<title> (string-append "SRFI " SRFI ": Nonempty Intervals and Generalized Arrays (Followup)"))
+        (<title> (string-append "SRFI " SRFI ": Nonempty Intervals and Generalized Arrays (Updated^2)"))
         (<link>
          rel: "icon"
          sizes: "192x192"
@@ -55,11 +55,11 @@ MathJax.Hub.Config({
                   src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
         )
        (<body>
-        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Nonempty Intervals and Generalized Arrays (Updated)")
+        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Nonempty Intervals and Generalized Arrays (Updated^2)")
         
         (<p> " by Bradley J. Lucier")
         
-        (<h2> "Status")
+        (<h2> id: 'status "Status")
         (<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
              (<a> href: "https://srfi.schemers.org/srfi-process.html" "an explanation")
              " of each status that a SRFI can hold.  To provide input on this SRFI, please send email to "
@@ -71,7 +71,10 @@ MathJax.Hub.Config({
              (<a> href: (string-append "https://srfi-email.schemers.org/srfi-" SRFI) "archive")".")
         
         (<ul>
-         (<li> "Received: ")
+         (<li> "Received: 2022-01-05")
+         (<li> "60-day deadline: 2022-03-08")
+         (<li> "Draft #1 published: 2022-01-07")
+         (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
         (<h2> "Abstract")
@@ -84,6 +87,7 @@ MathJax.Hub.Config({
          "called $d$-"(<i> 'intervals)", or more briefly "(<i>'intervals)", that encapsulates this notion. (We borrow this terminology from, e.g., "
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
          "Specialized variants of arrays provide portable programs with efficient representations for common use cases.")
+        (<p> "This is a revised version of "(<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")".")
         (<h2> "Rationale")
         (<p> "This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.")
         (<ul>
@@ -93,13 +97,13 @@ MathJax.Hub.Config({
          (<li> "Separate "(<b>"the procedures that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the procedures that actually do the work")" ("(<code>'array-copy)", "(<code>'array-assign!)", "(<code>'array-foldl)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
-        (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-231/" "SRFI 231")" in the following ways:")
+        (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
         (<ul>
          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
-         (<li> "The SRFI 231 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 231.")
-         (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 231 version.")
+         (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
+         (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
          (<li> "Procedures that generate useful permutations have been added: "(<code>'index-rotate)", "(<code>'index-first)", and "(<code>'index-last)".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
@@ -130,7 +134,7 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#array-translate" (<code>'array-translate))
                ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
          (<li> (<a> href: "#array-permute"(<code>'array-permute))
-               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary routines "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations of a certain type.")
+               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary routines "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations.")
          (<li> (<a> href: "#array-curry"(<code>"array-curry"))
                ": Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at a collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.")
          (<li> (<a> href:"#array-reverse" (<code>'array-reverse))
@@ -277,7 +281,7 @@ they may have hash tables or databases behind an implementation, one may read th
 
         (<h2> "Issues")
         (<ul>
-         (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-231/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
+         (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
          (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
          (<li> "The naming convention is not entirely uniform; most array functions begin with "(<code>'array-)" but there are also "
@@ -292,7 +296,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<h2> "Notes")
         (<ul>
          (<li> (<b> "Relationship to "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
-               "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
+               "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
          (<li> (<b> "Indexers. ")"The argument "(<code>(<var> "new-domain->old-domain"))" to "(<code> 'specialized-array-share)" is, conceptually, the getter of a multi-valued array.")
          (<li> (<b> "Source of procedure names. ")"The procedure "(<code> 'array-curry)" gets its name from the" #\newline
                (<a> href: "https://en.wikipedia.org/wiki/Currying" "curry operator")
@@ -425,7 +429,7 @@ We provide three procedures that return useful permutations.")
         (format-lambda-list '(permutation? object))
         (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a permutation, and "(<code> '#f)" otherwise.")
         (format-lambda-list '(index-rotate n k))
-        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).   Returns a permutation that rotates "(<var>'n)" indices "(<var>'k)" places to the left:")
+        (<p> "Assumes that "(<var>'n)" is a positive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).   Returns a permutation that rotates "(<var>'n)" indices "(<var>'k)" places to the left:")
         (<pre>(<code>
 "(define (index-rotate n k)
   (let ((identity-permutation (iota n)))
@@ -433,7 +437,7 @@ We provide three procedures that return useful permutations.")
                           (take identity-permutation k)))))"))
         (<p> "For example, "(<code>"(index-rotate 5 3)")" returns "(<code>"'#(3 4 0 1 2)")". It is an error of the arguments do not satisfy these conditions.")
         (format-lambda-list '(index-first n k))
-        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation of length "(<var>'n)" that moves index "(<var>'k)" (with count beginning at 0) to be first and leaves the other indices in order:")
+        (<p> "Assumes that "(<var>'n)" is a positive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation of length "(<var>'n)" that moves index "(<var>'k)" (with count beginning at 0) to be first and leaves the other indices in order:")
         (<pre>(<code>
 "(define (index-first n k)
   (let ((identity-permutation (iota n)))
@@ -442,7 +446,7 @@ We provide three procedures that return useful permutations.")
                                 (drop identity-permutation (fx+ k 1)))))))"))
         (<p> "For example, "(<code>"(index-first 5 3)")" returns "(<code>"'#(3 0 1 2 4)")". It is an error if the arguments do not satisfy these conditions.")
         (format-lambda-list '(index-last n k))
-        (<p> "Assumes that "(<var>'n)" is a postive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation of length "(<var>'n)" that moves index "(<var>'k)" (with count beginning at 0) to be last and leaves the other indices in order:")
+        (<p> "Assumes that "(<var>'n)" is a positive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).  Returns a permutation of length "(<var>'n)" that moves index "(<var>'k)" (with count beginning at 0) to be last and leaves the other indices in order:")
         (<pre>(<code>
 "(define (index-last n k)
   (let ((identity-permutation (iota n)))
@@ -1497,7 +1501,7 @@ calls")
 (<p> "It is an error to call "(<code> 'array-for-each)" if its arguments do not satisfy these conditions.")
 
 (format-lambda-list '(array-foldl op id array))
-(<p> "This procedure is analagous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
+(<p> "This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
 (<pre>(<code>
 "(define (foldl "(<var>'op)" "(<var>'id)" " (<var>'l)")
   (if (null? "(<var>'l)")
@@ -1511,7 +1515,7 @@ calls")
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure of two variables.")
 
 (format-lambda-list '(array-foldr op id array))
-(<p> "This procedure is analagous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
+(<p> "This procedure is analogous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
 (<pre>(<code>
 "(define (foldr "(<var>'op)" "(<var>'id)" " (<var>'l)")
   (if (null? "(<var>'l)")
@@ -1975,7 +1979,7 @@ translate: ")
               1)))"))
  "If one wants what Racket calls a \"strict\" array as a result, apply array-copy to the result.  One can define Racket's \"*-axis-*\" routines similarly.")
  (<li> "Racket's library has specialized mathematical array operations for many math procedures; this library does not.")
- (<li> "Racket's library has "(<a> href: "https://docs.racket-lang.org/math/array_subtypes.html" "flonum and complex flonum arrays")"; this library has similar features, including for various other homogenous storage types, and is extendible.")
+ (<li> "Racket's library has "(<a> href: "https://docs.racket-lang.org/math/array_subtypes.html" "flonum and complex flonum arrays")"; this library has similar features, including for various other homogeneous storage types, and is extendable.")
  (<li> "Racket has many routines to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.")
  (<li> "I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.")
  (<li> "I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.")
@@ -2237,7 +2241,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
    \"edge-test.pgm\"))
 "))
 
-(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".  Note that the first permutation is not a rotation"(string (integer->char 8212))"you want to have the head up in both the median and frontal views.")
+(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" (index-first 3 1)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" (index-first 3 2)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".  Note that you want to have the head up in both the median and frontal views, so we use "(<code>'index-first)" to provide the appropriate permutations.")
 
 
 (<p> (<b> "Calculating second differences of images. ")"For another example, if a real-valued function is defined
@@ -2754,7 +2758,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
  (<li> (<a> id: 'SRFI-63 href: "https://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer.")
  (<li> (<a> id: 'SRFI-164 href: "https://srfi.schemers.org/srfi-164/" "SRFI 164: Enhanced multi-dimensional Arrays")", by Per Bothner."))
 (<h2> "Copyright")
-(<p> (<unprotected> "&copy;")" 2016, 2018, 2020 Bradley J Lucier. All Rights Reserved.")
+(<p> (<unprotected> "&copy;")" 2016, 2018, 2020, 2022 Bradley J Lucier. All Rights Reserved.")
 (<p> "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: ")
 (<p> "The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.")
 (<p> " THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
