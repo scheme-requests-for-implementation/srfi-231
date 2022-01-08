@@ -255,14 +255,14 @@
     <p><b>Procedure: </b><code><a id="permutation?">permutation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a permutation, and <code>#f</code> otherwise.</p>
     <p><b>Procedure: </b><code><a id="index-rotate">index-rotate</a> <var>n</var> <var>k</var></code></p>
-    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).   Returns a permutation that rotates <var>n</var> indices <var>k</var> places to the left:</p>
+    <p>Assumes that <var>n</var> is a positive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).   Returns a permutation that rotates <var>n</var> indices <var>k</var> places to the left:</p>
     <pre><code>(define (index-rotate n k)
   (let ((identity-permutation (iota n)))
     (list-&gt;vector (append (drop identity-permutation k)
                           (take identity-permutation k)))))</code></pre>
     <p>For example, <code>(index-rotate 5 3)</code> returns <code>'#(3 4 0 1 2)</code>. It is an error of the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="index-first">index-first</a> <var>n</var> <var>k</var></code></p>
-    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation of length <var>n</var> that moves index <var>k</var> (with count beginning at 0) to be first and leaves the other indices in order:</p>
+    <p>Assumes that <var>n</var> is a positive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation of length <var>n</var> that moves index <var>k</var> (with count beginning at 0) to be first and leaves the other indices in order:</p>
     <pre><code>(define (index-first n k)
   (let ((identity-permutation (iota n)))
     (list-&gt;vector (cons k
@@ -270,7 +270,7 @@
                                 (drop identity-permutation (fx+ k 1)))))))</code></pre>
     <p>For example, <code>(index-first 5 3)</code> returns <code>'#(3 0 1 2 4)</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="index-last">index-last</a> <var>n</var> <var>k</var></code></p>
-    <p>Assumes that <var>n</var> is a postive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation of length <var>n</var> that moves index <var>k</var> (with count beginning at 0) to be last and leaves the other indices in order:</p>
+    <p>Assumes that <var>n</var> is a positive exact integer and that <var>k</var> is an exact integer between 0 (inclusive) and <var>n</var> (exclusive).  Returns a permutation of length <var>n</var> that moves index <var>k</var> (with count beginning at 0) to be last and leaves the other indices in order:</p>
     <pre><code>(define (index-last n k)
   (let ((identity-permutation (iota n)))
     (list-&gt;vector (append (take identity-permutation k)
@@ -1076,7 +1076,7 @@ indexer:       (lambda multi-index
                          <var>arrays</var>)))))</code></pre>
     <p>It is an error to call <code>array-for-each</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="array-foldl">array-foldl</a> <var>op</var> <var>id</var> <var>array</var></code></p>
-    <p>This procedure is analagous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
+    <p>This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
     <pre><code>(define (foldl <var>op</var> <var>id</var> <var>l</var>)
   (if (null? <var>l</var>)
       <var>id</var>
@@ -1086,7 +1086,7 @@ indexer:       (lambda multi-index
     <pre><code>(foldl <var>op</var> <var>id</var> (array-&gt;list <var>array</var>))</code></pre>
     <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>op</var></code> is not a procedure of two variables.</p>
     <p><b>Procedure: </b><code><a id="array-foldr">array-foldr</a> <var>op</var> <var>id</var> <var>array</var></code></p>
-    <p>This procedure is analagous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
+    <p>This procedure is analogous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
     <pre><code>(define (foldr <var>op</var> <var>id</var> <var>l</var>)
   (if (null? <var>l</var>)
       <var>id</var>
@@ -1498,7 +1498,7 @@ indexer:       (lambda multi-index
               (array-permute arr (index-last (array-dimension arr) k))
               1)))</code></pre>If one wants what Racket calls a &quot;strict&quot; array as a result, apply array-copy to the result.  One can define Racket's &quot;*-axis-*&quot; routines similarly.</li>
       <li>Racket's library has specialized mathematical array operations for many math procedures; this library does not.</li>
-      <li>Racket's library has <a href="https://docs.racket-lang.org/math/array_subtypes.html">flonum and complex flonum arrays</a>; this library has similar features, including for various other homogenous storage types, and is extendible.</li>
+      <li>Racket's library has <a href="https://docs.racket-lang.org/math/array_subtypes.html">flonum and complex flonum arrays</a>; this library has similar features, including for various other homogeneous storage types, and is extendable.</li>
       <li>Racket has many routines to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.</li>
       <li>I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.</li>
       <li>I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.</li>
