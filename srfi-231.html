@@ -45,7 +45,7 @@
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
       <li>Procedures that generate useful permutations have been added: <code>index-rotate</code>, <code>index-first</code>, and <code>index-last</code>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
-      <li>Introduced new routines <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
+      <li>Introduced new routines <code>storage-class-data?</code>, <code>storage-class-data-&gt;body</code>, <code>make-specialized-array-from-data</code>, <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -186,6 +186,8 @@
         <a href="#storage-class-copier">storage-class-copier</a>,
         <a href="#storage-class-length">storage-class-length</a>,
         <a href="#storage-class-default">storage-class-default</a>,
+        <a href="#storage-class-data?">storage-class-data?</a>,
+        <a href="#storage-class-data-rarrow-body">storage-class-data-&gt;body</a>,
         <a href="#generic-storage-class">generic-storage-class</a>,
         <a href="#s8-storage-class">s8-storage-class</a>,
         <a href="#s16-storage-class">s16-storage-class</a>,
@@ -213,6 +215,7 @@
         <a href="#mutable-array?">mutable-array?</a>,
         <a href="#array-setter">array-setter</a>,
         <a href="#make-specialized-array">make-specialized-array</a>,
+        <a href="#make-specialized-array-from-data">make-specialized-array-from-data</a>,
         <a href="#specialized-array?">specialized-array?</a>,
         <a href="#array-storage-class">array-storage-class</a>,
         <a href="#array-indexer">array-indexer</a>,
@@ -453,7 +456,7 @@
     <p>Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
       The procedures allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a id="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var></code></p>
+    <p><b>Procedure: </b><code><a id="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var> <var>data?</var> <var>data-&gt;body</var></code></p>
     <p>Here we assume the following relationships between the arguments of <code>make-storage-class</code>.  Assume that the &quot;elements&quot; of
       the backing store are of some &quot;type&quot;, either heterogeneous (all Scheme types) or homogeneous (of some restricted type).</p>
     <ul>
@@ -462,6 +465,7 @@
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> and  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, then <code>(<var>getter v i</var>)</code> returns the current value of the <code><var>i</var></code>'th element of <code><var>v</var></code>, and <code>(<var>checker</var> (<var>getter v i</var>)) =&gt; #t</code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code>,  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, and <code>(<var>checker</var> <var>val</var>) =&gt; #t</code>, then <code>(<var>setter v i val</var>)</code> sets the value of the <code><var>i</var></code>'th element of  <code><var>v</var></code> to <code><var>val</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li>
+      <li>The <code><var>data?</var></code> and <code><var>data-&gt;body</var></code> entries are low-level routines. <code>((storage-class-data? <var>storage-class</var>) <var>data</var>)</code> returns <code>#t</code> if and only if <code>((storage-class-data-&gt;body <var>storage-class</var>) <var>data</var>)</code> returns a body sharing data with <code><var>data</var></code>, without copying.  See the discussion of <code>make-specialized-array-from-data</code>.</li>
     </ul>
     <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-storage-class</code>.</p>
     <p>Note that we assume that <code><var>getter</var></code> and <code><var>setter</var></code> generally take <i>O</i>(1) time to execute.</p>
@@ -474,10 +478,12 @@
     <p><b>Procedure: </b><code><a id="storage-class-copier">storage-class-copier</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a id="storage-class-length">storage-class-length</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a id="storage-class-default">storage-class-default</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-data?">storage-class-data?</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a id="storage-class-data-rarrow-body">storage-class-data-&gt;body</a> <var>m</var></code></p>
     <p>If <code><var>m</var></code> is an object created by</p>
-    <blockquote><code>(make-storage-class <var>getter setter checker maker copier length default</var>)</code>
+    <blockquote><code>(make-storage-class <var>getter setter checker maker copier length default data? data-&gt;body</var>)</code>
     </blockquote>
-    <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, <code>storage-class-copier</code> returns <code><var>copier</var></code>, <code>storage-class-length</code> returns <code><var>length</var></code>, and <code>storage-class-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these procedures.</p>
+    <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, <code>storage-class-copier</code> returns <code><var>copier</var></code>, <code>storage-class-length</code> returns <code><var>length</var></code>,  <code>storage-class-default</code> returns <code><var>default</var></code>, <code>storage-class-data?</code> returns <code><var>data?</var></code>, and <code>storage-class-data-&gt;body</code> returns <code><var>data-&gt;body</var></code>.  Otherwise, it is an error to call any of these procedures.</p>
     <h3>Global Variables</h3>
     <p><b>Variable: </b><code><a id="generic-storage-class">generic-storage-class</a></code></p>
     <p><b>Variable: </b><code><a id="s8-storage-class">s8-storage-class</a></code></p>
@@ -640,6 +646,46 @@
     (make-specialized-array interval u16-storage-class 0 #f))
 </code></pre>
     <p>and then simply call, e.g., <code>(make-u16-array (make-interval '#(3 3)))</code>.</p>
+    <p><b>Procedure: </b><code><a id="make-specialized-array-from-data">make-specialized-array-from-data</a> <var>data</var> [ <var>storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p>This routine constructs a new specialized array using <code><var>data</var></code> as part of the body of the result without copying.</p>
+    <p>This routine exploits the low-level representation of the body of a specialized array of a specific storage class, and as such may not be portable between implementations.  Here are several examples.</p>
+    <p>The reference implementation uses homogeneous vectors to represent the bodies of arrays with storage classes <code>u8-storage-class</code>, <code>s8-storage-class</code>, ..., <code>s64-storage-class</code>, <code>f32-storage-class</code>, and <code>f64-storage-class</code>.  Another implementation might use byte-vectors as the bodies of arrays for all these storage classes.</p>
+    <p>The reference implementation uses homogeneous (f32 and f64) vectors with an even number of elements to represent the bodies of arrays with storage classes <code>c64-storage-class</code> and <code>c128-storage-class</code>. Another implementation with purely inexact complex numbers might make another choice.</p>
+    <p>Finally, the reference implementation uses <code>(vector <var>n</var> (u16vector ...))</code> to represent the body of an array with a <code>u1-storage-class</code>, where <code><var>n</var></code> represents the valid number of bits (no more than 16 times the length of the <code>u16vector</code>).  A Scheme with bitvectors might choose those as the underlying representation of bodies of arrays with <code>u1-storage-class</code>.</p>
+    <p>This routine assumes that <code><var>mutable?</var></code> and <code><var>safe?</var></code>, if given, are booleans, and that <code><var>storage-class</var></code>, if given, is a storage class.  <code><var>data</var></code> must be an object for which <code>((storage-class-data? <var>storage-class</var>) <var>data</var>)</code> returns <code>#t</code>.</p>
+    <p>This routine constructs a new one-dimensional array with storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, safety <code><var>safe?</var></code>, body <code>((storage-class-data-&gt;body <var>storage-class</var>) <var>data</var>)</code>, with domain <code>(make-interval (vector <var>N</var>))</code>, where <code><var>N</var></code> is the greatest number of elements one can fit into <code><var>data</var></code>, and indexer <code>(lambda (i) i)</code>.</p>
+    <p>It is an error if the arguments do not satisfy these conditions.</p>
+    <p><b>Example: </b>In the reference implementation, if you want to construct a $3\times3$ array with storage class <code>u1-storage-class</code> from a length-one <code>u16vector</code> named <code><var>board</var></code> then one could write</p>
+    <pre><code>(let* ((board (u16vector #b111100110111))
+       (A (specialized-array-reshape
+           (array-extract
+            (make-specialized-array-from-data board u1-storage-class)
+            (make-interval '#(9)))
+           (make-interval '#(3 3))))
+       (B (list-&gt;array '(1 1 1
+                         0 1 1
+                         0 0 1)
+                       (make-interval '#(3 3))
+                       u1-storage-class)))
+  (define (pad n s)
+    (string-append (make-string (- n (string-length s)) #\0) s))
+  
+  (for-each display (list &quot;(array-every = A B) =&gt; &quot; (array-every = A B) #\newline))
+  (for-each display (list &quot;(array-body A) =&gt; &quot; (array-body A) #\newline))
+  (for-each display (list &quot;(array-body B) =&gt; &quot; (array-body B) #\newline))
+  (for-each display (list &quot;(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =&gt; &quot; #\newline
+                          (pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\newline))
+  (for-each display (list &quot;(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =&gt; &quot; #\newline
+                          (pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline)))</code></pre>
+    <p>prints</p>
+    <pre>(array-every = A B) =&gt; #t
+(array-body A) =&gt; #(16 #u16(3895))
+(array-body B) =&gt; #(9 #u16(311))
+(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =&gt; 
+0000111100110111
+(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =&gt; 
+0000000100110111</pre>
+    <p>The 9 low-order bits of board represent the entries of the array <code>A</code>, ignoring higher order bits, and you can see the bit order that is used to represent a <code>u1-storage-class-body</code>.</p>
     <p><b>Procedure: </b><code><a id="specialized-array?">specialized-array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is a specialized-array, and <code>#f</code> otherwise. A specialized-array is an array.</p>
     <p><b>Procedure: </b><code><a id="array-storage-class">array-storage-class</a> <var>array</var></code></p>

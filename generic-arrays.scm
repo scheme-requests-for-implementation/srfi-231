@@ -974,15 +974,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; A storage-class contains functions and objects to manipulate the
 ;;; backing store of a specialized-array.
 ;;;
-;;; getter:   (lambda (body i) ...)   returns the value of body at index i
-;;; setter:   (lambda (body i v) ...) sets the value of body at index i to v
-;;; checker:  (lambda (val) ...)      checks that val is an appropriate value for storing in (maker n)
-;;; maker:    (lambda (n val) ...)    makes a body of length n with value val
-;;; length:   (lambda (body) ...)     returns the number of objects in body
-;;; default:  object                  is the default value with which to fill body
+;;; getter:     (lambda (body i) ...)   returns the value of body at index i
+;;; setter:     (lambda (body i v) ...) sets the value of body at index i to v
+;;; checker:    (lambda (val) ...)      checks that val is an appropriate value for storing in (maker n)
+;;; maker:      (lambda (n val) ...)    makes a body of length n with value val
+;;; length:     (lambda (body) ...)     returns the number of objects in body
+;;; default:    object                  is the default value with which to fill body
+;;; data?:      (lambda (data) ...)     returns #t iff data can be converted to a body
+;;; data->body: (lambda (data) ...)     converts data to a body, raising an exception if needed
 ;;;
 
-(define-structure storage-class getter setter checker maker copier length default)
+(define-structure storage-class getter setter checker maker copier length default data? data->body)
 
 ;;; We define specialized storage-classes for:
 ;;;
@@ -1007,22 +1009,40 @@ OTHER DEALINGS IN THE SOFTWARE.
      ,@(map (lambda (name prefix default checker)
               `(define ,(symbol-concatenate name '-storage-class)
                  (make-storage-class
-                  ;; getter:
+                  ;; getter
                   (lambda (v i)
                     (,(symbol-concatenate prefix 'vector-ref) v i))
-                  ;; setter:
+                  ;; setter
                   (lambda (v i val)
                     (,(symbol-concatenate prefix 'vector-set!) v i val))
                   ;; checker
                   ,checker
-                  ;; maker:
+                  ;; maker
                   ,(symbol-concatenate 'make- prefix 'vector)
                   ;; copier
                   ,(symbol-concatenate prefix 'vector-copy!)
-                  ;; length:
+                  ;; length
                   ,(symbol-concatenate prefix 'vector-length)
-                  ;; default:
-                  ,default)))
+                  ;; default
+                  ,default
+                  ;; data?
+                  (lambda (data)
+                    (and (,(symbol-concatenate prefix 'vector?) data)
+                         (fxpositive? (,(symbol-concatenate prefix 'vector-length) data))))
+                  ;; data->body
+                  (lambda (data)
+                    (if (not (and (,(symbol-concatenate prefix 'vector?) data)
+                                  (fxpositive? (,(symbol-concatenate prefix 'vector-length) data))))
+                        (error ,(symbol->string
+                                 (symbol-concatenate
+                                  "Expecting a nonempty "
+                                  prefix 'vector
+                                  " passed to "
+                                  "(storage-class-data->body "
+                                  prefix '-storage-class
+                                  "): "))
+                               data)
+                        data)))))
             '(generic s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
             '(""      s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
             '(#f       0  0   0   0   0   0   0   0 0.0 0.0)
@@ -1087,7 +1107,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define u1-storage-class
   (make-storage-class
-   ;; getter:
+   ;; getter
    (lambda (v i)
      (let ((index (fxarithmetic-shift-right i 4))
            (shift (fxand i 15))
@@ -1097,7 +1117,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (u16vector-ref bodyv index)
          shift)
         1)))
-   ;; setter:
+   ;; setter
    (lambda (v i val)
      (let ((index (fxarithmetic-shift-right i 4))
            (shift (fxand i 15))
@@ -1109,17 +1129,28 @@ OTHER DEALINGS IN THE SOFTWARE.
    (lambda (val)
      (and (fixnum? val)
           (eq? 0 (fxand -2 val))))
-   ;; maker:
+   ;; maker
    (lambda (size initializer)
      (let ((u16-size (fxarithmetic-shift-right (+ size 15) 4)))
        (vector size (make-u16vector u16-size (if (eqv? 0 initializer) 0 65535)))))
    ;; no copier (for now)
    #f
-   ;; length:
+   ;; length
    (lambda (v)
      (vector-ref v 0))
-   ;; default:
-   0))
+   ;; default
+   0
+   ;; data?
+   (lambda (data)
+     (and (u16vector? data)
+          (fxpositive? (u16vector-length data))))
+   ;; data->body
+   (lambda (data)
+     (if (not (and (u16vector? data)
+                   (fxpositive? (u16vector-length data))))
+         (error "Expecting a nonempty u16vector passed to (storage-class-data->body u1-storage-class): " data)
+         (vector (fx* 16 (u16vector-length data))
+                 data)))))
 
 (define-macro (make-complex-storage-classes)
   (define (symbol-concatenate . symbols)
@@ -1149,7 +1180,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                    (inexact? (imag-part obj))))
             ;; maker
             (lambda (n val)
-              (let ((l (* 2 n))
+              (let ((l (fx* 2 n))
                     (re (real-part val))
                     (im (imag-part val)))
                 (let ((result (,(symbol-concatenate 'make-
@@ -1166,7 +1197,28 @@ OTHER DEALINGS IN THE SOFTWARE.
             (lambda (body)
               (fxquotient (,(symbol-concatenate floating-point-prefix 'vector-length) body) 2))
             ;; default
-            0.+0.i)))))
+            0.+0.i
+            ;; data?
+            (lambda (data)
+              (and (,(symbol-concatenate floating-point-prefix 'vector?) data)
+                   (let ((len (,(symbol-concatenate floating-point-prefix 'vector-length) data)))
+                     (and (fxeven?      len)
+                          (fxpositive? len)))))
+            ;; data->body
+            (lambda (data)
+              (if (not (and (,(symbol-concatenate floating-point-prefix 'vector?) data)
+                            (let ((len (,(symbol-concatenate floating-point-prefix 'vector-length) data)))
+                              (and (fxeven?      len)
+                                   (fxpositive? len)))))
+                  (error ,(symbol->string
+                           (symbol-concatenate
+                            "Expecting a nonempty "
+                            floating-point-prefix 'vector
+                            " with an even number of elements passed to "
+                            "(storage-class-data->body "
+                            prefix '-storage-class
+                            "): "))
+                         data))))))))
   (let ((result
          `(begin
             ,@(map construct
@@ -1853,6 +1905,39 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 #t            ;; mutable?
                                 safe?
                                 #t)))         ;; new arrays are always in order
+
+(define (make-specialized-array-from-data data
+                                          #!optional
+                                          (storage-class generic-storage-class)
+                                          (mutable?      (specialized-array-default-mutable?))
+                                          (safe?         (specialized-array-default-safe?)))
+  (cond ((not (boolean? safe?))
+         (error "make-specialized-array-from-data: The fourth argument is not a boolean: " data storage-class mutable? safe?))
+        ((not (boolean? mutable?))
+         (error "make-specialized-array-from-data: The third argument is not a boolean: " data storage-class mutable?))
+        ((not (storage-class? storage-class))
+         (error "make-specialized-array-from-data: The second argument is not a storage class: " data storage-class))
+        ((not ((storage-class-data? storage-class) data))
+         (error "make-specialized-array-from-data: The first argument is not compatible with the storage class: " data))
+        (else
+         (%%make-specialized-array-from-data data storage-class mutable? safe?))))
+
+
+(define (%%make-specialized-array-from-data data storage-class mutable? safe?)
+  (let* ((body
+          ((storage-class-data->body storage-class) data))
+         (indexer
+          (lambda (i) i))
+         (domain
+          (make-interval (vector ((storage-class-length storage-class) body)))))
+    (%%finish-specialized-array domain
+                                storage-class
+                                body
+                                indexer
+                                mutable?
+                                safe?
+                                #t)))         ;; this array is in order by definition
+
 
 (define make-specialized-array
   (let ()
@@ -2615,10 +2700,53 @@ OTHER DEALINGS IN THE SOFTWARE.
               (%%array-getter array)
               (%%array-setter array)))
 
+;;; Elements of extracted arrays of in-order specialized
+;;; arrays are not in order unless
+;;; (1) the differences in the upper and lower bounds of the
+;;;     first dimensions all equal 1 *and*
+;;; (2) the next dimension doesn't matter *and*
+;;; (3) the upper and lower bounds of the latter dimensions
+;;;     of the original and extracted arrays are the same
+;;; Whew!
+
+;;; This takes time to compute, and whether an array is in order is
+;;; not always of interest, so we don't compute it.
+
+(define (%%extracted-array-elements-in-order? base extracted)
+  ;; This version is untested; the version in test-arrays.scm is tested.
+  (let* ((base-domain (%%array-domain base))
+         (extracted-domain (%%array-domain extracted))
+         (dim (%%interval-dimension base-domain)))
+    (let loop-1 ((i 0))
+      (or (fx= i (fx- dim 1))
+          (or (and (fx= 1 (- (interval-upper-bound extracted-domain i)
+                             (interval-lower-bound extracted-domain i)))
+                   (loop-1 (fx+ i 1)))
+              (let loop-2 ((i (fx+ i 1)))
+                (or (fx= i dim)
+                    (and (= (interval-upper-bound extracted-domain i)
+                            (interval-upper-bound base-domain i))
+                         (= (interval-lower-bound extracted-domain i)
+                            (interval-lower-bound base-domain i))
+                         (loop-2 (fx+ i 1))))))))))
+
 (define (%%specialized-array-extract array new-domain)
-  (%%specialized-array-share array
-                             new-domain
-                             values))
+
+  ;; (%%specialized-array-share array new-domain values)
+
+  ;; We can speed this by calling make-%%array directly,
+  ;; and so avoid a call to %%compose-indexers with values as
+  ;; new-domain->old-domain and avoid the computation of the
+  ;; new indexer, getter, and setter.
+
+  (make-%%array new-domain
+                (%%array-getter array)
+                (%%array-setter array)
+                (%%array-storage-class array)
+                (%%array-body array)
+                (%%array-indexer array)
+                (%%array-safe? array)
+                %%order-unknown))
 
 (define (%%array-extract array new-domain)
   (cond ((specialized-array? array)

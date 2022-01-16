@@ -108,6 +108,9 @@ MathJax.Hub.Config({
          (<li> "Procedures that generate useful permutations have been added: "(<code>'index-rotate)", "(<code>'index-first)", and "(<code>'index-last)".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> "Introduced new routines "
+               (<code>'storage-class-data?)", "
+               (<code>'storage-class-data->body)", "
+               (<code>'make-specialized-array-from-data)", "
                (<code>'array-inner-product)", "
                (<code>'array-stack)", and "
                (<code>'array-append)".")
@@ -354,6 +357,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#storage-class-copier" "storage-class-copier") END
                  (<a> href: "#storage-class-length" "storage-class-length") END
                  (<a> href: "#storage-class-default" "storage-class-default") END
+                 (<a> href: "#storage-class-data?" "storage-class-data?") END
+                 (<a> href: "#storage-class-data-rarrow-body" "storage-class-data->body") END
                  (<a> href: "#generic-storage-class" "generic-storage-class") END
                  (<a> href: "#s8-storage-class" "s8-storage-class") END
                  (<a> href: "#s16-storage-class" "s16-storage-class") END
@@ -382,6 +387,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
+                 (<a> href: "#make-specialized-array-from-data" "make-specialized-array-from-data")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
                  (<a> href: "#array-storage-class" "array-storage-class")END
                  (<a> href: "#array-indexer" "array-indexer")END
@@ -681,7 +687,7 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 The procedures allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
-(format-lambda-list '(make-storage-class getter setter checker maker copier length default))
+(format-lambda-list '(make-storage-class getter setter checker maker copier length default data? data->body))
 (<p> "Here we assume the following relationships between the arguments of "(<code> 'make-storage-class)".  Assume that the \"elements\" of
 the backing store are of some \"type\", either heterogeneous (all Scheme types) or homogeneous (of some restricted type).")
 (<ul>
@@ -695,7 +701,8 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
        ",  0 <= "(<code>(<var> 'i))" < "(<code>(<var> 'n))", and "(<code>"("(<var> 'checker)" "(<var> 'val)") => #t")", then "(<code> "("(<var>"setter v i val")")")" sets the value of the "(<code>(<var> 'i))"'th element of  "(<code>(<var> 'v))" to "(<code>(<var> 'val))".")
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
-       " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))"."))
+       " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))".")
+ (<li> "The "(<code>(<var>'data?))" and "(<code>(<var>'data->body))" entries are low-level routines. "(<code>"((storage-class-data? "(<var>'storage-class)") "(<var>'data)")")" returns "(<code>'#t)" if and only if "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")" returns a body sharing data with "(<code>(<var>'data))", without copying.  See the discussion of "(<code>'make-specialized-array-from-data)"."))
 (<p> "If the arguments do not satisfy these conditions, then it is an error to call "(<code> 'make-storage-class)".")
 (<p> "Note that we assume that "(<code>(<var> 'getter))" and "(<code>(<var> 'setter))" generally take "(<i> 'O)"(1) time to execute.")
 
@@ -709,17 +716,22 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-lambda-list '(storage-class-copier m))
 (format-lambda-list '(storage-class-length m))
 (format-lambda-list '(storage-class-default m))
+(format-lambda-list '(storage-class-data? m))
+(format-lambda-list '(storage-class-data->body m) 'storage-class-data-rarrow-body)
 (<p> "If "(<code>(<var> 'm))" is an object created by")
 (<blockquote>
- (<code>"(make-storage-class "(<var> "getter setter checker maker copier length default")")"))
+ (<code>"(make-storage-class "(<var> "getter setter checker maker copier length default data? data->body")")"))
 (<p> " then "
      (<code> 'storage-class-getter)" returns "(<code>(<var> 'getter))", "
      (<code> 'storage-class-setter)" returns "(<code>(<var> 'setter))", "
      (<code> 'storage-class-checker)" returns "(<code>(<var> 'checker))", "
      (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", "
      (<code> 'storage-class-copier)" returns "(<code>(<var> 'copier))", "
-     (<code> 'storage-class-length)" returns "(<code>(<var> 'length))", and "
-     (<code> 'storage-class-default)" returns "(<code>(<var> 'default))".  Otherwise, it is an error to call any of these procedures.")
+     (<code> 'storage-class-length)" returns "(<code>(<var> 'length))",  "
+     (<code> 'storage-class-default)" returns "(<code>(<var> 'default))", "
+     (<code> 'storage-class-data?)" returns "(<code>(<var> 'data?))", and "
+     (<code> 'storage-class-data->body)" returns "(<code>(<var> 'data->body))
+     ".  Otherwise, it is an error to call any of these procedures.")
 
 (<h3> "Global Variables")
 (format-global-variable 'generic-storage-class)
@@ -925,6 +937,55 @@ if "(<code>(<var> 'array))" is not a mutable array.")
     (make-specialized-array interval u16-storage-class 0 #f))
 "))
 (<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(3 3)))")".")
+
+(format-lambda-list '(make-specialized-array-from-data data
+                                                       #\[ storage-class "generic-storage-class" #\]
+                                                       #\[ mutable? "(specialized-array-default-mutable?)" #\]
+                                                       #\[ safe? "(specialized-array-default-safe?)" #\]))
+(<p> "This routine constructs a new specialized array using "(<code>(<var>'data))" as part of the body of the result without copying.")
+(<p> "This routine exploits the low-level representation of the body of a specialized array of a specific storage class, and as such may not be portable between implementations.  Here are several examples.")
+(<p> "The reference implementation uses homogeneous vectors to represent the bodies of arrays with storage classes "(<code>'u8-storage-class)", "(<code>'s8-storage-class)", ..., "(<code>'s64-storage-class)", "(<code>'f32-storage-class)", and "(<code>'f64-storage-class)".  Another implementation might use byte-vectors as the bodies of arrays for all these storage classes.")
+(<p> "The reference implementation uses homogeneous (f32 and f64) vectors with an even number of elements to represent the bodies of arrays with storage classes "(<code>'c64-storage-class)" and "(<code>'c128-storage-class)". Another implementation with purely inexact complex numbers might make another choice.")
+(<p> "Finally, the reference implementation uses "(<code>"(vector "(<var>'n)" (u16vector ...))")" to represent the body of an array with a "(<code>'u1-storage-class)", where "(<code>(<var>'n))" represents the valid number of bits (no more than 16 times the length of the "(<code>'u16vector)").  A Scheme with bitvectors might choose those as the underlying representation of bodies of arrays with "(<code>'u1-storage-class)".")
+(<p> "This routine assumes that "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))", if given, are booleans, and that "(<code>(<var>'storage-class))", if given, is a storage class.  "(<code>(<var>'data))" must be an object for which "(<code>"((storage-class-data? "(<var>'storage-class)") "(<var>'data)")")" returns "(<code>'#t)".")
+
+(<p> "This routine constructs a new one-dimensional array with storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", safety "(<code>(<var>'safe?))", body "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")", with domain "(<code>"(make-interval (vector "(<var>'N)"))")", where "(<code>(<var>'N))" is the greatest number of elements one can fit into "(<code>(<var>'data))", and indexer "(<code>"(lambda (i) i)")".")
+(<p> "It is an error if the arguments do not satisfy these conditions.")
+
+(<p> (<b> "Example: ")"In the reference implementation, if you want to construct a $3\\times3$ array with storage class "(<code>'u1-storage-class)" from a length-one "(<code>'u16vector)" named "(<code>(<var>'board))" then one could write")
+(<pre>(<code>
+"(let* ((board (u16vector #b111100110111))
+       (A (specialized-array-reshape
+           (array-extract
+            (make-specialized-array-from-data board u1-storage-class)
+            (make-interval '#(9)))
+           (make-interval '#(3 3))))
+       (B (list->array '(1 1 1
+                         0 1 1
+                         0 0 1)
+                       (make-interval '#(3 3))
+                       u1-storage-class)))
+  (define (pad n s)
+    (string-append (make-string (- n (string-length s)) #\\0) s))
+  
+  (for-each display (list \"(array-every = A B) => \" (array-every = A B) #\\newline))
+  (for-each display (list \"(array-body A) => \" (array-body A) #\\newline))
+  (for-each display (list \"(array-body B) => \" (array-body B) #\\newline))
+  (for-each display (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => \" #\\newline
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\\newline))
+  (for-each display (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => \" #\\newline
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\\newline)))"))
+(<p> "prints")
+(<pre>
+"(array-every = A B) => #t
+(array-body A) => #(16 #u16(3895))
+(array-body B) => #(9 #u16(311))
+(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => 
+0000111100110111
+(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => 
+0000000100110111")
+(<p> "The 9 low-order bits of board represent the entries of the array "(<code>'A)", ignoring higher order bits, and you can see the bit order that is used to represent a "(<code>'u1-storage-class-body)".")
+
 
 (format-lambda-list '(specialized-array? obj))
 (<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a specialized-array, and "(<code>"#f")" otherwise. A specialized-array is an array.")
