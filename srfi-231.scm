@@ -285,14 +285,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<h2> "Issues")
         (<ul>
          (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
-         (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
-         (<li> "The naming convention is not entirely uniform; most array functions begin with "(<code>'array-)" but there are also "
-               (<ul>
-                (<li> (<code>'make-array)", "(<code>'make-interval)", "(<code>'make-storage-class)", and "(<code>'make-specialized-array))
-                (<li> (<code>'mutable-array?)))
-               "All other operations begin with the name of the objects that they take as arguments, or that they return.  The question is whether we should change these few names.")
-                
          )
 
 
@@ -309,9 +302,6 @@ they may have hash tables or databases behind an implementation, one may read th
          (<li> (<b> "Choice of procedures on intervals. ")"The choice of procedures for both arrays and intervals was motivated almost solely by what I needed for arrays.")
          (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
          (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.")
-         (<li> (<b> "No low-level specialized array constructor. ")
-               "While the author of the SRFI uses mainly "(<code>"(make-array ...)")", "(<code>'array-map)", and "(<code>'array-copy)" to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple "(<code>"(make-array ...)")" mechanism is so general, allowing one to specify getters and setters as general procedures, as to cover nearly all needs.")
-
          )
         (<h2> "Specification")
         (let ((END ",\n"))

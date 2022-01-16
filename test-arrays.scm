@@ -662,20 +662,20 @@ OTHER DEALINGS IN THE SOFTWARE.
 (pp "storage-class tests")
 
 (define storage-class-names
-  (list (list   u1-storage-class   'u1-storage-class 'u16vector)
-        (list   u8-storage-class   'u8-storage-class  'u8vector)
-        (list  u16-storage-class  'u16-storage-class 'u16vector)
-        (list  u32-storage-class  'u32-storage-class 'u32vector)
-        (list  u64-storage-class  'u64-storage-class 'u64vector)
-        (list   s8-storage-class   's8-storage-class  's8vector)
-        (list  s16-storage-class  's16-storage-class 's16vector)
-        (list  s32-storage-class  's32-storage-class 's32vector)
-        (list  s64-storage-class  's64-storage-class 's64vector)
-        (list  f32-storage-class  'f32-storage-class 'f32vector)
-        (list  f64-storage-class  'f64-storage-class 'f64vector)
-        (list  c64-storage-class  'c64-storage-class 'f32vector)
-        (list c128-storage-class 'c128-storage-class 'f64vector)
-         ))
+  (list (list   u1-storage-class   'u1-storage-class 'u16vector make-u16vector)
+        (list   u8-storage-class   'u8-storage-class  'u8vector  make-u8vector)
+        (list  u16-storage-class  'u16-storage-class 'u16vector make-u16vector)
+        (list  u32-storage-class  'u32-storage-class 'u32vector make-u32vector)
+        (list  u64-storage-class  'u64-storage-class 'u64vector make-u64vector)
+        (list   s8-storage-class   's8-storage-class  's8vector  make-s8vector)
+        (list  s16-storage-class  's16-storage-class 's16vector make-s16vector)
+        (list  s32-storage-class  's32-storage-class 's32vector make-s32vector)
+        (list  s64-storage-class  's64-storage-class 's64vector make-s64vector)
+        (list  f32-storage-class  'f32-storage-class 'f32vector make-f32vector)
+        (list  f64-storage-class  'f64-storage-class 'f64vector make-f64vector)
+        (list  c64-storage-class  'c64-storage-class 'f32vector make-f32vector)
+        (list c128-storage-class 'c128-storage-class 'f64vector make-f64vector)
+        ))
 
 (define uniform-storage-classes
   (list u8-storage-class u16-storage-class u32-storage-class u64-storage-class
@@ -694,13 +694,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test ((storage-class-data? u1-storage-class) (u16vector 0))
       #t)
 
-(for-each (lambda (class-name-data)
+(for-each (lambda (class-name-data-maker)
             (let* ((class
-                    (car class-name-data))
+                    (car class-name-data-maker))
                    (name
-                    (cadr class-name-data))
+                    (cadr class-name-data-maker))
                    (data
-                    (caddr class-name-data))
+                    (caddr class-name-data-maker))
+                   (maker
+                    (cadddr class-name-data-maker))
                    (message
                     (string-append "Expecting a nonempty "
                                    (symbol->string data)
@@ -711,6 +713,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    (symbol->string name)
                                    "): ")))
               (test ((storage-class-data->body class) 'a)
+                    message)
+              (test ((storage-class-data->body class) (maker 0))
                     message)))
           storage-class-names)
 
@@ -989,8 +993,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (for-each display (list "(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => " #\newline
                           (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\newline))
   (for-each display (list "(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => " #\newline
-                           (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline))
-  )
+                           (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline)))
 
 
 
