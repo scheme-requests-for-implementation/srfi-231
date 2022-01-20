@@ -111,6 +111,8 @@ MathJax.Hub.Config({
                (<code>'storage-class-data?)", "
                (<code>'storage-class-data->body)", "
                (<code>'make-specialized-array-from-data)", "
+               (<code>'list*->array)", "
+               (<code>'vector*->array)", "
                (<code>'array-inner-product)", "
                (<code>'array-stack)", and "
                (<code>'array-append)".")
@@ -122,11 +124,12 @@ MathJax.Hub.Config({
         (<h3> "Introductory remarks")
         
         (<p> "The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.")
-        (<p> "There are two procedures that simply create new arrays, and one procedure that converts a list to an array:")
+        (<p> "There are two procedures that simply create new arrays, one procedure that converts a list to an array, and procedures that convert nested lists and nested vectors to arrays:")
         (<ul>
          (<li> (<a> href: "#make-array" (<code>'make-array))": Takes as arguments a specification of the valid indices $i\\ j\\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere, the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a "(<i>"generalized array")".")
          (<li> (<a> href: "#make-specialized-array"(<code>'make-specialized-array))": Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a "(<i>"specialized array")".")
-         (<li> (<a> href: "#list-rarrow-array"(<code>'list->array))": Takes as arguments a list and a specification of valid indices, returns a specialized array.")
+         (<li> (<a> href: "#list-rarrow-array" (<code>'list->array))": Takes as arguments a list and a specification of valid indices, returns a specialized array.")
+         (<li> (<a> href: "#list*-rarrow-array" (<code>'list*->array))" and " (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))": Convert nested lists and nested vectors, respectively, to arrays.")
          )
         (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
         (<ul>
@@ -404,6 +407,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-every" "array-every")END
                  (<a> href: "#array-rarrow-list" "array->list") END
                  (<a> href: "#list-rarrow-array" "list->array") END
+                 (<a> href: "#list*-rarrow-array" "list*->array") END
+                 (<a> href: "#vector*-rarrow-array" "vector*->array") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-append" "array-append") END
                  (<a> href: "#array-stack" "array-stack") END
@@ -1680,6 +1685,62 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Returns a specialized array with domain "(<code>(<var>'domain))" whose elements are the elements of the list "(<code>(<var>'l))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+
+(format-lambda-list '(list*->array nested-list d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
+(<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
+(<pre>(<code>
+"(define (check-nested-list nested-list d)
+  (and (list? nested-list)
+       (let ((len (length nested-list)))
+         (and (positive? len)
+              (if (eqv? d 1)
+                  (list len)
+                  (let* ((sublists
+                          (map (lambda (l)
+                                 (check-nested-list l (fx- d 1)))
+                               nested-list))
+                         (first
+                          (car sublists)))
+                    (and (pair? first)
+                         (every (lambda (l)
+                                  (equal? first l))
+                                (cdr sublists))
+                         (cons len first))))))))"))
+(<p> "In this case, "(<code>'list*->array)" returns an array with domain "(<code>"(make-interval (list->vector (check-nested-list "(<var>"nested-list d")")))")".  If we denote the getter of the result by "(<code>'A_)", then ")
+(<pre>(<code>
+"(A_ i_0 ... i_d-2 i_d-1)
+=> (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)"))
+(<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
+
+(format-lambda-list '(vector*->array nested-vector d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
+(<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
+(<pre>(<code>
+"(define (check-nested-vector nested-vector d)
+  (and (vector? nested-vector)
+       (let ((len (vector-length nested-vector)))
+         (and (positive? len)
+              (if (eqv? d 1)
+                  (list len)
+                  (let* ((sublists
+                          (map (lambda (l)
+                                 (check-nested-vector l (fx- d 1)))
+                               (vector->list nested-vector)))
+                         (first
+                          (car sublists)))
+                    (and (pair? first)
+                         (every (lambda (l)
+                                  (equal? first l))
+                                (cdr sublists))
+                         (cons len first))))))))"))
+(<p> "In this case, "(<code>'vector*->array)" returns an array with domain "(<code>"(make-interval (list->vector (check-nested-vector "(<var>"nested-vector d")")))")".  If we denote the getter of the result by "(<code>'A_)", then ")
+(<pre>(<code>
+"(A_ i_0 ... i_d-2 i_d-1)
+=> (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
+(<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 (format-lambda-list '(array-assign! destination source))
 (<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array with the same domain, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")

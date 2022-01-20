@@ -45,17 +45,18 @@
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
       <li>Procedures that generate useful permutations have been added: <code>index-rotate</code>, <code>index-first</code>, and <code>index-last</code>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
-      <li>Introduced new routines <code>storage-class-data?</code>, <code>storage-class-data-&gt;body</code>, <code>make-specialized-array-from-data</code>, <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
+      <li>Introduced new routines <code>storage-class-data?</code>, <code>storage-class-data-&gt;body</code>, <code>make-specialized-array-from-data</code>, <code>list*-&gt;array</code>, <code>vector*-&gt;array</code>, <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
     <h3>Introductory remarks</h3>
     <p>The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.</p>
-    <p>There are two procedures that simply create new arrays, and one procedure that converts a list to an array:</p>
+    <p>There are two procedures that simply create new arrays, one procedure that converts a list to an array, and procedures that convert nested lists and nested vectors to arrays:</p>
     <ul>
       <li><a href="#make-array"><code>make-array</code></a>: Takes as arguments a specification of the valid indices $i\ j\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere, the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a <i>generalized array</i>.</li>
       <li><a href="#make-specialized-array"><code>make-specialized-array</code></a>: Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a <i>specialized array</i>.</li>
       <li><a href="#list-rarrow-array"><code>list-&gt;array</code></a>: Takes as arguments a list and a specification of valid indices, returns a specialized array.</li>
+      <li><a href="#list*-rarrow-array"><code>list*-&gt;array</code></a> and <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>: Convert nested lists and nested vectors, respectively, to arrays.</li>
     </ul>
     <p>In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array (<code>array-curry</code> and <code>array-tile</code>) return a <i>generalized array</i>.</p>
     <ul>
@@ -235,6 +236,8 @@
         <a href="#array-every">array-every</a>,
         <a href="#array-rarrow-list">array-&gt;list</a>,
         <a href="#list-rarrow-array">list-&gt;array</a>,
+        <a href="#list*-rarrow-array">list*-&gt;array</a>,
+        <a href="#vector*-rarrow-array">vector*-&gt;array</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-append">array-append</a>,
         <a href="#array-stack">array-stack</a>,
@@ -1214,6 +1217,56 @@ indexer:       (lambda multi-index
     <p>Assumes that <code><var>l</var></code> is an list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
+    <p><b>Procedure: </b><code><a id="list*-rarrow-array">list*-&gt;array</a> <var>nested-list</var> <var>d</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p>Assumes that <code><var>d</var></code> is a positive exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>This routine builds an array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-list</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-list</var></code> and <code><var>d</var></code> as arguments:</p>
+    <pre><code>(define (check-nested-list nested-list d)
+  (and (list? nested-list)
+       (let ((len (length nested-list)))
+         (and (positive? len)
+              (if (eqv? d 1)
+                  (list len)
+                  (let* ((sublists
+                          (map (lambda (l)
+                                 (check-nested-list l (fx- d 1)))
+                               nested-list))
+                         (first
+                          (car sublists)))
+                    (and (pair? first)
+                         (every (lambda (l)
+                                  (equal? first l))
+                                (cdr sublists))
+                         (cons len first))))))))</code></pre>
+    <p>In this case, <code>list*-&gt;array</code> returns an array with domain <code>(make-interval (list-&gt;vector (check-nested-list <var>nested-list d</var>)))</code>.  If we denote the getter of the result by <code>A_</code>, then </p>
+    <pre><code>(A_ i_0 ... i_d-2 i_d-1)
+=&gt; (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>and we assume that this value can be manipulated by <code><var>storage-class</var></code>.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions.</p>
+    <p><b>Procedure: </b><code><a id="vector*-rarrow-array">vector*-&gt;array</a> <var>nested-vector</var> <var>d</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p>Assumes that <code><var>d</var></code> is a positive exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>This routine builds an array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-vector</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-vector</var></code> and <code><var>d</var></code> as arguments:</p>
+    <pre><code>(define (check-nested-vector nested-vector d)
+  (and (vector? nested-vector)
+       (let ((len (vector-length nested-vector)))
+         (and (positive? len)
+              (if (eqv? d 1)
+                  (list len)
+                  (let* ((sublists
+                          (map (lambda (l)
+                                 (check-nested-vector l (fx- d 1)))
+                               (vector-&gt;list nested-vector)))
+                         (first
+                          (car sublists)))
+                    (and (pair? first)
+                         (every (lambda (l)
+                                  (equal? first l))
+                                (cdr sublists))
+                         (cons len first))))))))</code></pre>
+    <p>In this case, <code>vector*-&gt;array</code> returns an array with domain <code>(make-interval (list-&gt;vector (check-nested-vector <var>nested-vector d</var>)))</code>.  If we denote the getter of the result by <code>A_</code>, then </p>
+    <pre><code>(A_ i_0 ... i_d-2 i_d-1)
+=&gt; (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>and we assume that this value can be manipulated by <code><var>storage-class</var></code>.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Procedure: </b><code><a id="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array with the same domain, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and assigns each value to the multi-index in <code><var>destination</var></code> in the same lexicographical order.</p>

@@ -993,9 +993,154 @@ OTHER DEALINGS IN THE SOFTWARE.
   (for-each display (list "(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => " #\newline
                           (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\newline))
   (for-each display (list "(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => " #\newline
-                           (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline)))
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline)))
+
+(pp "list*->array and vector*->array tests")
+
+;;; Error tests
+
+(for-each
+ (lambda (operation message)
+
+   (test (operation 1 2 3 4 5)
+         (string-append message "The fifth argument is not a boolean: "))
+
+   (test (operation 1 2 3 4 #t)
+         (string-append message "The fourth argument is not a boolean: "))
+
+   (test (operation 1 2 3 4)
+         (string-append message "The fourth argument is not a boolean: "))
+
+   (test (operation 1 2 3 #t #t)
+         (string-append message "The third argument is not a storage class: "))
+
+   (test (operation 1 2 3 #t)
+         (string-append message "The third argument is not a storage class: "))
+
+   (test (operation 1 2 3)
+         (string-append message "The third argument is not a storage class: "))
+
+   (test (operation 1 'a generic-storage-class #t #f)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0 generic-storage-class #t #f)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 'a generic-storage-class #t)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0 generic-storage-class #t)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 'a generic-storage-class)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0 generic-storage-class)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 'a)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0)
+         (string-append message "The second argument is not a positive fixnum: ")))
+ (list list*->array
+       vector*->array)
+ (list "list*->array: "
+       "vector*->array: "))
+
+(for-each (lambda (operation message)
+            (test (operation 1 1)    message)
+            (test (operation '() 1)  message)
+            (test (operation '#() 1) message))
+          (list list*->array
+                vector*->array)
+          (list "list*->array: The first argument is not a nested list: "
+                "vector*->array: The first argument is not a nested vector: "))
+
+;;; Output tests
+
+(test (array-every equal?
+                   (list*->array'((a b c) (1 2 3)) 1)
+                   (list->array '((a b c) (1 2 3))
+                                (make-interval '#(2))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array'((a b c) (1 2 3)) 2)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(2 3))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array'(((a b c) (1 2 3))) 3)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(1 2 3))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array'(((a b c) (1 2 3))) 2)
+                   (list->array '((a b c) (1 2 3))
+                                (make-interval '#(1 2))))
+      #t)
+
+(test (list*->array'(((a b c) (1 2))) 3)
+      (string-append "list*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
+
+(test (array-every equal?
+                   (list*->array'(((a b c) (1 2))) 2)
+                   (list->array '((a b c) (1 2))
+                                (make-interval '#(1 2))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array '#(#(a b c) #(1 2 3)) 2)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(2 3))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array '#(#(#(a b c) #(1 2 3))) 3)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(1 2 3))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array '#(#((a b c) (1 2 3))) 2)
+                   (list->array '((a b c) (1 2 3))
+                                (make-interval '#(1 2))))
+      #t)
+
+(test (vector*->array '#(#(#(a b c) #(1 2))) 3)
+      (string-append "vector*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
+
+(test (array-every equal?
+                   (vector*->array '#(#((a b c) (1 2))) 2)
+                   (list->array '((a b c) (1 2))
+                                (make-interval '#(1 2))))
+      #t)
 
 
+(test (vector*->array '#(#((a b c) (1 2))) 2 u8-storage-class)
+      "vector*->array: Not all elements of the source can be stored in destination: ")
+
+(test (list*->array '(((a b c) (1 2))) 2 u8-storage-class)
+      "list*->array: Not every element of the list can be stored in the body of the array: ")
+
+(for-each (lambda (operation data)
+            (for-each (lambda (mutable?)
+                        (for-each (lambda (safe?)
+                                    (parameterize
+                                        ((specialized-array-default-mutable? mutable?)
+                                         (specialized-array-default-safe? safe?))
+                                      (let ((A (operation data 2)))
+                                        (test (mutable-array? A) mutable?)
+                                        (test (array-safe? A) safe?))))
+                                  '(#t #f)))
+                      '(#t #f)))
+          (list list*->array
+                vector*->array)
+          (list '(((a b c) (1 2)))
+                '#(#((a b c) (1 2)))))
 
 (define random-storage-class-and-initializer
   (let* ((storage-classes

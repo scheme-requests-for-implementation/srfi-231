@@ -93,6 +93,8 @@
     array-every
     array->list
     list->array
+    list*->array
+    vector*->array
     array-assign!
     array-copy
     array-append
