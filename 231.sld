@@ -37,6 +37,8 @@
     storage-class-copier
     storage-class-length
     storage-class-default
+    storage-class-data?
+    storage-class-data->body
     generic-storage-class
     s8-storage-class
     s16-storage-class
@@ -65,6 +67,7 @@
     specialized-array-default-safe?
     specialized-array-default-mutable?
     make-specialized-array
+    make-specialized-array-from-data
     specialized-array?
     array-storage-class
     array-indexer
@@ -90,6 +93,8 @@
     array-every
     array->list
     list->array
+    list*->array
+    vector*->array
     array-assign!
     array-copy
     array-append

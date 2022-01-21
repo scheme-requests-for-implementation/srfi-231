@@ -74,6 +74,7 @@ MathJax.Hub.Config({
          (<li> "Received: 2022-01-05")
          (<li> "60-day deadline: 2022-03-08")
          (<li> "Draft #1 published: 2022-01-07")
+         (<li> "Draft #2 published: 2022-01-20")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -108,6 +109,11 @@ MathJax.Hub.Config({
          (<li> "Procedures that generate useful permutations have been added: "(<code>'index-rotate)", "(<code>'index-first)", and "(<code>'index-last)".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> "Introduced new routines "
+               (<code>'storage-class-data?)", "
+               (<code>'storage-class-data->body)", "
+               (<code>'make-specialized-array-from-data)", "
+               (<code>'list*->array)", "
+               (<code>'vector*->array)", "
                (<code>'array-inner-product)", "
                (<code>'array-stack)", and "
                (<code>'array-append)".")
@@ -119,11 +125,12 @@ MathJax.Hub.Config({
         (<h3> "Introductory remarks")
         
         (<p> "The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.")
-        (<p> "There are two procedures that simply create new arrays, and one procedure that converts a list to an array:")
+        (<p> "There are two procedures that simply create new arrays, one procedure that converts a list to an array, and procedures that convert nested lists and nested vectors to arrays:")
         (<ul>
          (<li> (<a> href: "#make-array" (<code>'make-array))": Takes as arguments a specification of the valid indices $i\\ j\\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere, the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a "(<i>"generalized array")".")
          (<li> (<a> href: "#make-specialized-array"(<code>'make-specialized-array))": Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a "(<i>"specialized array")".")
-         (<li> (<a> href: "#list-rarrow-array"(<code>'list->array))": Takes as arguments a list and a specification of valid indices, returns a specialized array.")
+         (<li> (<a> href: "#list-rarrow-array" (<code>'list->array))": Takes as arguments a list and a specification of valid indices, returns a specialized array.")
+         (<li> (<a> href: "#list*-rarrow-array" (<code>'list*->array))" and " (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))": Convert nested lists and nested vectors, respectively, to arrays.")
          )
         (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
         (<ul>
@@ -282,14 +289,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<h2> "Issues")
         (<ul>
          (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
-         (<li> "Should "(<a> href: "#specialized-array-default-mutable?" (<code>'specialized-array-default-mutable?))" and "(<a> href: "#specialized-array-default-safe?" (<code>'specialized-array-default-safe?))" be "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters or "(<a> href: "https://small.r7rs.org/attachment/r7rs.pdf" "R7RS")" parameters? Or would some other way of specifying, and changing, the default safety and mutability of specialized arrays be better?")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
-         (<li> "The naming convention is not entirely uniform; most array functions begin with "(<code>'array-)" but there are also "
-               (<ul>
-                (<li> (<code>'make-array)", "(<code>'make-interval)", "(<code>'make-storage-class)", and "(<code>'make-specialized-array))
-                (<li> (<code>'mutable-array?)))
-               "All other operations begin with the name of the objects that they take as arguments, or that they return.  The question is whether we should change these few names.")
-                
          )
 
 
@@ -306,9 +306,6 @@ they may have hash tables or databases behind an implementation, one may read th
          (<li> (<b> "Choice of procedures on intervals. ")"The choice of procedures for both arrays and intervals was motivated almost solely by what I needed for arrays.")
          (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
          (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.")
-         (<li> (<b> "No low-level specialized array constructor. ")
-               "While the author of the SRFI uses mainly "(<code>"(make-array ...)")", "(<code>'array-map)", and "(<code>'array-copy)" to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple "(<code>"(make-array ...)")" mechanism is so general, allowing one to specify getters and setters as general procedures, as to cover nearly all needs.")
-
          )
         (<h2> "Specification")
         (let ((END ",\n"))
@@ -354,6 +351,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#storage-class-copier" "storage-class-copier") END
                  (<a> href: "#storage-class-length" "storage-class-length") END
                  (<a> href: "#storage-class-default" "storage-class-default") END
+                 (<a> href: "#storage-class-data?" "storage-class-data?") END
+                 (<a> href: "#storage-class-data-rarrow-body" "storage-class-data->body") END
                  (<a> href: "#generic-storage-class" "generic-storage-class") END
                  (<a> href: "#s8-storage-class" "s8-storage-class") END
                  (<a> href: "#s16-storage-class" "s16-storage-class") END
@@ -382,6 +381,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
+                 (<a> href: "#make-specialized-array-from-data" "make-specialized-array-from-data")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
                  (<a> href: "#array-storage-class" "array-storage-class")END
                  (<a> href: "#array-indexer" "array-indexer")END
@@ -408,6 +408,8 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-every" "array-every")END
                  (<a> href: "#array-rarrow-list" "array->list") END
                  (<a> href: "#list-rarrow-array" "list->array") END
+                 (<a> href: "#list*-rarrow-array" "list*->array") END
+                 (<a> href: "#vector*-rarrow-array" "vector*->array") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-append" "array-append") END
                  (<a> href: "#array-stack" "array-stack") END
@@ -681,7 +683,7 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 The procedures allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
-(format-lambda-list '(make-storage-class getter setter checker maker copier length default))
+(format-lambda-list '(make-storage-class getter setter checker maker copier length default data? data->body))
 (<p> "Here we assume the following relationships between the arguments of "(<code> 'make-storage-class)".  Assume that the \"elements\" of
 the backing store are of some \"type\", either heterogeneous (all Scheme types) or homogeneous (of some restricted type).")
 (<ul>
@@ -695,7 +697,8 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
        ",  0 <= "(<code>(<var> 'i))" < "(<code>(<var> 'n))", and "(<code>"("(<var> 'checker)" "(<var> 'val)") => #t")", then "(<code> "("(<var>"setter v i val")")")" sets the value of the "(<code>(<var> 'i))"'th element of  "(<code>(<var> 'v))" to "(<code>(<var> 'val))".")
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
-       " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))"."))
+       " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))".")
+ (<li> "The "(<code>(<var>'data?))" and "(<code>(<var>'data->body))" entries are low-level routines. "(<code>"((storage-class-data? "(<var>'storage-class)") "(<var>'data)")")" returns "(<code>'#t)" if and only if "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")" returns a body sharing data with "(<code>(<var>'data))", without copying.  See the discussion of "(<code>'make-specialized-array-from-data)"."))
 (<p> "If the arguments do not satisfy these conditions, then it is an error to call "(<code> 'make-storage-class)".")
 (<p> "Note that we assume that "(<code>(<var> 'getter))" and "(<code>(<var> 'setter))" generally take "(<i> 'O)"(1) time to execute.")
 
@@ -709,17 +712,22 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-lambda-list '(storage-class-copier m))
 (format-lambda-list '(storage-class-length m))
 (format-lambda-list '(storage-class-default m))
+(format-lambda-list '(storage-class-data? m))
+(format-lambda-list '(storage-class-data->body m) 'storage-class-data-rarrow-body)
 (<p> "If "(<code>(<var> 'm))" is an object created by")
 (<blockquote>
- (<code>"(make-storage-class "(<var> "getter setter checker maker copier length default")")"))
+ (<code>"(make-storage-class "(<var> "getter setter checker maker copier length default data? data->body")")"))
 (<p> " then "
      (<code> 'storage-class-getter)" returns "(<code>(<var> 'getter))", "
      (<code> 'storage-class-setter)" returns "(<code>(<var> 'setter))", "
      (<code> 'storage-class-checker)" returns "(<code>(<var> 'checker))", "
      (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", "
      (<code> 'storage-class-copier)" returns "(<code>(<var> 'copier))", "
-     (<code> 'storage-class-length)" returns "(<code>(<var> 'length))", and "
-     (<code> 'storage-class-default)" returns "(<code>(<var> 'default))".  Otherwise, it is an error to call any of these procedures.")
+     (<code> 'storage-class-length)" returns "(<code>(<var> 'length))",  "
+     (<code> 'storage-class-default)" returns "(<code>(<var> 'default))", "
+     (<code> 'storage-class-data?)" returns "(<code>(<var> 'data?))", and "
+     (<code> 'storage-class-data->body)" returns "(<code>(<var> 'data->body))
+     ".  Otherwise, it is an error to call any of these procedures.")
 
 (<h3> "Global Variables")
 (format-global-variable 'generic-storage-class)
@@ -925,6 +933,55 @@ if "(<code>(<var> 'array))" is not a mutable array.")
     (make-specialized-array interval u16-storage-class 0 #f))
 "))
 (<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(3 3)))")".")
+
+(format-lambda-list '(make-specialized-array-from-data data
+                                                       #\[ storage-class "generic-storage-class" #\]
+                                                       #\[ mutable? "(specialized-array-default-mutable?)" #\]
+                                                       #\[ safe? "(specialized-array-default-safe?)" #\]))
+(<p> "This routine constructs a new specialized array using "(<code>(<var>'data))" as part of the body of the result without copying.")
+(<p> "This routine exploits the low-level representation of the body of a specialized array of a specific storage class, and as such may not be portable between implementations.  Here are several examples.")
+(<p> "The reference implementation uses homogeneous vectors to represent the bodies of arrays with storage classes "(<code>'u8-storage-class)", "(<code>'s8-storage-class)", ..., "(<code>'s64-storage-class)", "(<code>'f32-storage-class)", and "(<code>'f64-storage-class)".  Another implementation might use byte-vectors as the bodies of arrays for all these storage classes.")
+(<p> "The reference implementation uses homogeneous (f32 and f64) vectors with an even number of elements to represent the bodies of arrays with storage classes "(<code>'c64-storage-class)" and "(<code>'c128-storage-class)". Another implementation with purely inexact complex numbers might make another choice.")
+(<p> "Finally, the reference implementation uses "(<code>"(vector "(<var>'n)" (u16vector ...))")" to represent the body of an array with a "(<code>'u1-storage-class)", where "(<code>(<var>'n))" represents the valid number of bits (no more than 16 times the length of the "(<code>'u16vector)").  A Scheme with bitvectors might choose those as the underlying representation of bodies of arrays with "(<code>'u1-storage-class)".")
+(<p> "This routine assumes that "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))", if given, are booleans, and that "(<code>(<var>'storage-class))", if given, is a storage class.  "(<code>(<var>'data))" must be an object for which "(<code>"((storage-class-data? "(<var>'storage-class)") "(<var>'data)")")" returns "(<code>'#t)".")
+
+(<p> "This routine constructs a new one-dimensional array with storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", safety "(<code>(<var>'safe?))", body "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")", with domain "(<code>"(make-interval (vector "(<var>'N)"))")", where "(<code>(<var>'N))" is the greatest number of elements one can fit into "(<code>(<var>'data))", and indexer "(<code>"(lambda (i) i)")".")
+(<p> "It is an error if the arguments do not satisfy these conditions.")
+
+(<p> (<b> "Example: ")"In the reference implementation, if you want to construct a $3\\times3$ array with storage class "(<code>'u1-storage-class)" from a length-one "(<code>'u16vector)" named "(<code>(<var>'board))" then one could write")
+(<pre>(<code>
+"(let* ((board (u16vector #b111100110111))
+       (A (specialized-array-reshape
+           (array-extract
+            (make-specialized-array-from-data board u1-storage-class)
+            (make-interval '#(9)))
+           (make-interval '#(3 3))))
+       (B (list->array '(1 1 1
+                         0 1 1
+                         0 0 1)
+                       (make-interval '#(3 3))
+                       u1-storage-class)))
+  (define (pad n s)
+    (string-append (make-string (- n (string-length s)) #\\0) s))
+  
+  (for-each display (list \"(array-every = A B) => \" (array-every = A B) #\\newline))
+  (for-each display (list \"(array-body A) => \" (array-body A) #\\newline))
+  (for-each display (list \"(array-body B) => \" (array-body B) #\\newline))
+  (for-each display (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => \" #\\newline
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\\newline))
+  (for-each display (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => \" #\\newline
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\\newline)))"))
+(<p> "prints")
+(<pre>
+"(array-every = A B) => #t
+(array-body A) => #(16 #u16(3895))
+(array-body B) => #(9 #u16(311))
+(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => 
+0000111100110111
+(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => 
+0000000100110111")
+(<p> "The 9 low-order bits of board represent the entries of the array "(<code>'A)", ignoring higher order bits, and you can see the bit order that is used to represent a "(<code>'u1-storage-class-body)".")
+
 
 (format-lambda-list '(specialized-array? obj))
 (<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a specialized-array, and "(<code>"#f")" otherwise. A specialized-array is an array.")
@@ -1629,6 +1686,62 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Returns a specialized array with domain "(<code>(<var>'domain))" whose elements are the elements of the list "(<code>(<var>'l))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+
+(format-lambda-list '(list*->array nested-list d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
+(<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
+(<pre>(<code>
+"(define (check-nested-list nested-list d)
+  (and (list? nested-list)
+       (let ((len (length nested-list)))
+         (and (positive? len)
+              (if (eqv? d 1)
+                  (list len)
+                  (let* ((sublists
+                          (map (lambda (l)
+                                 (check-nested-list l (fx- d 1)))
+                               nested-list))
+                         (first
+                          (car sublists)))
+                    (and (pair? first)
+                         (every (lambda (l)
+                                  (equal? first l))
+                                (cdr sublists))
+                         (cons len first))))))))"))
+(<p> "In this case, "(<code>'list*->array)" returns an array with domain "(<code>"(make-interval (list->vector (check-nested-list "(<var>"nested-list d")")))")".  If we denote the getter of the result by "(<code>'A_)", then ")
+(<pre>(<code>
+"(A_ i_0 ... i_d-2 i_d-1)
+=> (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)"))
+(<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
+
+(format-lambda-list '(vector*->array nested-vector d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
+(<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
+(<pre>(<code>
+"(define (check-nested-vector nested-vector d)
+  (and (vector? nested-vector)
+       (let ((len (vector-length nested-vector)))
+         (and (positive? len)
+              (if (eqv? d 1)
+                  (list len)
+                  (let* ((sublists
+                          (map (lambda (l)
+                                 (check-nested-vector l (fx- d 1)))
+                               (vector->list nested-vector)))
+                         (first
+                          (car sublists)))
+                    (and (pair? first)
+                         (every (lambda (l)
+                                  (equal? first l))
+                                (cdr sublists))
+                         (cons len first))))))))"))
+(<p> "In this case, "(<code>'vector*->array)" returns an array with domain "(<code>"(make-interval (list->vector (check-nested-vector "(<var>"nested-vector d")")))")".  If we denote the getter of the result by "(<code>'A_)", then ")
+(<pre>(<code>
+"(A_ i_0 ... i_d-2 i_d-1)
+=> (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
+(<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 (format-lambda-list '(array-assign! destination source))
 (<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array with the same domain, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")

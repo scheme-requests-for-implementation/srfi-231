@@ -196,6 +196,16 @@ OTHER DEALINGS IN THE SOFTWARE.
       (and (< (car l) (cadr l))
            (in-order < (cdr l)))))
 
+(define (foldl op id l)
+  (if (null? l)
+      id
+      (foldl op (op id (car l)) (cdr l))))
+
+(define (foldr op id l)
+  (if (null? l)
+      id
+      (op (car l) (foldr op id (cdr l)))))
+
 ;; (include "generic-arrays.scm")
 
 (pp "Interval error tests")
@@ -649,6 +659,65 @@ OTHER DEALINGS IN THE SOFTWARE.
     (else
      (error "array-display can't handle > 2 dimensions: " A))))
 
+(pp "storage-class tests")
+
+(define storage-class-names
+  (list (list   u1-storage-class   'u1-storage-class 'u16vector make-u16vector)
+        (list   u8-storage-class   'u8-storage-class  'u8vector  make-u8vector)
+        (list  u16-storage-class  'u16-storage-class 'u16vector make-u16vector)
+        (list  u32-storage-class  'u32-storage-class 'u32vector make-u32vector)
+        (list  u64-storage-class  'u64-storage-class 'u64vector make-u64vector)
+        (list   s8-storage-class   's8-storage-class  's8vector  make-s8vector)
+        (list  s16-storage-class  's16-storage-class 's16vector make-s16vector)
+        (list  s32-storage-class  's32-storage-class 's32vector make-s32vector)
+        (list  s64-storage-class  's64-storage-class 's64vector make-s64vector)
+        (list  f32-storage-class  'f32-storage-class 'f32vector make-f32vector)
+        (list  f64-storage-class  'f64-storage-class 'f64vector make-f64vector)
+        (list  c64-storage-class  'c64-storage-class 'f32vector make-f32vector)
+        (list c128-storage-class 'c128-storage-class 'f64vector make-f64vector)
+        ))
+
+(define uniform-storage-classes
+  (list u8-storage-class u16-storage-class u32-storage-class u64-storage-class
+        s8-storage-class s16-storage-class s32-storage-class s64-storage-class
+        f32-storage-class f64-storage-class
+        c64-storage-class c128-storage-class))
+
+
+(for-each (lambda (storage-class)
+            (test ((storage-class-data? storage-class)
+                   ((storage-class-maker storage-class)
+                    8 (storage-class-default storage-class)))
+                  #t))
+          uniform-storage-classes)
+
+(test ((storage-class-data? u1-storage-class) (u16vector 0))
+      #t)
+
+(for-each (lambda (class-name-data-maker)
+            (let* ((class
+                    (car class-name-data-maker))
+                   (name
+                    (cadr class-name-data-maker))
+                   (data
+                    (caddr class-name-data-maker))
+                   (maker
+                    (cadddr class-name-data-maker))
+                   (message
+                    (string-append "Expecting a nonempty "
+                                   (symbol->string data)
+                                   (if (memq class (list c64-storage-class c128-storage-class))
+                                       " with an even number of elements passed to "
+                                       " passed to ")
+                                   "(storage-class-data->body "
+                                   (symbol->string name)
+                                   "): ")))
+              (test ((storage-class-data->body class) 'a)
+                    message)
+              (test ((storage-class-data->body class) (maker 0))
+                    message)))
+          storage-class-names)
+
 (pp "array error tests")
 
 (test (make-array 1 values)
@@ -833,7 +902,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (test (array-safe? a)
         "array-safe?: The argument is not a specialized array: "))
 
-(pp "specialized-array error tests")
+(pp "make-specialized-array error tests")
 
 (test (make-specialized-array  'a)
       "make-specialized-array: The first argument is not an interval: ")
@@ -858,10 +927,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
       (specialized-array-default-safe?))
 
-(test (let () (specialized-array-default-safe? #t) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
+(test (parameterize ((specialized-array-default-safe? #t)) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
       #t)
 
-(test (let () (specialized-array-default-safe? #f) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
+(test (parameterize ((specialized-array-default-safe? #f)) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
       #f)
 
 (test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #t))
@@ -870,6 +939,208 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #f))
       #f)
 
+(pp "make-specialized-array-from-data error tests")
+
+(test (make-specialized-array-from-data 'a 'a 'a 'a)
+      "make-specialized-array-from-data: The fourth argument is not a boolean: ")
+
+(test (make-specialized-array-from-data 'a 'a 'a #t)
+      "make-specialized-array-from-data: The third argument is not a boolean: ")
+
+(test (make-specialized-array-from-data 'a 'a 'a)
+      "make-specialized-array-from-data: The third argument is not a boolean: ")
+
+(test (make-specialized-array-from-data 'a 'a #f #t)
+      "make-specialized-array-from-data: The second argument is not a storage class: ")
+
+(test (make-specialized-array-from-data 'a 'a #f)
+      "make-specialized-array-from-data: The second argument is not a storage class: ")
+
+(test (make-specialized-array-from-data 'a 'a)
+      "make-specialized-array-from-data: The second argument is not a storage class: ")
+
+(test (make-specialized-array-from-data 'a generic-storage-class #f #t)
+      "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
+
+(test (make-specialized-array-from-data 'a generic-storage-class #f)
+      "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
+
+(test (make-specialized-array-from-data 'a generic-storage-class)
+      "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
+
+(test (make-specialized-array-from-data 'a)
+      "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
+
+(let* ((board (u16vector #b111100110111))
+       (A (specialized-array-reshape
+           (array-extract
+            (make-specialized-array-from-data board u1-storage-class)
+            (make-interval '#(9)))
+           (make-interval '#(3 3))))
+       (B (list->array '(1 1 1
+                         0 1 1
+                         0 0 1)
+                       (make-interval '#(3 3))
+                       u1-storage-class)))
+  (define (pad n s)
+    (string-append (make-string (- n (string-length s)) #\0) s))
+  
+  (test (array-every = A B)
+        #t)
+  (for-each display (list "(array-every = A B) => " (array-every = A B) #\newline))
+  (for-each display (list "(array-body A) => " (array-body A) #\newline))
+  (for-each display (list "(array-body B) => " (array-body B) #\newline))
+  (for-each display (list "(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => " #\newline
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\newline))
+  (for-each display (list "(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => " #\newline
+                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline)))
+
+(pp "list*->array and vector*->array tests")
+
+;;; Error tests
+
+(for-each
+ (lambda (operation message)
+
+   (test (operation 1 2 3 4 5)
+         (string-append message "The fifth argument is not a boolean: "))
+
+   (test (operation 1 2 3 4 #t)
+         (string-append message "The fourth argument is not a boolean: "))
+
+   (test (operation 1 2 3 4)
+         (string-append message "The fourth argument is not a boolean: "))
+
+   (test (operation 1 2 3 #t #t)
+         (string-append message "The third argument is not a storage class: "))
+
+   (test (operation 1 2 3 #t)
+         (string-append message "The third argument is not a storage class: "))
+
+   (test (operation 1 2 3)
+         (string-append message "The third argument is not a storage class: "))
+
+   (test (operation 1 'a generic-storage-class #t #f)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0 generic-storage-class #t #f)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 'a generic-storage-class #t)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0 generic-storage-class #t)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 'a generic-storage-class)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0 generic-storage-class)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 'a)
+         (string-append message "The second argument is not a positive fixnum: "))
+
+   (test (operation 1 0)
+         (string-append message "The second argument is not a positive fixnum: ")))
+ (list list*->array
+       vector*->array)
+ (list "list*->array: "
+       "vector*->array: "))
+
+(for-each (lambda (operation message)
+            (test (operation 1 1)    message)
+            (test (operation '() 1)  message)
+            (test (operation '#() 1) message))
+          (list list*->array
+                vector*->array)
+          (list "list*->array: The first argument is not a nested list: "
+                "vector*->array: The first argument is not a nested vector: "))
+
+;;; Output tests
+
+(test (array-every equal?
+                   (list*->array'((a b c) (1 2 3)) 1)
+                   (list->array '((a b c) (1 2 3))
+                                (make-interval '#(2))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array'((a b c) (1 2 3)) 2)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(2 3))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array'(((a b c) (1 2 3))) 3)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(1 2 3))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array'(((a b c) (1 2 3))) 2)
+                   (list->array '((a b c) (1 2 3))
+                                (make-interval '#(1 2))))
+      #t)
+
+(test (list*->array'(((a b c) (1 2))) 3)
+      (string-append "list*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
+
+(test (array-every equal?
+                   (list*->array'(((a b c) (1 2))) 2)
+                   (list->array '((a b c) (1 2))
+                                (make-interval '#(1 2))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array '#(#(a b c) #(1 2 3)) 2)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(2 3))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array '#(#(#(a b c) #(1 2 3))) 3)
+                   (list->array '(a b c 1 2 3)
+                                (make-interval '#(1 2 3))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array '#(#((a b c) (1 2 3))) 2)
+                   (list->array '((a b c) (1 2 3))
+                                (make-interval '#(1 2))))
+      #t)
+
+(test (vector*->array '#(#(#(a b c) #(1 2))) 3)
+      (string-append "vector*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
+
+(test (array-every equal?
+                   (vector*->array '#(#((a b c) (1 2))) 2)
+                   (list->array '((a b c) (1 2))
+                                (make-interval '#(1 2))))
+      #t)
+
+
+(test (vector*->array '#(#((a b c) (1 2))) 2 u8-storage-class)
+      "vector*->array: Not all elements of the source can be stored in destination: ")
+
+(test (list*->array '(((a b c) (1 2))) 2 u8-storage-class)
+      "list*->array: Not every element of the list can be stored in the body of the array: ")
+
+(for-each (lambda (operation data)
+            (for-each (lambda (mutable?)
+                        (for-each (lambda (safe?)
+                                    (parameterize
+                                        ((specialized-array-default-mutable? mutable?)
+                                         (specialized-array-default-safe? safe?))
+                                      (let ((A (operation data 2)))
+                                        (test (mutable-array? A) mutable?)
+                                        (test (array-safe? A) safe?))))
+                                  '(#t #f)))
+                      '(#t #f)))
+          (list list*->array
+                vector*->array)
+          (list '(((a b c) (1 2)))
+                '#(#((a b c) (1 2)))))
 
 (define random-storage-class-and-initializer
   (let* ((storage-classes
@@ -1194,22 +1465,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (make-array (make-interval '#(1 4)) list)
                              "")
       "Arrays must have the same domains: ")
-
-(define storage-class-names
-  (list (list u1-storage-class 'u1-storage-class)
-        (list u8-storage-class 'u8-storage-class)
-        (list u16-storage-class 'u16-storage-class)
-        (list u32-storage-class 'u32-storage-class)
-        (list u64-storage-class 'u64-storage-class)
-        (list s8-storage-class 's8-storage-class)
-        (list s16-storage-class 's16-storage-class)
-        (list s32-storage-class 's32-storage-class)
-        (list s64-storage-class 's64-storage-class)
-        (list f32-storage-class 'f32-storage-class)
-        (list f64-storage-class 'f64-storage-class)
-        (list c64-storage-class 'c64-storage-class)
-        (list c128-storage-class 'c128-storage-class)
-         ))
 
 
 
@@ -4759,16 +5014,6 @@ that computes the componentwise products when we need them, the times are
 ;;; FIXME: Need to test the values of other optional arguments to array-append
 
 ;;; We steal some tests from Alex Shinn's test suite.
-
-(define (foldl op id l)
-  (if (null? l)
-      id
-      (foldl op (op id (car l)) (cdr l))))
-
-(define (foldr op id l)
-  (if (null? l)
-      id
-      (op (car l) (foldr op id (cdr l)))))
 
 (define (append-map f l)
   (foldr append

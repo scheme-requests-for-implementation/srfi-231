@@ -974,15 +974,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; A storage-class contains functions and objects to manipulate the
 ;;; backing store of a specialized-array.
 ;;;
-;;; getter:   (lambda (body i) ...)   returns the value of body at index i
-;;; setter:   (lambda (body i v) ...) sets the value of body at index i to v
-;;; checker:  (lambda (val) ...)      checks that val is an appropriate value for storing in (maker n)
-;;; maker:    (lambda (n val) ...)    makes a body of length n with value val
-;;; length:   (lambda (body) ...)     returns the number of objects in body
-;;; default:  object                  is the default value with which to fill body
+;;; getter:     (lambda (body i) ...)   returns the value of body at index i
+;;; setter:     (lambda (body i v) ...) sets the value of body at index i to v
+;;; checker:    (lambda (val) ...)      checks that val is an appropriate value for storing in (maker n)
+;;; maker:      (lambda (n val) ...)    makes a body of length n with value val
+;;; length:     (lambda (body) ...)     returns the number of objects in body
+;;; default:    object                  is the default value with which to fill body
+;;; data?:      (lambda (data) ...)     returns #t iff data can be converted to a body
+;;; data->body: (lambda (data) ...)     converts data to a body, raising an exception if needed
 ;;;
 
-(define-structure storage-class getter setter checker maker copier length default)
+(define-structure storage-class getter setter checker maker copier length default data? data->body)
 
 ;;; We define specialized storage-classes for:
 ;;;
@@ -1007,22 +1009,40 @@ OTHER DEALINGS IN THE SOFTWARE.
      ,@(map (lambda (name prefix default checker)
               `(define ,(symbol-concatenate name '-storage-class)
                  (make-storage-class
-                  ;; getter:
+                  ;; getter
                   (lambda (v i)
                     (,(symbol-concatenate prefix 'vector-ref) v i))
-                  ;; setter:
+                  ;; setter
                   (lambda (v i val)
                     (,(symbol-concatenate prefix 'vector-set!) v i val))
                   ;; checker
                   ,checker
-                  ;; maker:
+                  ;; maker
                   ,(symbol-concatenate 'make- prefix 'vector)
                   ;; copier
                   ,(symbol-concatenate prefix 'vector-copy!)
-                  ;; length:
+                  ;; length
                   ,(symbol-concatenate prefix 'vector-length)
-                  ;; default:
-                  ,default)))
+                  ;; default
+                  ,default
+                  ;; data?
+                  (lambda (data)
+                    (and (,(symbol-concatenate prefix 'vector?) data)
+                         (fxpositive? (,(symbol-concatenate prefix 'vector-length) data))))
+                  ;; data->body
+                  (lambda (data)
+                    (if (not (and (,(symbol-concatenate prefix 'vector?) data)
+                                  (fxpositive? (,(symbol-concatenate prefix 'vector-length) data))))
+                        (error ,(symbol->string
+                                 (symbol-concatenate
+                                  "Expecting a nonempty "
+                                  prefix 'vector
+                                  " passed to "
+                                  "(storage-class-data->body "
+                                  prefix '-storage-class
+                                  "): "))
+                               data)
+                        data)))))
             '(generic s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
             '(""      s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
             '(#f       0  0   0   0   0   0   0   0 0.0 0.0)
@@ -1087,7 +1107,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define u1-storage-class
   (make-storage-class
-   ;; getter:
+   ;; getter
    (lambda (v i)
      (let ((index (fxarithmetic-shift-right i 4))
            (shift (fxand i 15))
@@ -1097,7 +1117,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (u16vector-ref bodyv index)
          shift)
         1)))
-   ;; setter:
+   ;; setter
    (lambda (v i val)
      (let ((index (fxarithmetic-shift-right i 4))
            (shift (fxand i 15))
@@ -1109,17 +1129,28 @@ OTHER DEALINGS IN THE SOFTWARE.
    (lambda (val)
      (and (fixnum? val)
           (eq? 0 (fxand -2 val))))
-   ;; maker:
+   ;; maker
    (lambda (size initializer)
      (let ((u16-size (fxarithmetic-shift-right (+ size 15) 4)))
        (vector size (make-u16vector u16-size (if (eqv? 0 initializer) 0 65535)))))
    ;; no copier (for now)
    #f
-   ;; length:
+   ;; length
    (lambda (v)
      (vector-ref v 0))
-   ;; default:
-   0))
+   ;; default
+   0
+   ;; data?
+   (lambda (data)
+     (and (u16vector? data)
+          (fxpositive? (u16vector-length data))))
+   ;; data->body
+   (lambda (data)
+     (if (not (and (u16vector? data)
+                   (fxpositive? (u16vector-length data))))
+         (error "Expecting a nonempty u16vector passed to (storage-class-data->body u1-storage-class): " data)
+         (vector (fx* 16 (u16vector-length data))
+                 data)))))
 
 (define-macro (make-complex-storage-classes)
   (define (symbol-concatenate . symbols)
@@ -1149,7 +1180,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                    (inexact? (imag-part obj))))
             ;; maker
             (lambda (n val)
-              (let ((l (* 2 n))
+              (let ((l (fx* 2 n))
                     (re (real-part val))
                     (im (imag-part val)))
                 (let ((result (,(symbol-concatenate 'make-
@@ -1166,7 +1197,28 @@ OTHER DEALINGS IN THE SOFTWARE.
             (lambda (body)
               (fxquotient (,(symbol-concatenate floating-point-prefix 'vector-length) body) 2))
             ;; default
-            0.+0.i)))))
+            0.+0.i
+            ;; data?
+            (lambda (data)
+              (and (,(symbol-concatenate floating-point-prefix 'vector?) data)
+                   (let ((len (,(symbol-concatenate floating-point-prefix 'vector-length) data)))
+                     (and (fxeven?      len)
+                          (fxpositive? len)))))
+            ;; data->body
+            (lambda (data)
+              (if (not (and (,(symbol-concatenate floating-point-prefix 'vector?) data)
+                            (let ((len (,(symbol-concatenate floating-point-prefix 'vector-length) data)))
+                              (and (fxeven?      len)
+                                   (fxpositive? len)))))
+                  (error ,(symbol->string
+                           (symbol-concatenate
+                            "Expecting a nonempty "
+                            floating-point-prefix 'vector
+                            " with an even number of elements passed to "
+                            "(storage-class-data->body "
+                            prefix '-storage-class
+                            "): "))
+                         data))))))))
   (let ((result
          `(begin
             ,@(map construct
@@ -1854,6 +1906,170 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 safe?
                                 #t)))         ;; new arrays are always in order
 
+(define (make-specialized-array-from-data data
+                                          #!optional
+                                          (storage-class generic-storage-class)
+                                          (mutable?      (specialized-array-default-mutable?))
+                                          (safe?         (specialized-array-default-safe?)))
+  (cond ((not (boolean? safe?))
+         (error "make-specialized-array-from-data: The fourth argument is not a boolean: " data storage-class mutable? safe?))
+        ((not (boolean? mutable?))
+         (error "make-specialized-array-from-data: The third argument is not a boolean: " data storage-class mutable?))
+        ((not (storage-class? storage-class))
+         (error "make-specialized-array-from-data: The second argument is not a storage class: " data storage-class))
+        ((not ((storage-class-data? storage-class) data))
+         (error "make-specialized-array-from-data: The first argument is not compatible with the storage class: " data))
+        (else
+         (%%make-specialized-array-from-data data storage-class mutable? safe?))))
+
+
+(define (%%make-specialized-array-from-data data storage-class mutable? safe?)
+  (let* ((body
+          ((storage-class-data->body storage-class) data))
+         (indexer
+          (lambda (i) i))
+         (domain
+          (make-interval (vector ((storage-class-length storage-class) body)))))
+    (%%finish-specialized-array domain
+                                storage-class
+                                body
+                                indexer
+                                mutable?
+                                safe?
+                                #t)))         ;; this array is in order by definition
+
+(define (%%list*->array nested-list dimension storage-class mutable? safe? message)
+
+  (define (check-nested-list nested-data dimension)
+    ;; Assumes dimension >= 1
+    (and (list? nested-data)
+         (let ((len (length nested-data)))
+           (and (positive? len)
+                (if (eqv? dimension 1)
+                    (list len)
+                    (let* ((sublists
+                            (map (lambda (l)
+                                   (check-nested-list l (fx- dimension 1)))
+                                 nested-data))
+                           (first
+                            (car sublists)))
+                      (and (pair? first)
+                           (%%every (lambda (l)
+                                      (equal? first l))
+                                    (cdr sublists))
+                           (cons len first))))))))
+  
+  (define (nested-list->array nested-data dimension)
+    (if (eqv? dimension 1)
+        (%%list->array nested-data
+                       (make-interval (vector (length nested-data)))
+                       storage-class
+                       mutable?
+                       safe?
+                       message)
+        (let ((subarrays
+               (map (lambda (l)
+                      (nested-list->array l (- dimension 1)))
+                    nested-data)))
+          (%%array-stack 0             ;; the new dimension is always the first
+                         subarrays
+                         storage-class
+                         mutable?
+                         safe?
+                         message))))
+
+  (if (check-nested-list nested-list dimension)
+      (nested-list->array nested-list dimension)
+      (error (string-append message "The first argument is not the right shape to be converted to an array of the given dimension: ") nested-list dimension)))
+
+(define (list*->array nested-data
+                      dimension
+                      #!optional
+                      (storage-class generic-storage-class)
+                      (mutable?      (specialized-array-default-mutable?))
+                      (safe?         (specialized-array-default-safe?)))
+  (cond ((not (boolean? safe?))
+         (error "list*->array: The fifth argument is not a boolean: " nested-data dimension storage-class mutable? safe?))
+        ((not (boolean? mutable?))
+         (error "list*->array: The fourth argument is not a boolean: " nested-data dimension storage-class mutable?))
+        ((not (storage-class? storage-class))
+         (error "list*->array: The third argument is not a storage class: " nested-data dimension storage-class))
+        ((not (and (fixnum? dimension)
+                   (fxpositive? dimension)))
+         (error "list*->array: The second argument is not a positive fixnum: " nested-data dimension))
+        ((not (and (list? nested-data)
+                   (not (null? nested-data))))
+         (error "list*->array: The first argument is not a nested list: " nested-data dimension))
+        (else
+         (%%list*->array nested-data dimension storage-class mutable? safe? "list*->array: "))))
+  
+ (define (%%vector*->array nested-vector dimension storage-class mutable? safe? message)
+
+  (define (check-nested-vector nested-data dimension)
+    ;; Assumes dimension >= 1
+    (and (vector? nested-data)
+         (let ((len (vector-length nested-data)))
+           (and (positive? len)
+                (if (eqv? dimension 1)
+                    (list len)
+                    (let* ((sublists
+                            (vector-map (lambda (l)
+                                          (check-nested-vector l (fx- dimension 1)))
+                                        nested-data))
+                           (first
+                            (vector-ref sublists 0)))
+                      (and (pair? first)
+                           (%%vector-every (lambda (l)
+                                             (equal? first l))
+                                           sublists)
+                           (cons len first))))))))
+
+  (define (nested-vector->array nested-data dimension)
+    (if (eqv? dimension 1)
+        (let ((generic-array
+               (%%make-specialized-array-from-data nested-data generic-storage-class mutable? safe?)))
+          (%!array-copy generic-array
+                        storage-class
+                        (%%array-domain generic-array)
+                        mutable?
+                        safe?
+                        message))
+        (let ((subarrays
+               (map (lambda (l)
+                      (nested-vector->array l (- dimension 1)))
+                    (vector->list nested-data))))
+          (%%array-stack 0             ;; the new dimension is always the first
+                         subarrays
+                         storage-class
+                         mutable?
+                         safe?
+                         message))))
+  
+  (if (check-nested-vector nested-vector dimension)
+      (nested-vector->array nested-vector dimension)
+      (error (string-append message "The first argument is not the right shape to be converted to an array of the given dimension: ") nested-vector dimension)))
+
+(define (vector*->array nested-data
+                        dimension
+                        #!optional
+                        (storage-class generic-storage-class)
+                        (mutable?      (specialized-array-default-mutable?))
+                        (safe?         (specialized-array-default-safe?)))
+  (cond ((not (boolean? safe?))
+         (error "vector*->array: The fifth argument is not a boolean: " nested-data dimension storage-class mutable? safe?))
+        ((not (boolean? mutable?))
+         (error "vector*->array: The fourth argument is not a boolean: " nested-data dimension storage-class mutable?))
+        ((not (storage-class? storage-class))
+         (error "vector*->array: The third argument is not a storage class: " nested-data dimension storage-class))
+        ((not (and (fixnum? dimension)
+                   (fxpositive? dimension)))
+         (error "vector*->array: The second argument is not a positive fixnum: " nested-data dimension))
+        ((not (and (vector? nested-data)
+                   (fxpositive? (vector-length nested-data))))
+         (error "vector*->array: The first argument is not a nested vector: " nested-data dimension))
+        (else
+         (%%vector*->array nested-data dimension storage-class mutable? safe? "vector*->array: "))))
+
 (define make-specialized-array
   (let ()
     (define (one-arg interval storage-class initial-value safe?)
@@ -2348,12 +2564,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                       result-storage-class
                       domain
                       mutable?
-                      safe?)
+                      safe?
+                      message)
   (let ((result (%%make-specialized-array domain
                                           result-storage-class
                                           (storage-class-default result-storage-class)
                                           safe?)))
-    (%%move-array-elements result array "array-copy: ")
+    (%%move-array-elements result array message)
     (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
         (%%array-setter-set! result #f))
     result))
@@ -2392,7 +2609,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                         result-storage-class
                         (%%array-domain array)
                         mutable?
-                        safe?)))
+                        safe?
+                        "array-copy: ")))
                             
     (case-lambda
      ((array)
@@ -2615,10 +2833,53 @@ OTHER DEALINGS IN THE SOFTWARE.
               (%%array-getter array)
               (%%array-setter array)))
 
+;;; Elements of extracted arrays of in-order specialized
+;;; arrays are not in order unless
+;;; (1) the differences in the upper and lower bounds of the
+;;;     first dimensions all equal 1 *and*
+;;; (2) the next dimension doesn't matter *and*
+;;; (3) the upper and lower bounds of the latter dimensions
+;;;     of the original and extracted arrays are the same
+;;; Whew!
+
+;;; This takes time to compute, and whether an array is in order is
+;;; not always of interest, so we don't compute it.
+
+(define (%%extracted-array-elements-in-order? base extracted)
+  ;; This version is untested; the version in test-arrays.scm is tested.
+  (let* ((base-domain (%%array-domain base))
+         (extracted-domain (%%array-domain extracted))
+         (dim (%%interval-dimension base-domain)))
+    (let loop-1 ((i 0))
+      (or (fx= i (fx- dim 1))
+          (or (and (fx= 1 (- (interval-upper-bound extracted-domain i)
+                             (interval-lower-bound extracted-domain i)))
+                   (loop-1 (fx+ i 1)))
+              (let loop-2 ((i (fx+ i 1)))
+                (or (fx= i dim)
+                    (and (= (interval-upper-bound extracted-domain i)
+                            (interval-upper-bound base-domain i))
+                         (= (interval-lower-bound extracted-domain i)
+                            (interval-lower-bound base-domain i))
+                         (loop-2 (fx+ i 1))))))))))
+
 (define (%%specialized-array-extract array new-domain)
-  (%%specialized-array-share array
-                             new-domain
-                             values))
+
+  ;; (%%specialized-array-share array new-domain values)
+
+  ;; We can speed this by calling make-%%array directly,
+  ;; and so avoid a call to %%compose-indexers with values as
+  ;; new-domain->old-domain and avoid the computation of the
+  ;; new indexer, getter, and setter.
+
+  (make-%%array new-domain
+                (%%array-getter array)
+                (%%array-setter array)
+                (%%array-storage-class array)
+                (%%array-body array)
+                (%%array-indexer array)
+                (%%array-safe? array)
+                %%order-unknown))
 
 (define (%%array-extract array new-domain)
   (cond ((specialized-array? array)
@@ -3701,6 +3962,44 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (array-foldr cons '() array))))
 
+;;; Refactored for use in list*->array
+
+(define (%%list->array l
+                       interval
+                       result-storage-class
+                       mutable?
+                       safe?
+                       message)
+  (let* ((checker
+          (storage-class-checker  result-storage-class))
+         (setter
+          (storage-class-setter   result-storage-class))
+         (result
+          (%%make-specialized-array interval
+                                    result-storage-class
+                                    (storage-class-default result-storage-class)
+                                    safe?))
+         (body
+          (%%array-body result))
+         (n
+          (%%interval-volume interval)))
+    (let loop ((i 0)
+               (local l))
+      (if (or (fx= i n) (null? local))
+          (if (and (fx= i n) (null? local))
+              (begin
+                (if (not mutable?)
+                    (%%array-setter-set! result #f))
+                result)
+              (error (string-append message "The length of the first argument does not equal the volume of the second: ") l interval))
+          (let ((item (car local)))
+            (if (checker item)
+                (begin
+                  (setter body i item)
+                  (loop (fx+ i 1)
+                        (cdr local)))
+                (error (string-append message "Not every element of the list can be stored in the body of the array: ") l interval item)))))))
+
 (define (list->array l
                      interval
                      #!optional
@@ -3718,35 +4017,12 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (boolean? safe?))
          (error "list->array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
         (else
-         (let* ((checker
-                 (storage-class-checker  result-storage-class))
-                (setter
-                 (storage-class-setter   result-storage-class))
-                (result
-                 (%%make-specialized-array interval
-                                           result-storage-class
-                                           (storage-class-default result-storage-class)
-                                           safe?))
-                (body
-                 (%%array-body result))
-                (n
-                 (%%interval-volume interval)))
-           (let loop ((i 0)
-                      (local l))
-             (if (or (fx= i n) (null? local))
-                 (if (and (fx= i n) (null? local))
-                     (begin
-                       (if (not mutable?)
-                           (%%array-setter-set! result #f))
-                       result)
-                     (error "list->array: The length of the first argument does not equal the volume of the second: " l interval))
-                 (let ((item (car local)))
-                   (if (checker item)
-                       (begin
-                         (setter body i item)
-                         (loop (fx+ i 1)
-                               (cdr local)))
-                       (error "list->array: Not every element of the list can be stored in the body of the array: " l interval item)))))))))
+         (%%list->array l
+                        interval
+                        result-storage-class
+                        mutable?
+                        safe?
+                        "list->array: "))))
 
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
@@ -3793,6 +4069,45 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-inner-product A f g B))))
 
+;;; Refactored from array-stack to use in list*->array and vector*->array 
+
+(define (%%array-stack k arrays storage-class mutable? safe? message)
+  (let* ((first-array
+          (car arrays))
+         (number-of-arrays
+          (length arrays))
+         (domain                         ;; the common domain of all the arrays
+          (%%array-domain first-array))
+         (domain-dimension
+          (%%interval-dimension domain))
+         (lowers
+          (%%interval-lower-bounds->list domain))
+         (uppers
+          (%%interval-upper-bounds->list domain))
+         (result-dimension
+          (fx+ 1 domain-dimension))
+         (result-domain
+          (%%finish-interval
+           (list->vector (append (take lowers k) (cons 0                (drop lowers k))))
+           (list->vector (append (take uppers k) (cons number-of-arrays (drop uppers k))))))
+         (result-dimension
+          (fx+ 1 domain-dimension))
+         (result-array
+          (%%make-specialized-array result-domain
+                                    storage-class
+                                    (storage-class-default storage-class)
+                                    safe?))
+         (permuted-and-curried-result
+          (%%array-curry (%%array-permute result-array (%%index-first result-dimension k))
+                         domain-dimension)))
+    ;; copy each array argument to the associated place in stack
+    (array-for-each (lambda (destination source)
+                      (%%move-array-elements destination source message))
+                    permuted-and-curried-result
+                    (list->array arrays (make-interval (vector number-of-arrays))))
+    (if (not mutable?)
+        (%%array-setter-set! result-array #f))
+    result-array))
 
 (define (array-stack . args) ;; (array-stack [storage-class] k array1 array2 ...)
 
@@ -3846,8 +4161,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ((boolean? mutable?)            3)
                  ((storage-class? storage-class) 2)
                  (else                           1)))
-          (number-of-arrays
-           (length arrays))
           (first-array   ;; may not really be an array at this point
            (car arrays)))
       (cond ((not (and (%%every array? arrays)
@@ -3898,38 +4211,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    safe?
                                    (specialized-array-default-mutable?)))))
                (lambda (storage-class mutable? safe?)
-                 (let* ((domain                         ;; the common domain of all the arrays
-                         (%%array-domain first-array))
-                        (domain-dimension
-                         (%%interval-dimension domain))
-                        (lowers
-                         (%%interval-lower-bounds->list domain))
-                        (uppers
-                         (%%interval-upper-bounds->list domain))
-                        (result-dimension
-                         (fx+ 1 domain-dimension))
-                        (result-domain
-                         (%%finish-interval
-                          (list->vector (append (take lowers k) (cons 0                (drop lowers k))))
-                          (list->vector (append (take uppers k) (cons number-of-arrays (drop uppers k))))))
-                        (result-dimension
-                         (fx+ 1 domain-dimension))
-                        (result-array
-                         (%%make-specialized-array result-domain
-                                                   storage-class
-                                                   (storage-class-default storage-class)
-                                                   safe?))
-                        (permuted-and-curried-result
-                         (%%array-curry (%%array-permute result-array (%%index-first result-dimension k))
-                                        domain-dimension)))
-                   ;; copy each array argument to the associated place in stack
-                   (array-for-each (lambda (destination source)
-                                     (%%move-array-elements destination source "array-stack!: "))
-                                   permuted-and-curried-result
-                                   (list->array arrays (make-interval (vector number-of-arrays))))
-                   (if (not mutable?)
-                       (%%array-setter-set! result-array #f))
-                   result-array)))))))
+                 (%%array-stack k arrays storage-class mutable? safe? "array-stack: ")))))))
 
   (initial-parse args))
 
@@ -4326,7 +4608,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                     (%%array-storage-class array)
                                                     domain
                                                     (mutable-array? array)
-                                                    (array-safe? array))
+                                                    (array-safe? array)
+                                                    "array-reshape: ")
                                       new-domain)
                                      (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
                                  (loop-3 (fx+ ok 1)))
