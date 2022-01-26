@@ -206,6 +206,10 @@ OTHER DEALINGS IN THE SOFTWARE.
       id
       (op (car l) (foldr op id (cdr l)))))
 
+(define (indices->string  . l)
+  (apply string-append (number->string (car l))
+         (map (lambda (n) (string-append "_" (number->string n))) (cdr l))))
+
 ;; (include "generic-arrays.scm")
 
 (pp "Interval error tests")
@@ -1124,7 +1128,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       "vector*->array: Not all elements of the source can be stored in destination: ")
 
 (test (list*->array '(((a b c) (1 2))) 2 u8-storage-class)
-      "list*->array: Not every element of the list can be stored in the body of the array: ")
+      "list*->array: Not all elements of the source can be stored in destination: ")
 
 (for-each (lambda (operation data)
             (for-each (lambda (mutable?)
@@ -1141,6 +1145,55 @@ OTHER DEALINGS IN THE SOFTWARE.
                 vector*->array)
           (list '(((a b c) (1 2)))
                 '#(#((a b c) (1 2)))))
+
+(pp "array->list* and array->vector*")
+
+;;; Minimal tests, sorry.
+
+(test (array->list* 'a)
+      "array->list*: The argument is not an array: ")
+
+(test (array->vector* 'a)
+      "array->vector*: The argument is not an array: ")
+
+(test (array->list* (make-array (make-interval '#(1 1)) indices->string))
+      '(("0_0")))
+
+(test (array->list* (make-array (make-interval '#(1)) indices->string))
+      '("0"))
+
+(test (array->list* (make-array (make-interval '#(2 3)) indices->string))
+      '(("0_0" "0_1" "0_2") ("1_0" "1_1" "1_2")))
+
+(test (array->list* (make-array (make-interval '#(1 1) '#(2 3)) indices->string))
+      '(("1_1" "1_2")))
+
+(test (array->vector* (make-array (make-interval '#(1 1)) indices->string))
+      '#(#("0_0")))
+
+(test (array->vector* (make-array (make-interval '#(1)) indices->string))
+      '#("0"))
+
+(test (array->vector* (make-array (make-interval '#(2 3)) indices->string))
+      '#(#("0_0" "0_1" "0_2") #("1_0" "1_1" "1_2")))
+
+(test (array->list* (make-array (make-interval '#(2 3)) indices->string))
+      '(("0_0" "0_1" "0_2") ("1_0" "1_1" "1_2")))
+
+(test (array->vector* (make-array (make-interval '#(1 1) '#(2 3)) indices->string))
+      '#(#("1_1" "1_2")))
+
+(test (array->vector* (list->array '(0 1 0
+                                     0 1 1)
+                                   (make-interval '#(2 3))
+                                   u1-storage-class))
+      '#(#(0 1 0) #(0 1 1)))
+
+(test (array->list* (list->array '(0 1 0
+                                   0 1 1)
+                                  (make-interval '#(2 3))
+                                  u1-storage-class))
+      '((0 1 0) (0 1 1)))
 
 (define random-storage-class-and-initializer
   (let* ((storage-classes
@@ -3721,36 +3774,35 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
-(pp "array->list and list->array")
+(pp "array->list, array->vector and list->array, vector->array")
 
 (test (array->list 'a)
       "array->list: The argument is not an array: ")
 
-(test (list->array 'a 'b)
-      "list->array: The first argument is not a list: ")
+(test (array->vector 'a)
+      "array->vector: The argument is not an array: ")
 
-(test (list->array '(0) 'b)
-      "list->array: The second argument is not an interval: ")
-
-(test (list->array '(0) (make-interval '#(0) '#(1)) 'a)
-      "list->array: The third argument is not a storage-class: ")
-
-(test (list->array '(0) (make-interval '#(0) '#(1)) generic-storage-class 'a)
-      "list->array: The fourth argument is not a boolean: ")
-
-(test (list->array '(0) (make-interval '#(0) '#(1)) generic-storage-class #t 'a)
-      "list->array: The fifth argument is not a boolean: ")
-
-;; (list->array '(0) (make-interval '#(0) '#(10)))
-
-(test (list->array '(0) (make-interval '#(0) '#(10)))
-      "list->array: The length of the first argument does not equal the volume of the second: ")
-
-(test (list->array '(a) (make-interval '#(0) '#(1)) u1-storage-class)
-      "list->array: Not every element of the list can be stored in the body of the array: " )
-
-(test (list->array '(a) (make-interval '#(10)))
-      "list->array: The length of the first argument does not equal the volume of the second: ")
+(for-each (lambda (function arg name name2)
+            (test (function 'a 'b)
+                  (string-append name "The first argument is not a " name2 ": "))
+            (test (function arg 'b)
+                  (string-append name "The second argument is not an interval: "))
+            (test (function arg (make-interval '#(0) '#(1)) 'a)
+                  (string-append name "The third argument is not a storage-class: "))
+            (test (function arg (make-interval '#(0) '#(1)) generic-storage-class 'a)
+                  (string-append name "The fourth argument is not a boolean: "))
+            (test (function arg (make-interval '#(0) '#(1)) generic-storage-class #t 'a)
+                  (string-append name "The fifth argument is not a boolean: "))
+            (test (function arg (make-interval '#(0) '#(10)))
+                  (string-append name "The length of the first argument does not equal the volume of the second: "))
+            (test (function arg (make-interval '#(0) '#(1)) u1-storage-class)
+                  (string-append name "Not all elements of the source can be stored in destination: "))
+            (test (function arg (make-interval '#(10)))
+                  (string-append name "The length of the first argument does not equal the volume of the second: ")))
+          (list list->array vector->array)
+          '((10) #(10))
+          '("list->array: " "vector->array: ")
+          '("list" "vector"))
 
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random 0 (expt 2 1))))
@@ -3778,8 +3830,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                               #f
                               #t)) ; safe
            (l (array->list Array))
-           (new-array (list->array l domain storage-class (zero? (test-random-integer 2)))))
-      (test (myarray= Array new-array)
+           (mutable? (zero? (test-random-integer 2)))
+           (new-list-array (list->array l domain storage-class mutable?))
+           (new-vector-array (vector->array (list->vector l) domain storage-class mutable?)))
+      (test (myarray= Array new-list-array)
+            #t)
+      (test (myarray= Array new-vector-array)
             #t))))
 
 (next-test-random-source-state!)

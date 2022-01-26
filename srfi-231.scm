@@ -108,12 +108,16 @@ MathJax.Hub.Config({
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
          (<li> "Procedures that generate useful permutations have been added: "(<code>'index-rotate)", "(<code>'index-first)", and "(<code>'index-last)".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
-         (<li> "Introduced new routines "
+         (<li> "Introduced new procedures "
                (<code>'storage-class-data?)", "
                (<code>'storage-class-data->body)", "
                (<code>'make-specialized-array-from-data)", "
+               (<code>'vector->array)", "
+               (<code>'array->vector)", "
                (<code>'list*->array)", "
+               (<code>'array->list*)", "
                (<code>'vector*->array)", "
+               (<code>'array->vector*)", "
                (<code>'array-inner-product)", "
                (<code>'array-stack)", and "
                (<code>'array-append)".")
@@ -125,12 +129,10 @@ MathJax.Hub.Config({
         (<h3> "Introductory remarks")
         
         (<p> "The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.")
-        (<p> "There are two procedures that simply create new arrays, one procedure that converts a list to an array, and procedures that convert nested lists and nested vectors to arrays:")
+        (<p> "There are two procedures that simply create new arrays:")
         (<ul>
          (<li> (<a> href: "#make-array" (<code>'make-array))": Takes as arguments a specification of the valid indices $i\\ j\\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere, the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a "(<i>"generalized array")".")
          (<li> (<a> href: "#make-specialized-array"(<code>'make-specialized-array))": Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a "(<i>"specialized array")".")
-         (<li> (<a> href: "#list-rarrow-array" (<code>'list->array))": Takes as arguments a list and a specification of valid indices, returns a specialized array.")
-         (<li> (<a> href: "#list*-rarrow-array" (<code>'list*->array))" and " (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))": Convert nested lists and nested vectors, respectively, to arrays.")
          )
         (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
         (<ul>
@@ -141,7 +143,7 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#array-translate" (<code>'array-translate))
                ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
          (<li> (<a> href: "#array-permute"(<code>'array-permute))
-               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary routines "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations.")
+               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations.")
          (<li> (<a> href: "#array-curry"(<code>"array-curry"))
                ": Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at a collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.")
          (<li> (<a> href:"#array-reverse" (<code>'array-reverse))
@@ -172,11 +174,21 @@ MathJax.Hub.Config({
                (<a> href:"#array-foldr"(<code>'array-foldr))", "
                (<a> href:"#array-reduce"(<code>'array-reduce))", "
                (<a> href:"#array-for-each"(<code>'array-for-each))", "
-               (<a> href:"#array-any"(<code>'array-any))", "
-               (<a> href: "#array-every"(<code>'array-every))", and "
-               (<a> href: "#array-rarrow-list" (<code>'array->list))
+               (<a> href:"#array-any"(<code>'array-any))", and "
+               (<a> href: "#array-every"(<code>'array-every))
                ": Evaluates all elements of an array (for "(<code>'array-every)" and "(<code>'array-any)", as many as needed to know the result) and combine them in certain ways.")
          )
+        (<p> "Finally, we have procedures that convert between other data and arrays:")
+        (<ul>
+         (<li> (<a> href: "#make-specialized-array-from-data" (<code>'make-specialized-array-from-data))": Construct a specialized array whose body shares elements with an existing data structure.")
+         (<li> (<a> href: "#array-rarrow-list" (<code>'array->list))", "
+               (<a> href: "#list-rarrow-array" (<code>'list->array))", "
+               (<a> href: "#array-rarrow-vector" (<code>'array->vector))", and "
+               (<a> href: "#vector-rarrow-array" (<code>'vector->array))": Either transfer the elements of an array to a list or vector, or construct a specialized array from the elements of a list or vector.")
+         (<li> (<a> href: "#array-rarrow-list*" (<code>'array->list*))", "
+               (<a> href: "#list*-rarrow-array" (<code>'list*->array))", "
+               (<a> href: "#array-rarrow-vector*" (<code>'array->vector*))", and "
+               (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))": Either transfer the elements of an array to a nested list or vector, or construct a specialized array from the elements of a nested list or vector."))
         (<p>"I hope this brief discussion gives a flavor for the design of this SRFI.")
 
        (<h3> "Bawden-style arrays")
@@ -408,8 +420,12 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-every" "array-every")END
                  (<a> href: "#array-rarrow-list" "array->list") END
                  (<a> href: "#list-rarrow-array" "list->array") END
+                 (<a> href: "#array-rarrow-list*" "array->list*") END
                  (<a> href: "#list*-rarrow-array" "list*->array") END
+                 (<a> href: "#array-rarrow-vector" "array->vector") END
+                 (<a> href: "#vector-rarrow-array" "vector->array") END
                  (<a> href: "#vector*-rarrow-array" "vector*->array") END
+                 (<a> href: "#array-rarrow-vector*" "array->vector*") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-append" "array-append") END
                  (<a> href: "#array-stack" "array-stack") END
@@ -698,7 +714,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
        " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))".")
- (<li> "The "(<code>(<var>'data?))" and "(<code>(<var>'data->body))" entries are low-level routines. "(<code>"((storage-class-data? "(<var>'storage-class)") "(<var>'data)")")" returns "(<code>'#t)" if and only if "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")" returns a body sharing data with "(<code>(<var>'data))", without copying.  See the discussion of "(<code>'make-specialized-array-from-data)"."))
+ (<li> "The "(<code>(<var>'data?))" and "(<code>(<var>'data->body))" entries are low-level procedures. "(<code>"((storage-class-data? "(<var>'storage-class)") "(<var>'data)")")" returns "(<code>'#t)" if and only if "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")" returns a body sharing data with "(<code>(<var>'data))", without copying.  See the discussion of "(<code>'make-specialized-array-from-data)"."))
 (<p> "If the arguments do not satisfy these conditions, then it is an error to call "(<code> 'make-storage-class)".")
 (<p> "Note that we assume that "(<code>(<var> 'getter))" and "(<code>(<var> 'setter))" generally take "(<i> 'O)"(1) time to execute.")
 
@@ -1472,7 +1488,7 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
      " will call "(<code>(<var>'op))" as well as "(<code>"(array-getter "(<var>'A)")")" and "(<code>"(array-getter "(<var>'B)")")".  This implies that if all elements of "(<code>(<var>'C))" are eventually accessed, then "
      (<code>"(array-getter "(<var>'A)")")" will be called "(<code>"(array-volume "(<var>'B)")")" times; similarly "(<code>"(array-getter "(<var>'B)")")" will be called "(<code>"(array-volume "(<var>'A)")")" times. ")
 (<p> "This implies that if "(<code>"(array-getter "(<var>'A)")")" is expensive to compute (for example, if it's returning an array, as does "(<code>'array-curry)") then the elements of "(<code>(<var>'A))
-     " should be pre-computed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
+     " should be precomputed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
      "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for "(<code>'array-inner-product)
      " applies "(<code>'array-outer-product)" to curried arrays, so we apply "(<code>"array-copy")" to the arguments before passage to "(<code>'array-outer-product)".")
 
@@ -1715,6 +1731,28 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
 
+(format-lambda-list '(array->list* A) 'array-rarrow-list*)
+(<p> "Assumes that "(<code>(<var>'A))" is an array, and returns a newly allocated nested list "(<code>(<var>'nested-list))".  If we denote the getter of "(<code>(<var>'A))" by "(<code>'A_)", then "(<code>(<var>'nested-list))" and "(<code>'A_)" satisfy")
+(<pre>(<code>
+"(A_ i_0 ... i_d-2 i_d-1)
+=> (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)"))
+(<p> "It is an error if "(<code>(<var>'A))" is not an array.")
+
+(format-lambda-list '(array->vector array) 'array-rarrow-vector)
+(<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated vector in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
+(<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
+
+(format-lambda-list '(vector->array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector-rarrow-array)
+(<p> "Assumes that "
+     (<code>(<var> 'l))" is a vector, "
+     (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
+     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'l))", and "
+     (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "Returns a specialized array with domain "(<code>(<var>'domain))" whose elements are the elements of the vector "(<code>(<var>'v))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
+     (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
+(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+
+
 (format-lambda-list '(vector*->array nested-vector d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
@@ -1742,6 +1780,13 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 => (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
 (<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
+
+(format-lambda-list '(array->vector* A) 'array-rarrow-vector*)
+(<p> "Assumes that "(<code>(<var>'A))" is an array, and returns a newly allocated nested vector "(<code>(<var>'nested-vector))".  If we denote the getter of "(<code>(<var>'A))" by "(<code>'A_)", then "(<code>(<var>'nested-vector))" and "(<code>'A_)" satisfy")
+(<pre>(<code>
+"(A_ i_0 ... i_d-2 i_d-1)
+=> (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
+(<p> "It is an error if "(<code>(<var>'A))" is not an array.")
 
 (format-lambda-list '(array-assign! destination source))
 (<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array with the same domain, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
@@ -2090,10 +2135,10 @@ translate: ")
              (array-curry
               (array-permute arr (index-last (array-dimension arr) k))
               1)))"))
- "If one wants what Racket calls a \"strict\" array as a result, apply array-copy to the result.  One can define Racket's \"*-axis-*\" routines similarly.")
+ "If one wants what Racket calls a \"strict\" array as a result, apply array-copy to the result.  One can define Racket's \"*-axis-*\" procedures similarly.")
  (<li> "Racket's library has specialized mathematical array operations for many math procedures; this library does not.")
  (<li> "Racket's library has "(<a> href: "https://docs.racket-lang.org/math/array_subtypes.html" "flonum and complex flonum arrays")"; this library has similar features, including for various other homogeneous storage types, and is extendable.")
- (<li> "Racket has many routines to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.")
+ (<li> "Racket has many procedures to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.")
  (<li> "I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.")
  (<li> "I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.")
  )
