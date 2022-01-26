@@ -2029,8 +2029,8 @@ OTHER DEALINGS IN THE SOFTWARE.
         (let ((generic-array
                (%%make-specialized-array-from-data nested-data generic-storage-class mutable? safe?)))
           (%!array-copy generic-array
-                        storage-class
                         (%%array-domain generic-array)
+                        storage-class
                         mutable?
                         safe?
                         message))
@@ -2561,8 +2561,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; (array-getter array) applied to the elements of (array-domain array)
 
 (define (%!array-copy array
-                      result-storage-class
                       domain
+                      result-storage-class
                       mutable?
                       safe?
                       message)
@@ -2606,8 +2606,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       (if (not (array? array))
           (error "array-copy: The first argument is not an array: " array)
           (%!array-copy array
-                        result-storage-class
                         (%%array-domain array)
+                        result-storage-class
                         mutable?
                         safe?
                         "array-copy: ")))
@@ -3956,11 +3956,29 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-reduce sum A))))
 
+(define (%%array->list array)
+  (array-foldr cons '() array))
+
 (define (array->list array)
   (cond ((not (array? array))
          (error "array->list: The argument is not an array: " array))
         (else
-         (array-foldr cons '() array))))
+         (%%array->list array))))
+
+(define (%%array->vector array)
+  (%%array-body
+   (%!array-copy array
+                 (%%array-domain array)
+                 generic-storage-class
+                 #f
+                 #f
+                 "")))
+
+(define (array->vector array)
+  (cond ((not (array? array))
+         (error "array->vector: The argument is not an array: " array))
+        (else
+         (%%array->vector array))))
 
 ;;; Refactored for use in list*->array
 
@@ -3998,7 +4016,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (setter body i item)
                   (loop (fx+ i 1)
                         (cdr local)))
-                (error (string-append message "Not every element of the list can be stored in the body of the array: ") l interval item)))))))
+                (error (string-append message "Not all elements of the source can be stored in destination: ") l interval item)))))))
 
 (define (list->array l
                      interval
@@ -4023,6 +4041,61 @@ OTHER DEALINGS IN THE SOFTWARE.
                         mutable?
                         safe?
                         "list->array: "))))
+
+(define (vector->array  v
+                        interval
+                        #!optional
+                        (result-storage-class generic-storage-class)
+                        (mutable? (specialized-array-default-mutable?))
+                        (safe? (specialized-array-default-safe?)))
+  (cond ((not (vector? v))
+         (error "vector->array: The first argument is not a vector: " v interval))
+        ((not (interval? interval))
+         (error "vector->array: The second argument is not an interval: " v interval))
+        ((not (= (vector-length v)
+                 (%%interval-volume interval)))
+         (error "vector->array: The length of the first argument does not equal the volume of the second: " v interval))
+        ((not (storage-class? result-storage-class))
+         (error "vector->array: The third argument is not a storage-class: " v interval result-storage-class))
+        ((not (boolean? mutable?))
+         (error "vector->array: The fourth argument is not a boolean: " v interval result-storage-class mutable?))
+        ((not (boolean? safe?))
+         (error "vector->array: The fifth argument is not a boolean: " v interval result-storage-class mutable? safe?))
+        (else
+         (specialized-array-reshape
+          (%!array-copy (%%make-specialized-array-from-data v generic-storage-class #f #f)
+                        (make-interval (vector (vector-length v)))
+                        result-storage-class
+                        mutable?
+                        safe?
+                        "vector->array: ")
+          interval))))
+
+(define (array->list* array)
+  (cond ((not (array? array))
+         (error "array->list*: The argument is not an array: " array))
+        (else
+         (let ()
+           (define (a->l a)
+             (let ((dim (%%interval-dimension (%%array-domain a))))
+               (if (eqv? dim 1)
+                   (%%array->list a)
+                   (%%array->list
+                    (%%array-map a->l (%%array-curry a (fx- dim 1)) '())))))
+           (a->l array)))))
+
+ (define (array->vector* array)
+  (cond ((not (array? array))
+         (error "array->vector*: The argument is not an array: " array))
+        (else
+         (let ()
+           (define (a->v a)
+             (let ((dim (%%interval-dimension (%%array-domain a))))
+               (if (eqv? dim 1)
+                   (%%array->vector a)
+                   (%%array->vector
+                    (%%array-map a->v (%%array-curry a (fx- dim 1)) '())))))
+           (a->v array)))))
 
 (define (array-assign! destination source)
   (cond ((not (mutable-array? destination))
@@ -4605,8 +4678,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                  (if copy-on-failure?
                                      (specialized-array-reshape
                                       (%!array-copy array
-                                                    (%%array-storage-class array)
                                                     domain
+                                                    (%%array-storage-class array)
                                                     (mutable-array? array)
                                                     (array-safe? array)
                                                     "array-reshape: ")

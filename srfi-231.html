@@ -22,6 +22,7 @@
       <li>60-day deadline: 2022-03-08</li>
       <li>Draft #1 published: 2022-01-07</li>
       <li>Draft #2 published: 2022-01-20</li>
+      <li>Draft #3 published: 2022-01-26</li>
       <li>Bradley Lucier's <a href="https://github.com/gambiteer/srfi-231">personal Git repo for this SRFI</a> for reference while the SRFI is in <em>draft</em> status.</li>
     </ul>
     <h2>Abstract</h2>
@@ -46,25 +47,23 @@
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
       <li>Procedures that generate useful permutations have been added: <code>index-rotate</code>, <code>index-first</code>, and <code>index-last</code>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
-      <li>Introduced new routines <code>storage-class-data?</code>, <code>storage-class-data-&gt;body</code>, <code>make-specialized-array-from-data</code>, <code>list*-&gt;array</code>, <code>vector*-&gt;array</code>, <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
+      <li>Introduced new procedures <code>storage-class-data?</code>, <code>storage-class-data-&gt;body</code>, <code>make-specialized-array-from-data</code>, <code>vector-&gt;array</code>, <code>array-&gt;vector</code>, <code>list*-&gt;array</code>, <code>array-&gt;list*</code>, <code>vector*-&gt;array</code>, <code>array-&gt;vector*</code>, <code>array-inner-product</code>, <code>array-stack</code>, and <code>array-append</code>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
     <h3>Introductory remarks</h3>
     <p>The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.</p>
-    <p>There are two procedures that simply create new arrays, one procedure that converts a list to an array, and procedures that convert nested lists and nested vectors to arrays:</p>
+    <p>There are two procedures that simply create new arrays:</p>
     <ul>
       <li><a href="#make-array"><code>make-array</code></a>: Takes as arguments a specification of the valid indices $i\ j\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere, the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a <i>generalized array</i>.</li>
       <li><a href="#make-specialized-array"><code>make-specialized-array</code></a>: Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a <i>specialized array</i>.</li>
-      <li><a href="#list-rarrow-array"><code>list-&gt;array</code></a>: Takes as arguments a list and a specification of valid indices, returns a specialized array.</li>
-      <li><a href="#list*-rarrow-array"><code>list*-&gt;array</code></a> and <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>: Convert nested lists and nested vectors, respectively, to arrays.</li>
     </ul>
     <p>In the next group of procedures, the new and old arrays share elements, so modifications to one affects the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array (<code>array-curry</code> and <code>array-tile</code>) return a <i>generalized array</i>.</p>
     <ul>
       <li><a href="#array-extract"><code>array-extract</code></a>: Constructs a rectangular &quot;window&quot; or &quot;view&quot; into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.</li>
       <li><a href="#array-tile"><code>array-tile</code></a>: Builds an array of subarrays of the original array, like breaking a large matrix into smaller matrices for block matrix operations.</li>
       <li><a href="#array-translate"><code>array-translate</code></a>: Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.</li>
-      <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary routines <code>index-rotate</code>, <code>index-first</code>,  and <code>index-last</code> create commonly used permutations.</li>
+      <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures <code>index-rotate</code>, <code>index-first</code>,  and <code>index-last</code> create commonly used permutations.</li>
       <li><a href="#array-curry"><code>array-curry</code></a>: Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at a collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.</li>
       <li><a href="#array-reverse"><code>array-reverse</code></a>: Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.</li>
       <li><a href="#array-sample"><code>array-sample</code></a>: Accesses every second (or third, etc.) row or column, or both, of an array.</li>
@@ -81,7 +80,13 @@
       <li><a href="#array-assign!"><code>array-assign!</code></a>: Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine <code>array-map</code>, <code>array-outer-product</code>, <code>array-extract</code>, and <code>array-assign!</code> to do one step of the elimination.</li>
       <li><a href="#array-stack"><code>array-stack</code></a>: Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to <code>array-curry</code>.  Returns a specialized array.</li>
       <li><a href="#array-append"><code>array-append</code></a>: Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.</li>
-      <li><a href="#array-foldl"><code>array-foldl</code></a>, <a href="#array-foldr"><code>array-foldr</code></a>, <a href="#array-reduce"><code>array-reduce</code></a>, <a href="#array-for-each"><code>array-for-each</code></a>, <a href="#array-any"><code>array-any</code></a>, <a href="#array-every"><code>array-every</code></a>, and <a href="#array-rarrow-list"><code>array-&gt;list</code></a>: Evaluates all elements of an array (for <code>array-every</code> and <code>array-any</code>, as many as needed to know the result) and combine them in certain ways.</li>
+      <li><a href="#array-foldl"><code>array-foldl</code></a>, <a href="#array-foldr"><code>array-foldr</code></a>, <a href="#array-reduce"><code>array-reduce</code></a>, <a href="#array-for-each"><code>array-for-each</code></a>, <a href="#array-any"><code>array-any</code></a>, and <a href="#array-every"><code>array-every</code></a>: Evaluates all elements of an array (for <code>array-every</code> and <code>array-any</code>, as many as needed to know the result) and combine them in certain ways.</li>
+    </ul>
+    <p>Finally, we have procedures that convert between other data and arrays:</p>
+    <ul>
+      <li><a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>: Construct a specialized array whose body shares elements with an existing data structure.</li>
+      <li><a href="#array-rarrow-list"><code>array-&gt;list</code></a>, <a href="#list-rarrow-array"><code>list-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, and <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>: Either transfer the elements of an array to a list or vector, or construct a specialized array from the elements of a list or vector.</li>
+      <li><a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, and <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>: Either transfer the elements of an array to a nested list or vector, or construct a specialized array from the elements of a nested list or vector.</li>
     </ul>
     <p>I hope this brief discussion gives a flavor for the design of this SRFI.</p>
     <h3>Bawden-style arrays</h3>
@@ -237,8 +242,12 @@
         <a href="#array-every">array-every</a>,
         <a href="#array-rarrow-list">array-&gt;list</a>,
         <a href="#list-rarrow-array">list-&gt;array</a>,
+        <a href="#array-rarrow-list*">array-&gt;list*</a>,
         <a href="#list*-rarrow-array">list*-&gt;array</a>,
+        <a href="#array-rarrow-vector">array-&gt;vector</a>,
+        <a href="#vector-rarrow-array">vector-&gt;array</a>,
         <a href="#vector*-rarrow-array">vector*-&gt;array</a>,
+        <a href="#array-rarrow-vector*">array-&gt;vector*</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-append">array-append</a>,
         <a href="#array-stack">array-stack</a>,
@@ -462,7 +471,7 @@
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> and  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, then <code>(<var>getter v i</var>)</code> returns the current value of the <code><var>i</var></code>'th element of <code><var>v</var></code>, and <code>(<var>checker</var> (<var>getter v i</var>)) =&gt; #t</code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code>,  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, and <code>(<var>checker</var> <var>val</var>) =&gt; #t</code>, then <code>(<var>setter v i val</var>)</code> sets the value of the <code><var>i</var></code>'th element of  <code><var>v</var></code> to <code><var>val</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li>
-      <li>The <code><var>data?</var></code> and <code><var>data-&gt;body</var></code> entries are low-level routines. <code>((storage-class-data? <var>storage-class</var>) <var>data</var>)</code> returns <code>#t</code> if and only if <code>((storage-class-data-&gt;body <var>storage-class</var>) <var>data</var>)</code> returns a body sharing data with <code><var>data</var></code>, without copying.  See the discussion of <code>make-specialized-array-from-data</code>.</li>
+      <li>The <code><var>data?</var></code> and <code><var>data-&gt;body</var></code> entries are low-level procedures. <code>((storage-class-data? <var>storage-class</var>) <var>data</var>)</code> returns <code>#t</code> if and only if <code>((storage-class-data-&gt;body <var>storage-class</var>) <var>data</var>)</code> returns a body sharing data with <code><var>data</var></code>, without copying.  See the discussion of <code>make-specialized-array-from-data</code>.</li>
     </ul>
     <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-storage-class</code>.</p>
     <p>Note that we assume that <code><var>getter</var></code> and <code><var>setter</var></code> generally take <i>O</i>(1) time to execute.</p>
@@ -1059,7 +1068,7 @@ indexer:       (lambda multi-index
                   (apply (array-getter array2) (drop args (array-dimension array1))))))</code></pre>
     <p>This operation can be considered a partial inverse to <code>array-curry</code>.  It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Note: </b>You can see from the above definition that if <code><var>C</var></code> is <code>(array-outer-product <var>op</var> <var>A</var> <var>B</var>)</code>, then each call to <code>(array-getter <var>C</var>)</code> will call <code><var>op</var></code> as well as <code>(array-getter <var>A</var>)</code> and <code>(array-getter <var>B</var>)</code>.  This implies that if all elements of <code><var>C</var></code> are eventually accessed, then <code>(array-getter <var>A</var>)</code> will be called <code>(array-volume <var>B</var>)</code> times; similarly <code>(array-getter <var>B</var>)</code> will be called <code>(array-volume <var>A</var>)</code> times. </p>
-    <p>This implies that if <code>(array-getter <var>A</var>)</code> is expensive to compute (for example, if it's returning an array, as does <code>array-curry</code>) then the elements of <code><var>A</var></code> should be pre-computed if necessary and stored in a specialized array, typically using <code>array-copy</code>, before that specialized array is passed as an argument to <code>array-outer-product</code>.  In the examples below, the code for Gaussian elimination applies <code>array-outer-product</code> to shared specialized arrays, which are of course themselves specialized arrays; the code for <code>array-inner-product</code> applies <code>array-outer-product</code> to curried arrays, so we apply <code>array-copy</code> to the arguments before passage to <code>array-outer-product</code>.</p>
+    <p>This implies that if <code>(array-getter <var>A</var>)</code> is expensive to compute (for example, if it's returning an array, as does <code>array-curry</code>) then the elements of <code><var>A</var></code> should be precomputed if necessary and stored in a specialized array, typically using <code>array-copy</code>, before that specialized array is passed as an argument to <code>array-outer-product</code>.  In the examples below, the code for Gaussian elimination applies <code>array-outer-product</code> to shared specialized arrays, which are of course themselves specialized arrays; the code for <code>array-inner-product</code> applies <code>array-outer-product</code> to curried arrays, so we apply <code>array-copy</code> to the arguments before passage to <code>array-outer-product</code>.</p>
     <p><b>Procedure: </b><code><a id="array-inner-product">array-inner-product</a> <var>A</var> <var>f</var> <var>g</var> <var>B</var></code></p>
     <p>Assumes that <code><var>f</var></code> and <code><var>g</var></code> are procedures of two arguments and <code><var>A</var></code> and <code><var>B</var></code> are arrays, with the upper and lower bounds of the last axis of <code><var>A</var></code> the same as those of the first axis of <code><var>B</var></code>. Computes the equivalent of</p>
     <pre><code>(define (array-inner-product <var>A f g B</var>)
@@ -1243,6 +1252,18 @@ indexer:       (lambda multi-index
 =&gt; (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)</code></pre>
     <p>and we assume that this value can be manipulated by <code><var>storage-class</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
+    <p><b>Procedure: </b><code><a id="array-rarrow-list*">array-&gt;list*</a> <var>A</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is an array, and returns a newly allocated nested list <code><var>nested-list</var></code>.  If we denote the getter of <code><var>A</var></code> by <code>A_</code>, then <code><var>nested-list</var></code> and <code>A_</code> satisfy</p>
+    <pre><code>(A_ i_0 ... i_d-2 i_d-1)
+=&gt; (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>It is an error if <code><var>A</var></code> is not an array.</p>
+    <p><b>Procedure: </b><code><a id="array-rarrow-vector">array-&gt;vector</a> <var>array</var></code></p>
+    <p>Stores the elements of <code><var>array</var></code> into a newly allocated vector in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
+    <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
+    <p><b>Procedure: </b><code><a id="vector-rarrow-array">vector-&gt;array</a> <var>l</var> <var>domain</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p>Assumes that <code><var>l</var></code> is a vector, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the vector <code><var>v</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Procedure: </b><code><a id="vector*-rarrow-array">vector*-&gt;array</a> <var>nested-vector</var> <var>d</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>d</var></code> is a positive exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>This routine builds an array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-vector</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-vector</var></code> and <code><var>d</var></code> as arguments:</p>
@@ -1268,6 +1289,11 @@ indexer:       (lambda multi-index
 =&gt; (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)</code></pre>
     <p>and we assume that this value can be manipulated by <code><var>storage-class</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
+    <p><b>Procedure: </b><code><a id="array-rarrow-vector*">array-&gt;vector*</a> <var>A</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is an array, and returns a newly allocated nested vector <code><var>nested-vector</var></code>.  If we denote the getter of <code><var>A</var></code> by <code>A_</code>, then <code><var>nested-vector</var></code> and <code>A_</code> satisfy</p>
+    <pre><code>(A_ i_0 ... i_d-2 i_d-1)
+=&gt; (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>It is an error if <code><var>A</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a id="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array with the same domain, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and assigns each value to the multi-index in <code><var>destination</var></code> in the same lexicographical order.</p>
@@ -1592,10 +1618,10 @@ indexer:       (lambda multi-index
                (array-foldl f init pencil))
              (array-curry
               (array-permute arr (index-last (array-dimension arr) k))
-              1)))</code></pre>If one wants what Racket calls a &quot;strict&quot; array as a result, apply array-copy to the result.  One can define Racket's &quot;*-axis-*&quot; routines similarly.</li>
+              1)))</code></pre>If one wants what Racket calls a &quot;strict&quot; array as a result, apply array-copy to the result.  One can define Racket's &quot;*-axis-*&quot; procedures similarly.</li>
       <li>Racket's library has specialized mathematical array operations for many math procedures; this library does not.</li>
       <li>Racket's library has <a href="https://docs.racket-lang.org/math/array_subtypes.html">flonum and complex flonum arrays</a>; this library has similar features, including for various other homogeneous storage types, and is extendable.</li>
-      <li>Racket has many routines to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.</li>
+      <li>Racket has many procedures to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.</li>
       <li>I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.</li>
       <li>I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.</li>
     </ul>

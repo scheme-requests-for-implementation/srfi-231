@@ -94,7 +94,11 @@
     array->list
     list->array
     list*->array
+    array->list*
+    array->vector
+    vector->array
     vector*->array
+    array->vector*
     array-assign!
     array-copy
     array-append
