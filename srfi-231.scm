@@ -177,7 +177,7 @@ MathJax.Hub.Config({
                (<a> href:"#array-for-each"(<code>'array-for-each))", "
                (<a> href:"#array-any"(<code>'array-any))", and "
                (<a> href: "#array-every"(<code>'array-every))
-               ": Evaluates all elements of an array (for "(<code>'array-every)" and "(<code>'array-any)", as many as needed to know the result) and combine them in certain ways.")
+               ": Evaluates all elements of an array (for "(<code>'array-every)" and "(<code>'array-any)", as many as needed to know the result), and combines them in certain ways.")
          )
         (<p> "Finally, we have procedures that convert between other data and arrays:")
         (<ul>
