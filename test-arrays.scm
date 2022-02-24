@@ -41,6 +41,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; take the following steps:
   ;; 1. Put generic-arrays.scm and 231.sld in new directory ./srfi/231.
   ;; 2. Uncomment this "begin".
+  ;; 2 bis. If you want to compile the library do "gsc . srfi/231".
   ;; 3. Run "gsi . test-arrays".
   
   (import (srfi 231))
@@ -5289,5 +5290,70 @@ that computes the componentwise products when we need them, the times are
        (B
         (apply array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))))
   (array-display B))
+
+
+(define (array-pad-periodically a N)
+  ;; Pad a periodically with N rows and columns top and bottom, left and right.
+  ;; Returns a generalized array.
+  (let* ((domain     (array-domain a))
+         (m          (interval-upper-bound domain 0))
+         (n          (interval-upper-bound domain 1))
+         (a_         (array-getter a)))
+    (make-array (interval-dilate domain (vector (- N) (- N)) (vector N N))
+                (lambda (i j)
+                  (a_ (modulo i m) (modulo j n))))))
+
+(define (neighbor-count a)
+  (let* ((big-a      (array-copy (array-pad-periodically a 1)
+                                 (array-storage-class a)))
+         (domain     (array-domain a))
+         (translates (map (lambda (translation)
+                            (array-extract (array-translate big-a translation) domain))
+                          '(#(1 0) #(0 1) #(-1 0) #(0 -1)
+                            #(1 1) #(1 -1) #(-1 1) #(-1 -1)))))
+    ;; Returns a generalized array that contains the number
+    ;; of 1s in the 8 cells surrounding each cell in the original array.
+    (apply array-map + translates)))
+
+(define (game-rules a neighbor-count)
+  ;; a is a single cell, neighbor-count is the count of 1s in
+  ;; its 8 neighboring cells.
+  (if (= a 1)
+      (if (or (= neighbor-count 2)
+              (= neighbor-count 3))
+          1 0)
+      ;; (= a 0)
+      (if (= neighbor-count 3)
+          1 0)))
+
+(define (advance a)
+  (array-copy
+   (array-map game-rules a (neighbor-count a))
+   (array-storage-class a)))
+
+(define glider
+  (list*->array
+   '((0 0 0 0 0 0 0 0 0 0)
+     (0 0 1 0 0 0 0 0 0 0)
+     (0 0 0 1 0 0 0 0 0 0)
+     (0 1 1 1 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0))
+   2
+   u1-storage-class))
+
+(define (generations a N)
+  (do ((i 0 (fx+ i 1))
+       (a a  (advance a)))
+      ((fx= i N))
+    (newline)
+    (pretty-print (array->list* a))))
+
+(generations glider 5)
+
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))

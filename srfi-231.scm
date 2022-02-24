@@ -76,6 +76,7 @@ MathJax.Hub.Config({
          (<li> "Draft #1 published: 2022-01-07")
          (<li> "Draft #2 published: 2022-01-20")
          (<li> "Draft #3 published: 2022-01-26")
+         (<li> "Dreft #4 published; 2022-02-20")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -1706,7 +1707,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(list*->array nested-list d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
+(<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
 "(define (check-nested-list nested-list d)
   (and (list? nested-list)
@@ -1756,7 +1757,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(vector*->array nested-vector d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> "This routine builds an array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
+(<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
 "(define (check-nested-vector nested-vector d)
   (and (vector? nested-vector)
@@ -2866,6 +2867,133 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 ;;; 1/3     1/4     1/5     1/6
 ;;; 1/4     1/5     1/6     1/7
 "))
+(<p> (<b> (<a> href: "https://en.wikipedia.org/w/index.php?title=Conway%27s_Game_of_Life&oldid=1071836488" "Conway's Game of Life")". ")"Alex Harsányi "(<a> href: "https://racket.discourse.group/t/game-of-life-using-math-array/584" "implemented")" Conway's Game of Life using Racket's "(<a> href: "https://docs.racket-lang.org/math/array.html" "array library")"; here we implement the game using this SRFI.")
+(<p> "Our strategy is to extend the original array periodically to an array dilated by one row and column above and below, left and right: ")
+(<pre>(<code>
+"(define (array-pad-periodically a N)
+  ;; Pad a periodically with N rows and columns top and bottom, left and right.
+  ;; Assumes that the domain of a has zero lower bounds.
+  ;; Returns a generalized array.
+  (let* ((domain (array-domain a))
+         (m      (interval-upper-bound domain 0))
+         (n      (interval-upper-bound domain 1))
+         (a_     (array-getter a)))
+    (make-array (interval-dilate domain (vector (- N) (- N)) (vector N N))
+                (lambda (i j)
+                  (a_ (modulo i m) (modulo j n))))))
+
+(define (neighbor-count a)
+  (let* ((big-a      (array-copy (array-pad-periodically a 1)
+                                 (array-storage-class a)))
+         (domain     (array-domain a))
+         (translates (map (lambda (translation)
+                            (array-extract (array-translate big-a translation) domain))
+                          '(#(1 0) #(0 1) #(-1 0) #(0 -1)
+                            #(1 1) #(1 -1) #(-1 1) #(-1 -1)))))
+    ;; Returns a generalized array that contains the number
+    ;; of 1s in the 8 cells surrounding each cell in the original array.
+    (apply array-map + translates)))
+
+(define (game-rules a neighbor-count)
+  ;; a is a single cell, neighbor-count is the count of 1s in
+  ;; its 8 neighboring cells.
+  (if (= a 1)
+      (if (or (= neighbor-count 2)
+              (= neighbor-count 3))
+          1 0)
+      ;; (= a 0)
+      (if (= neighbor-count 3)
+          1 0)))
+
+(define (advance a)
+  ;; Returns a specialized array
+  (array-copy
+   (array-map game-rules a (neighbor-count a))
+   (array-storage-class a)))
+
+(define glider
+  (list*->array
+   '((0 0 0 0 0 0 0 0 0 0)
+     (0 0 1 0 0 0 0 0 0 0)
+     (0 0 0 1 0 0 0 0 0 0)
+     (0 1 1 1 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0))
+   2
+   u1-storage-class))
+
+(define (generations a N)
+  (do ((i 0 (fx+ i 1))
+       (a a  (advance a)))
+      ((fx= i N))
+    (newline)
+    (pretty-print (array->list* a))))
+
+(generations glider 5)"))
+(<p> "which prints")
+(<pre>(<code>
+"((0 0 0 0 0 0 0 0 0 0)
+ (0 0 1 0 0 0 0 0 0 0)
+ (0 0 0 1 0 0 0 0 0 0)
+ (0 1 1 1 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0))
+
+((0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 1 0 1 0 0 0 0 0 0)
+ (0 0 1 1 0 0 0 0 0 0)
+ (0 0 1 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0))
+
+((0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 1 0 0 0 0 0 0)
+ (0 1 0 1 0 0 0 0 0 0)
+ (0 0 1 1 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0))
+
+((0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 1 0 0 0 0 0 0 0)
+ (0 0 0 1 1 0 0 0 0 0)
+ (0 0 1 1 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0))
+
+((0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 1 0 0 0 0 0 0)
+ (0 0 0 0 1 0 0 0 0 0)
+ (0 0 1 1 1 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0)
+ (0 0 0 0 0 0 0 0 0 0))"))
+
+
+
+
 (<p> (<b> "Inner products. ")"Our "(<code>'array-inner-product)" procedure differs from that found in APL in several ways: The arguments "(<code>(<var>'A))" and "(<code>(<var>'B))" must each have two or more dimensions, and the result is always an array, never a scalar.")
 (<p> "We take some examples from the "(<a> href: "https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf" "APLX Language Reference")":")
 (<pre>
@@ -2905,7 +3033,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 ;;; 2
 "))
 (<h2> "Acknowledgments")
-(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner, and Alex Shinn for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
+(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, and Jens Axel Søgaard for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
  (<li> (<a> id: 'bawden href: "https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ" "\"multi-dimensional arrays in R5RS?\"")
