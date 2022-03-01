@@ -43,9 +43,9 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; 2. Uncomment this "begin".
   ;; 2 bis. If you want to compile the library do "gsc . srfi/231".
   ;; 3. Run "gsi . test-arrays".
-  
+
   (import (srfi 231))
-  
+
   (##namespace
    ("srfi/231#"
     ;; Internal SRFI 231 procedures that are either tested or called here.
@@ -335,9 +335,41 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (interval-upper-bounds->list #f)
       "interval-upper-bounds->list: The argument is not an interval: ")
 
-(pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->list, and interval-upper-bounds->list result tests")
+(pp "interval-lower-bounds->vector error tests")
 
+(test (interval-lower-bounds->vector 1)
+      "interval-lower-bounds->vector: The argument is not an interval: ")
 
+(pp "interval-upper-bounds->vector error tests")
+
+(test (interval-upper-bounds->vector #f)
+      "interval-upper-bounds->vector: The argument is not an interval: ")
+
+(pp "interval-width, interval-widths error tests")
+
+(test (interval-width 1 0)
+      "interval-width: The first argument is not an interval: ")
+
+(test (interval-width (make-interval '#(1 2 3) '#(4 5 6)) #f)
+      "interval-width: The second argument is not an exact integer between 0 (inclusive) and the dimension of the first argument (exclusive): ")
+
+(test (interval-width (make-interval '#(1 2 3) '#(4 5 6)) 1.)
+      "interval-width: The second argument is not an exact integer between 0 (inclusive) and the dimension of the first argument (exclusive): ")
+
+(test (interval-width (make-interval '#(1 2 3) '#(4 5 6)) -1)
+      "interval-width: The second argument is not an exact integer between 0 (inclusive) and the dimension of the first argument (exclusive): ")
+
+(test (interval-width (make-interval '#(1 2 3) '#(4 5 6)) 3)
+      "interval-width: The second argument is not an exact integer between 0 (inclusive) and the dimension of the first argument (exclusive): ")
+
+(test (interval-width (make-interval '#(1 2 3) '#(4 5 6)) 4)
+      "interval-width: The second argument is not an exact integer between 0 (inclusive) and the dimension of the first argument (exclusive): ")
+
+(test (interval-widths 1)
+      "interval-widths: The argument is not an interval: ")
+
+(pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->list, interval-upper-bounds->list,")
+(pp "interval-lower-bounds->vector, interval-upper-bounds->vector, interval-width, interval-widths result tests")
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
@@ -353,39 +385,19 @@ OTHER DEALINGS IN THE SOFTWARE.
       (test (interval-lower-bounds->list interval)
             lower)
       (test (interval-upper-bounds->list interval)
-            upper))))
-
-(next-test-random-source-state!)
-
-(pp "interval-lower-bounds->vector error tests")
-
-(test (interval-lower-bounds->vector 1)
-      "interval-lower-bounds->vector: The argument is not an interval: ")
-
-(pp "interval-upper-bounds-> error tests")
-
-(test (interval-upper-bounds->vector #f)
-      "interval-upper-bounds->vector: The argument is not an interval: ")
-
-(pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->vector, and interval-upper-bounds->vector result tests")
-
-(do ((i 0 (+ i 1)))
-    ((= i random-tests))
-  (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
-         (upper (map (lambda (x) (+ (random 1 11) x)) lower)))
-    (let ((interval (make-interval (list->vector lower)
-                                   (list->vector upper)))
-          (offset (random (length lower))))
-      (test (interval-lower-bound interval offset)
-            (list-ref lower offset))
-      (test (interval-upper-bound interval offset)
-            (list-ref upper offset))
+            upper)
       (test (interval-lower-bounds->vector interval)
             (list->vector lower))
       (test (interval-upper-bounds->vector interval)
-            (list->vector upper)))))
+            (list->vector upper))
+      (test (interval-width interval offset)
+            (- (list-ref upper offset)
+               (list-ref lower offset)))
+      (test (interval-widths interval)
+            (list->vector (map - upper lower))))))
 
 (next-test-random-source-state!)
+
 
 (pp "interval-projections error tests")
 
@@ -393,7 +405,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       "interval-projections: The first argument is not an interval: ")
 
 (test (interval-projections (make-interval '#(0) '#(1)) #t)
-      "interval-projections: The dimension of the first argument is not greater than 1: " )
+      "interval-projections: The dimension of the first argument is not greater than 1: ")
 
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 1/2)
@@ -582,7 +594,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (test (interval-dilate 'a '#(10 10) '#(-10 -10))
         "interval-dilate: The first argument is not an interval: ")
   (test (interval-dilate interval '#(10 10) 'a)
-"interval-dilate: The third argument is not a vector of exact integers: "       )
+"interval-dilate: The third argument is not a vector of exact integers: ")
   (test (interval-dilate interval '#(10) '#(-10 -10))
         "interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: ")
   (test (interval-dilate interval '#(10 10) '#( -10))
@@ -632,7 +644,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     subinterval))
 
 
-(define (random-nonnegative-interval #!optional (min 1) (max 6) )
+(define (random-nonnegative-interval #!optional (min 1) (max 6))
   ;; a random interval with min <= dimension < max
   ;; positive and negative lower bounds
   (let* ((lower
@@ -650,10 +662,10 @@ OTHER DEALINGS IN THE SOFTWARE.
   (zero? (random 2)))
 
 (define (array-display A)
-  
+
   (define (display-item x)
     (display x) (display "\t"))
-  
+
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -982,14 +994,14 @@ OTHER DEALINGS IN THE SOFTWARE.
             (make-specialized-array-from-data board u1-storage-class)
             (make-interval '#(9)))
            (make-interval '#(3 3))))
-       (B (list->array '(1 1 1
+       (B (list->array (make-interval '#(3 3))
+                       '(1 1 1
                          0 1 1
                          0 0 1)
-                       (make-interval '#(3 3))
                        u1-storage-class)))
   (define (pad n s)
     (string-append (make-string (- n (string-length s)) #\0) s))
-  
+
   (test (array-every = A B)
         #t)
   (for-each display (list "(array-every = A B) => " (array-every = A B) #\newline))
@@ -1025,29 +1037,29 @@ OTHER DEALINGS IN THE SOFTWARE.
    (test (operation 1 2 3)
          (string-append message "The third argument is not a storage class: "))
 
-   (test (operation 1 'a generic-storage-class #t #f)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 'a 1 generic-storage-class #t #f)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 0 generic-storage-class #t #f)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 0 1 generic-storage-class #t #f)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 'a generic-storage-class #t)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 'a 1 generic-storage-class #t)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 0 generic-storage-class #t)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 0 1 generic-storage-class #t)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 'a generic-storage-class)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 'a 1 generic-storage-class)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 0 generic-storage-class)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 0 1 generic-storage-class)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 'a)
-         (string-append message "The second argument is not a positive fixnum: "))
+   (test (operation 'a 1)
+         (string-append message "The first argument is not a positive fixnum: "))
 
-   (test (operation 1 0)
-         (string-append message "The second argument is not a positive fixnum: ")))
+   (test (operation 0 1)
+         (string-append message "The first argument is not a positive fixnum: ")))
  (list list*->array
        vector*->array)
  (list "list*->array: "
@@ -1055,80 +1067,80 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (for-each (lambda (operation message)
             (test (operation 1 1)    message)
-            (test (operation '() 1)  message)
-            (test (operation '#() 1) message))
+            (test (operation 1 '())  message)
+            (test (operation 1 '#()) message))
           (list list*->array
                 vector*->array)
-          (list "list*->array: The first argument is not a nested list: "
-                "vector*->array: The first argument is not a nested vector: "))
+          (list "list*->array: The second argument is not a nested list: "
+                "vector*->array: The second argument is not a nested vector: "))
 
 ;;; Output tests
 
 (test (array-every equal?
-                   (list*->array'((a b c) (1 2 3)) 1)
-                   (list->array '((a b c) (1 2 3))
-                                (make-interval '#(2))))
+                   (list*->array 1 '((a b c) (1 2 3)))
+                   (list->array (make-interval '#(2))
+                                '((a b c) (1 2 3))))
       #t)
 
 (test (array-every equal?
-                   (list*->array'((a b c) (1 2 3)) 2)
-                   (list->array '(a b c 1 2 3)
-                                (make-interval '#(2 3))))
+                   (list*->array 2 '((a b c) (1 2 3)))
+                   (list->array (make-interval '#(2 3))
+                                '(a b c 1 2 3)))
       #t)
 
 (test (array-every equal?
-                   (list*->array'(((a b c) (1 2 3))) 3)
-                   (list->array '(a b c 1 2 3)
-                                (make-interval '#(1 2 3))))
+                   (list*->array 3 '(((a b c) (1 2 3))))
+                   (list->array (make-interval '#(1 2 3))
+                                '(a b c 1 2 3)))
       #t)
 
 (test (array-every equal?
-                   (list*->array'(((a b c) (1 2 3))) 2)
-                   (list->array '((a b c) (1 2 3))
-                                (make-interval '#(1 2))))
+                   (list*->array 2 '(((a b c) (1 2 3))))
+                   (list->array (make-interval '#(1 2))
+                                '((a b c) (1 2 3))))
       #t)
 
-(test (list*->array'(((a b c) (1 2))) 3)
+(test (list*->array 3 '(((a b c) (1 2))))
       (string-append "list*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
 
 (test (array-every equal?
-                   (list*->array'(((a b c) (1 2))) 2)
-                   (list->array '((a b c) (1 2))
-                                (make-interval '#(1 2))))
+                   (list*->array 2 '(((a b c) (1 2))))
+                   (list->array (make-interval '#(1 2))
+                                '((a b c) (1 2))))
       #t)
 
 (test (array-every equal?
-                   (vector*->array '#(#(a b c) #(1 2 3)) 2)
-                   (list->array '(a b c 1 2 3)
-                                (make-interval '#(2 3))))
+                   (vector*->array 2 '#(#(a b c) #(1 2 3)))
+                   (list->array (make-interval '#(2 3))
+                                '(a b c 1 2 3)))
       #t)
 
 (test (array-every equal?
-                   (vector*->array '#(#(#(a b c) #(1 2 3))) 3)
-                   (list->array '(a b c 1 2 3)
-                                (make-interval '#(1 2 3))))
+                   (vector*->array 3 '#(#(#(a b c) #(1 2 3))))
+                   (list->array (make-interval '#(1 2 3))
+                                '(a b c 1 2 3)))
       #t)
 
 (test (array-every equal?
-                   (vector*->array '#(#((a b c) (1 2 3))) 2)
-                   (list->array '((a b c) (1 2 3))
-                                (make-interval '#(1 2))))
+                   (vector*->array 2 '#(#((a b c) (1 2 3))))
+                   (list->array (make-interval '#(1 2))
+                                '((a b c) (1 2 3))))
       #t)
 
-(test (vector*->array '#(#(#(a b c) #(1 2))) 3)
+(test (vector*->array 3 '#(#(#(a b c) #(1 2))))
       (string-append "vector*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
 
 (test (array-every equal?
-                   (vector*->array '#(#((a b c) (1 2))) 2)
-                   (list->array '((a b c) (1 2))
-                                (make-interval '#(1 2))))
+                   (vector*->array 2 '#(#((a b c) (1 2))))
+                   (list->array(make-interval '#(1 2))
+                               '((a b c) (1 2))))
       #t)
 
 
-(test (vector*->array '#(#((a b c) (1 2))) 2 u8-storage-class)
+(test (vector*->array 2 '#(#((a b c) (1 2))) u8-storage-class)
       "vector*->array: Not all elements of the source can be stored in destination: ")
 
-(test (list*->array '(((a b c) (1 2))) 2 u8-storage-class)
+(test (list*->array 2 '(((a b c) (1 2))) u8-storage-class)
       "list*->array: Not all elements of the source can be stored in destination: ")
 
 (for-each (lambda (operation data)
@@ -1137,7 +1149,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     (parameterize
                                         ((specialized-array-default-mutable? mutable?)
                                          (specialized-array-default-safe? safe?))
-                                      (let ((A (operation data 2)))
+                                      (let ((A (operation 2 data)))
                                         (test (mutable-array? A) mutable?)
                                         (test (array-safe? A) safe?))))
                                   '(#t #f)))
@@ -1184,15 +1196,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array->vector* (make-array (make-interval '#(1 1) '#(2 3)) indices->string))
       '#(#("1_1" "1_2")))
 
-(test (array->vector* (list->array '(0 1 0
+(test (array->vector* (list->array (make-interval '#(2 3))
+                                   '(0 1 0
                                      0 1 1)
-                                   (make-interval '#(2 3))
                                    u1-storage-class))
       '#(#(0 1 0) #(0 1 1)))
 
-(test (array->list* (list->array '(0 1 0
+(test (array->list* (list->array (make-interval '#(2 3))
+                                 '(0 1 0
                                    0 1 1)
-                                  (make-interval '#(2 3))
                                   u1-storage-class))
       '((0 1 0) (0 1 1)))
 
@@ -1571,7 +1583,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (test (%%move-array-elements (array-reverse specialized-destination) specialized-source "test: ")
               (if (array-elements-in-order? (array-reverse specialized-destination))
                   "In order, no checks needed"
-                  "Out of order, no checks needed" ))
+                  "Out of order, no checks needed"))
         (test (myarray= specialized-source (array-reverse specialized-destination))
               #t)
         ;; copy to non-specialized array
@@ -1708,14 +1720,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; Check that explicit setting of mutable? and safe? work
 
 
-(test (mutable-array? (array-copy (list->array '(1 2 3 4)
-                                               (make-interval '#(2 2))
+(test (mutable-array? (array-copy (list->array (make-interval '#(2 2))
+                                               '(1 2 3 4)
                                                generic-storage-class
                                                #f)))
       #f)
 
-(test (mutable-array? (array-copy (list->array '(1 2 3 4)
-                                               (make-interval '#(2 2))
+(test (mutable-array? (array-copy (list->array (make-interval '#(2 2))
+                                               '(1 2 3 4)
                                                generic-storage-class
                                                #f)
                                   generic-storage-class
@@ -1723,15 +1735,15 @@ OTHER DEALINGS IN THE SOFTWARE.
       #t)
 
 
-(test (array-safe? (array-copy (list->array '(1 2 3 4)
-                                            (make-interval '#(2 2))
+(test (array-safe? (array-copy (list->array (make-interval '#(2 2))
+                                            '(1 2 3 4)
                                             generic-storage-class
                                             #f
                                             #f)))
       #f)
 
-(test (array-safe? (array-copy (list->array '(1 2 3 4)
-                                            (make-interval '#(2 2))
+(test (array-safe? (array-copy (list->array (make-interval '#(2 2))
+                                            '(1 2 3 4)
                                             generic-storage-class
                                             #f
                                             #f)
@@ -1744,14 +1756,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (parameterize
     ((specialized-array-default-mutable? #t))
-  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
-                                                 (make-interval '#(2 2))
+  (test (mutable-array? (array-copy (list->array (make-interval '#(2 2))
+                                                 '(1 2 3 4)
                                                  generic-storage-class
                                                  #t)))
         #t)
-  
-  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
-                                                 (make-interval '#(2 2))
+
+  (test (mutable-array? (array-copy (list->array (make-interval '#(2 2))
+                                                 '(1 2 3 4)
                                                  generic-storage-class
                                                  #t)
                                     generic-storage-class
@@ -1767,15 +1779,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (parameterize
     ((specialized-array-default-mutable? #f))
-  (test (array-safe? (array-copy (list->array '(1 2 3 4)
-                                              (make-interval '#(2 2))
+  (test (array-safe? (array-copy (list->array (make-interval '#(2 2))
+                                              '(1 2 3 4)
                                               generic-storage-class
                                               #t
                                               #t)))
         #t)
-  
-  (test (array-safe? (array-copy (list->array '(1 2 3 4)
-                                              (make-interval '#(2 2))
+
+  (test (array-safe? (array-copy (list->array (make-interval '#(2 2))
+                                              '(1 2 3 4)
                                               generic-storage-class
                                               #t
                                               #t)
@@ -1794,14 +1806,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (parameterize
     ((specialized-array-default-safe? #t))
-  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
-                                                 (make-interval '#(2 2))
+  (test (mutable-array? (array-copy (list->array (make-interval '#(2 2))
+                                                 '(1 2 3 4)
                                                  generic-storage-class
                                                  #f)))
         #f)
-  
-  (test (mutable-array? (array-copy (list->array '(1 2 3 4)
-                                                 (make-interval '#(2 2))
+
+  (test (mutable-array? (array-copy (list->array (make-interval '#(2 2))
+                                                 '(1 2 3 4)
                                                  generic-storage-class
                                                  #f)
                                     generic-storage-class
@@ -1809,7 +1821,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         #t)
   (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)))
         #t)
-  
+
   (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)
                                  generic-storage-class
                                  #f
@@ -1818,15 +1830,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (parameterize
     ((specialized-array-default-safe? #f))
-  (test (array-safe? (array-copy (list->array '(1 2 3 4)
-                                              (make-interval '#(2 2))
+  (test (array-safe? (array-copy (list->array (make-interval '#(2 2))
+                                              '(1 2 3 4)
                                               generic-storage-class
                                               #f
                                               #f)))
         #f)
-  
-  (test (array-safe? (array-copy (list->array '(1 2 3 4)
-                                              (make-interval '#(2 2))
+
+  (test (array-safe? (array-copy (list->array (make-interval '#(2 2))
+                                              '(1 2 3 4)
                                               generic-storage-class
                                               #f
                                               #f)
@@ -1834,7 +1846,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                  #t
                                  #t))
         #t)
-  
+
   (test (array-safe? (array-copy (make-array (make-interval '#(2 2)) list)))
         #f)
 
@@ -1861,7 +1873,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-copy (make-array (make-interval '#(1 1 1) '#(2 2 2))
                               list)
                   u16-storage-class)
-      "array-copy: Not all elements of the source can be stored in destination: " )
+      "array-copy: Not all elements of the source can be stored in destination: ")
 
 (test (array-copy (make-array (make-interval '#(1 1 1 1) '#(2 2 2 2))
                               list)
@@ -1934,8 +1946,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (apply setter1 v indices)
         (apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array-copy array1 generic-storage-class ) array2) (pp "test3"))
-    ))
+    (or (myarray= (array-copy array1 generic-storage-class) array2) (pp "test3"))))
 
 (next-test-random-source-state!)
 
@@ -1968,7 +1979,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (set! alist (cons (cons indices value)
                                         alist))))))))
          (array2
-          (array-copy array1 generic-storage-class ))
+          (array-copy array1 generic-storage-class))
          (setter1
           (array-setter array1))
          (setter2
@@ -1980,8 +1991,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (apply setter1 v indices)
         (apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array-copy array1 generic-storage-class ) array2) (pp "test3"))
-    ))
+    (or (myarray= (array-copy array1 generic-storage-class) array2) (pp "test3"))))
 
 (next-test-random-source-state!)
 
@@ -2119,8 +2129,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     (if (not (indices-in-proper-order (reverse arguments-1)))
         (error "arrghh arguments-1" arguments-1))
     (if (not (indices-in-proper-order (reverse arguments-2)))
-        (error "arrghh arguments-2" arguments-2))
-    ))
+        (error "arrghh arguments-2" arguments-2))))
 
 (next-test-random-source-state!)
 
@@ -2537,8 +2546,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (list mutable-curry
                       specialized-curry
                       mutable-curry-from-definition
-                      specialized-curry-from-definition
-                      ))
+                      specialized-curry-from-definition))
 
       (and (or (myarray= Array copied-array) (error "Arggh"))
            (or (array-every array? immutable-curry) (error "Arggh"))
@@ -2575,10 +2583,10 @@ OTHER DEALINGS IN THE SOFTWARE.
       "specialized-array-share: The third argument is not a procedure: ")
 
 
-(test (myarray= (list->array (reverse (local-iota 0 10))
-                             (make-interval '#(0) '#(10)))
-                (specialized-array-share (list->array (local-iota 0 10)
-                                                      (make-interval '#(0) '#(10)))
+(test (myarray= (list->array (make-interval '#(0) '#(10))
+                             (reverse (local-iota 0 10)))
+                (specialized-array-share (list->array (make-interval '#(0) '#(10))
+                                                      (local-iota 0 10))
                                          (make-interval '#(0) '#(10))
                                          (lambda (i)
                                            (- 9 i))))
@@ -3090,8 +3098,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (apply (array-setter my-permuted-array) value multi-index)))))))
         (test (myarray= permuted-array
                         my-permuted-array)
-              #t))))
-  )
+              #t)))))
 
 (next-test-random-source-state!)
 
@@ -3607,7 +3614,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       "array-assign: The destination and source do not have the same domains: ")
 
 (test (array-assign! (array-permute (array-copy (make-array (make-interval '#(2 3))
-                                                           list ))
+                                                           list))
                                     '#(1 0))
                      (make-array (make-interval '#(2 3)) list))
       "array-assign: The destination and source do not have the same domains: ")
@@ -3764,7 +3771,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       (test (apply getter valid-args)
             "array-getter: domain does not contain multi-index: ")
       (test (apply setter 10 valid-args)
-            "array-setter: domain does not contain multi-index: " )
+            "array-setter: domain does not contain multi-index: ")
       (if (< 4 dimension)
           (begin
             (set! valid-args (cons 1 valid-args))
@@ -3784,22 +3791,22 @@ OTHER DEALINGS IN THE SOFTWARE.
       "array->vector: The argument is not an array: ")
 
 (for-each (lambda (function arg name name2)
-            (test (function 'a 'b)
-                  (string-append name "The first argument is not a " name2 ": "))
-            (test (function arg 'b)
-                  (string-append name "The second argument is not an interval: "))
-            (test (function arg (make-interval '#(0) '#(1)) 'a)
+            (test (function 'b arg)
+                  (string-append name "The first argument is not an interval: "))
+            (test (function (make-interval '#(0) '#(1)) 'b)
+                  (string-append name "The second argument is not a " name2 ": "))
+            (test (function (make-interval '#(0) '#(1)) arg 'a)
                   (string-append name "The third argument is not a storage-class: "))
-            (test (function arg (make-interval '#(0) '#(1)) generic-storage-class 'a)
+            (test (function (make-interval '#(0) '#(1)) arg generic-storage-class 'a)
                   (string-append name "The fourth argument is not a boolean: "))
-            (test (function arg (make-interval '#(0) '#(1)) generic-storage-class #t 'a)
+            (test (function (make-interval '#(0) '#(1)) arg generic-storage-class #t 'a)
                   (string-append name "The fifth argument is not a boolean: "))
-            (test (function arg (make-interval '#(0) '#(10)))
-                  (string-append name "The length of the first argument does not equal the volume of the second: "))
-            (test (function arg (make-interval '#(0) '#(1)) u1-storage-class)
+            (test (function (make-interval '#(0) '#(10)) arg)
+                  (string-append name "The volume of the first argument does not equal the length of the second: "))
+            (test (function (make-interval '#(0) '#(1)) arg u1-storage-class)
                   (string-append name "Not all elements of the source can be stored in destination: "))
-            (test (function arg (make-interval '#(10)))
-                  (string-append name "The length of the first argument does not equal the volume of the second: ")))
+            (test (function (make-interval '#(10)) arg)
+                  (string-append name "The volume of the first argument does not equal the length of the second: ")))
           (list list->array vector->array)
           '((10) #(10))
           '("list->array: " "vector->array: ")
@@ -3832,8 +3839,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                               #t)) ; safe
            (l (array->list Array))
            (mutable? (zero? (test-random-integer 2)))
-           (new-list-array (list->array l domain storage-class mutable?))
-           (new-vector-array (vector->array (list->vector l) domain storage-class mutable?)))
+           (new-list-array (list->array domain l storage-class mutable?))
+           (new-vector-array (vector->array domain (list->vector l) storage-class mutable?)))
       (test (myarray= Array new-list-array)
             #t)
       (test (myarray= Array new-vector-array)
@@ -4014,7 +4021,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t)) (make-interval '#(3 2)))
       "specialized-array-reshape: Requested reshaping is impossible: ")
 
-(test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1)) (make-interval '#(4)) )
+(test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1)) (make-interval '#(4)))
       "specialized-array-reshape: Requested reshaping is impossible: ")
 
 (test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1)) (make-interval '#(4)))
@@ -4107,7 +4114,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (array-for-each (lambda (row)
                     (pretty-print (array->list row)))
                   (array-curry b 1))
-  
+
   ;; which prints
   ;; ((0 0) (0 1) (0 2) (0 3) (0 4))
   ;; ((1 1) (1 2) (1 3) (1 4) (1 5))
@@ -4362,22 +4369,21 @@ that computes the componentwise products when we need them, the times are
                     (lambda (k l)
                       (* (S_ (+ i k)
                              (+ j l))
-                         (F_ k l))))))
-                )))
+                         (F_ k l)))))))))
 
 (define sharpen-filter
   (list->array
+   (make-interval '#(-1 -1) '#(2 2))
    '(0 -1  0
     -1  5 -1
-     0 -1  0)
-   (make-interval '#(-1 -1) '#(2 2))))
+     0 -1  0)))
 
 (define edge-filter
   (list->array
+   (make-interval '#(-1 -1) '#(2 2))
    '(0 -1  0
     -1  4 -1
-     0 -1  0)
-   (make-interval '#(-1 -1) '#(2 2))))
+     0 -1  0)))
 
 (define (round-and-clip pixel max-grey)
   (max 0 (min (exact (round pixel)) max-grey)))
@@ -4699,21 +4705,19 @@ that computes the componentwise products when we need them, the times are
 (array-display product)
 
 (array-display
- (matrix-multiply (list->array '(1 0
-                                 0 1)
-                               (make-interval '#(2 2)))
+ (matrix-multiply (list->array (make-interval '#(2 2))
+                               '(1 0
+                                 0 1))
                   (make-array (make-interval '#(2 4))
                               (lambda (i j)
-                                (+ i j)))
-                  ))
+                                (+ i j)))))
 
-(test (myarray= (matrix-multiply (list->array '(1 0
-                                                   0 1)
-                                               (make-interval '#(2 2)))
+(test (myarray= (matrix-multiply (list->array (make-interval '#(2 2))
+                                              '(1 0
+                                                   0 1))
                                   (make-array (make-interval '#(2 4))
                                               (lambda (i j)
-                                                (+ i j)))
-                                  )
+                                                (+ i j))))
                  (make-array (make-interval '#(2 4))
                              (lambda (i j)
                                (+ i j))))
@@ -4724,16 +4728,16 @@ that computes the componentwise products when we need them, the times are
 
 (define TABLE1
   (list->array
+   (make-interval '#(3 2))
    '(1 2
      5 4
-     3 0)
-   (make-interval '#(3 2))))
+     3 0)))
 
 (define TABLE2
   (list->array
+   (make-interval '#(2 4))
    '(6 2 3 4
-     7 0 1 8)
-   (make-interval '#(2 4))))
+     7 0 1 8)))
 
 (array-display (array-inner-product TABLE1 + * TABLE2))
 
@@ -4743,10 +4747,10 @@ that computes the componentwise products when we need them, the times are
 ;;; 18 6 9 12
 
 (define X   ;; a "row vector"
-  (list->array '(1 3 5 7) (make-interval '#(1 4))))
+  (list->array (make-interval '#(1 4)) '(1 3 5 7)))
 
 (define Y   ;; a "column vector"
-  (list->array '(2 3 6 7) (make-interval '#(4 1))))
+  (list->array (make-interval '#(4 1)) '(2 3 6 7)))
 
 (array-display (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 
@@ -4954,31 +4958,31 @@ that computes the componentwise products when we need them, the times are
       generic-storage-class)
 
 (test (myarray= (array-append
-                  0
-                  (list->array '(1 2
-                                   3 4)
-                               (make-interval '#(2 2)))
-                  (list->array '(5 6
-                                   7 8)
-                               (make-interval '#(2 2))))
-                 (list->array '(1 2
-                                  3 4
-                                  5 6
-                                  7 8)
-                              (make-interval '#(4 2))))
+                 0
+                 (list->array (make-interval '#(2 2))
+                              '(1 2
+                                  3 4))
+                 (list->array (make-interval '#(2 2))
+                              '(5 6
+                                  7 8)))
+                (list->array (make-interval '#(4 2))
+                             '(1 2
+                                 3 4
+                                 5 6
+                                 7 8)))
       #t)
 
 (test (myarray= (array-append
                   1
-                  (list->array '(1 2
-                                   3 4)
-                               (make-interval '#(2 2)))
-                  (list->array '(5 6
-                                   7 8)
-                               (make-interval '#(2 2))))
-                 (list->array '(1 2 5 6
-                                  3 4 7 8)
-                              (make-interval '#(2 4))))
+                  (list->array (make-interval '#(2 2))
+                               '(1 2
+                                   3 4))
+                  (list->array (make-interval '#(2 2))
+                               '(5 6
+                                   7 8)))
+                (list->array (make-interval '#(2 4))
+                             '(1 2 5 6
+                                  3 4 7 8)))
       #t)
 
 (define (my-array-append k . arrays)              ;; call with at least one array
@@ -5032,38 +5036,38 @@ that computes the componentwise products when we need them, the times are
 
 (test (myarray= (array-append
                   0
-                  (list->array '(1 2
-                                   3 4)
-                               (make-interval '#(2 2)))
-                  (list->array '(5 6
-                                   7 8)
-                               (make-interval '#(2 2))))
+                  (list->array (make-interval '#(2 2))
+                               '(1 2
+                                   3 4))
+                  (list->array (make-interval '#(2 2))
+                               '(5 6
+                                   7 8)))
                  (my-array-append
                   0
-                  (list->array '(1 2
-                                   3 4)
-                               (make-interval '#(2 2)))
-                  (list->array '(5 6
-                                   7 8)
-                               (make-interval '#(2 2)))))
+                  (list->array (make-interval '#(2 2))
+                               '(1 2
+                                   3 4))
+                  (list->array (make-interval '#(2 2))
+                               '(5 6
+                                   7 8))))
       #t)
 
 (test (myarray= (array-append
-                  1
-                  (list->array '(1 2
-                                   3 4)
-                               (make-interval '#(2 2)))
-                  (list->array '(5 6
-                                   7 8)
-                               (make-interval '#(2 2))))
-                 (my-array-append
-                  1
-                  (list->array '(1 2
-                                   3 4)
-                               (make-interval '#(2 2)))
-                  (list->array '(5 6
-                                   7 8)
-                               (make-interval '#(2 2)))))
+                 1
+                 (list->array (make-interval '#(2 2))
+                              '(1 2
+                                  3 4))
+                 (list->array (make-interval '#(2 2))
+                              '(5 6
+                                  7 8)))
+                (my-array-append
+                 1
+                 (list->array (make-interval '#(2 2))
+                              '(1 2
+                                  3 4))
+                 (list->array (make-interval '#(2 2))
+                              '(5 6
+                                  7 8))))
       #t)
 
 
@@ -5088,8 +5092,8 @@ that computes the componentwise products when we need them, the times are
      ((pair? ls) (lp (car ls) (cons (length ls) lens)))
      (else
       (apply list->array
-             (flatten nested-ls)
              (make-interval (list->vector (reverse lens)))
+             (flatten nested-ls)
              o)))))
 
 (define (identity-array k . o)
@@ -5106,8 +5110,8 @@ that computes the componentwise products when we need them, the times are
 
 (test (myarray= (tensor '((4 7) (2 6) (1 0) (0 1)))
                 (array-append 0
-                              (list->array '(4 7 2 6)
-                                           (make-interval '#(2 0) '#(4 2)))
+                              (list->array (make-interval '#(2 0) '#(4 2))
+                                           '(4 7 2 6))
                               (identity-array 2)))
       #t)
 (test (myarray= (tensor '((4 7 1 0)
@@ -5126,10 +5130,11 @@ that computes the componentwise products when we need them, the times are
                           (2 6 0 1 5 8 9)))
                 (array-append
                  1
-                 (list->array '(4 7 2 6)
-                              (make-interval '#(2 2)))
+                 (list->array (make-interval '#(2 2))
+                              '(4 7 2 6))
                  (identity-array 2)
-                 (list->array '(0 1 3 5 8 9) (make-interval '#(2 3)))))
+                 (list->array (make-interval '#(2 3))
+                              '(0 1 3 5 8 9))))
       #t)
 
 (pp "array-stack tests")
@@ -5333,6 +5338,7 @@ that computes the componentwise products when we need them, the times are
 
 (define glider
   (list*->array
+   2
    '((0 0 0 0 0 0 0 0 0 0)
      (0 0 1 0 0 0 0 0 0 0)
      (0 0 0 1 0 0 0 0 0 0)
@@ -5343,7 +5349,6 @@ that computes the componentwise products when we need them, the times are
      (0 0 0 0 0 0 0 0 0 0)
      (0 0 0 0 0 0 0 0 0 0)
      (0 0 0 0 0 0 0 0 0 0))
-   2
    u1-storage-class))
 
 (define (generations a N)

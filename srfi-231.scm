@@ -56,9 +56,9 @@ MathJax.Hub.Config({
         )
        (<body>
         (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Nonempty Intervals and Generalized Arrays (Updated^2)")
-        
+
         (<p> " by Bradley J. Lucier")
-        
+
         (<h2> id: 'status "Status")
         (<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
              (<a> href: "https://srfi.schemers.org/srfi-process.html" "an explanation")
@@ -69,14 +69,14 @@ MathJax.Hub.Config({
              (<a> href: "https://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
              ".  You can access previous messages via the mailing list "
              (<a> href: "https://srfi-email.schemers.org/srfi-231/" "archive")".")
-        
+
         (<ul>
          (<li> "Received: 2022-01-05")
          (<li> "60-day deadline: 2022-03-08")
          (<li> "Draft #1 published: 2022-01-07")
          (<li> "Draft #2 published: 2022-01-20")
          (<li> "Draft #3 published: 2022-01-26")
-         (<li> "Dreft #4 published; 2022-02-20")
+         (<li> "Draft #4 published: 2022-02-24")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -103,33 +103,36 @@ MathJax.Hub.Config({
         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
         (<ul>
          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
+         (<li>  (<code>'list->array)" and "(<code>'vector->array)" are now called as "(<code>"(list->array interval l ...)")" and "(<code>"(vector->array interval v ...)")"; i.e., the order of the first two arguments has been reversed.")
          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
-         (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<code>'array-foldl)" and "(<code>'array-foldr)", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
+         (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
-         (<li> "Procedures that generate useful permutations have been added: "(<code>'index-rotate)", "(<code>'index-first)", and "(<code>'index-last)".")
+         (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", and "(<a> href: "#index-last" (<code>'index-last))".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> "Introduced new procedures "
-               (<code>'storage-class-data?)", "
-               (<code>'storage-class-data->body)", "
-               (<code>'make-specialized-array-from-data)", "
-               (<code>'vector->array)", "
-               (<code>'array->vector)", "
-               (<code>'list*->array)", "
-               (<code>'array->list*)", "
-               (<code>'vector*->array)", "
-               (<code>'array->vector*)", "
-               (<code>'array-inner-product)", "
-               (<code>'array-stack)", and "
-               (<code>'array-append)".")
+               (<a> href: "#interval-width" (<code>'interval-width))", "
+               (<a> href: "#interval-widths" (<code>'interval-widths))", "
+               (<a> href: "#storage-class-data?" (<code>'storage-class-data?))", "
+               (<a> href: "#storage-class-data-rarrow-body" (<code>'storage-class-data->body))", "
+               (<a> href: "#make-specialized-array-from-data" (<code>'make-specialized-array-from-data))", "
+               (<a> href: "#vector-rarrow-array" (<code>'vector->array))", "
+               (<a> href: "#array-rarrow-vector" (<code>'array->vector))", "
+               (<a> href: "#list*-rarrow-array" (<code>'list*->array))", "
+               (<a> href: "#array-rarrow-list*" (<code>'array->list*))", "
+               (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))", "
+               (<a> href: "#array-rarrow-vector*" (<code>'array->vector*))", "
+               (<a> href: "#array-inner-product" (<code>'array-inner-product))", "
+               (<a> href: "#array-stack" (<code>'array-stack))", and "
+               (<a> href: "#array-append" (<code>'array-append))".")
          (<li> "A new set of \"Introductory remarks\" surveys some of the more important procedures in this SRFI.")
          )
-        
+
         (<h2> "Overview")
-        
+
         (<h3> "Introductory remarks")
-        
+
         (<p> "The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.")
         (<p> "There are two procedures that simply create new arrays:")
         (<ul>
@@ -338,11 +341,13 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#interval-dimension" "interval-dimension")END
                  (<a> href: "#interval-lower-bound" "interval-lower-bound")END
                  (<a> href: "#interval-upper-bound" "interval-upper-bound")END
+                 (<a> href: "#interval-width" "interval-width")END
                  (<a> href: "#interval-lower-bounds-rarrow-list" "interval-lower-bounds->list")END
                  (<a> href: "#interval-upper-bounds-rarrow-list" "interval-upper-bounds->list")END
                  (<a> href: "#interval-lower-bounds-rarrow-vector" "interval-lower-bounds->vector")END
                  (<a> href: "#interval-upper-bounds-rarrow-vector" "interval-upper-bounds->vector")END
                  (<a> href: "#interval=" "interval=")END
+                 (<a> href: "#interval-widths" "interval-widths")END
                  (<a> href: "#interval-volume" "interval-volume")END
                  (<a> href: "#interval-subset?" "interval-subset?")END
                  (<a> href: "#interval-contains-multi-index?" "interval-contains-multi-index?")END
@@ -507,11 +512,13 @@ $0\\leq i<{}$"(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an erro
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
         (<pre>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-        (<p> "then "(<code> 'interval-dimension)" returns "(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error to call "(<code> 'interval-dimension)"
+        (<p> "then "(<code> 'interval-dimension)" returns "(<code>"(vector-length "(<var>"lower-bounds")")")".")
+        (<p> "It is an error to call "(<code> 'interval-dimension)"
 if "(<code>(<var>"interval"))" is not an interval.")
 
         (format-lambda-list '(interval-lower-bound interval i))
         (format-lambda-list '(interval-upper-bound interval i))
+        (format-lambda-list '(interval-width       interval i))
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
         (<blockquote>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
@@ -519,18 +526,20 @@ if "(<code>(<var>"interval"))" is not an interval.")
         (<blockquote>
          "$0 \\leq i<$ "(<code>"(vector-length "(<var>"lower-bounds")")")",")
         (<p> " then "(<code> 'interval-lower-bound)" returns
-"(<code>"(vector-ref "(<var>"lower-bounds")" "(<var>"i")")")" and "(<code> 'interval-upper-bound)" returns
-"(<code>"(vector-ref "(<var>"upper-bounds")" "(<var>"i")")")".  It is an error to call "(<code> 'interval-lower-bound)" or "(<code> 'interval-upper-bound)"
-if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these conditions.")
+"(<code>"(vector-ref "(<var>"lower-bounds")" "(<var>"i")")")", "(<code> 'interval-upper-bound)" returns
+"(<code>"(vector-ref "(<var>"upper-bounds")" "(<var>"i")")")", and "(<code>'interval-width)" returns
+"(<code>"(- (vector-ref "(<var>'upper-bounds)" "(<var>'i)") (vector-ref "(<var>'lower-bounds)" "(<var>'i)"))")".")
+        (<p> "It is an error to call "(<code> 'interval-lower-bound)", "(<code> 'interval-upper-bound)", or "
+             (<code>'interval-width)" if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these conditions.")
 
-
- (format-lambda-list '(interval-lower-bounds->list interval) 'interval-lower-bounds-rarrow-list)
- (format-lambda-list '(interval-upper-bounds->list interval) 'interval-upper-bounds-rarrow-list)
- (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
- (<pre>
-  (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
- (<p> " then "(<code> 'interval-lower-bounds->list)" returns "(<code> "(vector->list "(<var>"lower-bounds")")")
-      " and  "(<code> 'interval-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")". It is an error to call
+        (format-lambda-list '(interval-lower-bounds->list interval) 'interval-lower-bounds-rarrow-list)
+        (format-lambda-list '(interval-upper-bounds->list interval) 'interval-upper-bounds-rarrow-list)
+        (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
+        (<pre>
+         (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
+        (<p> " then "(<code> 'interval-lower-bounds->list)" returns "(<code> "(vector->list "(<var>"lower-bounds")")")
+             " and  "(<code> 'interval-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")".")
+        (<p> "It is an error to call
  "(<code> 'interval-lower-bounds->list)" or "(<code> 'interval-upper-bounds->list)" if "(<code>(<var>"interval"))" does not satisfy these conditions.")
 
         (format-lambda-list '(interval-lower-bounds->vector interval) 'interval-lower-bounds-rarrow-vector)
@@ -539,9 +548,18 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
         (<pre>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
         (<p> " then "(<code> 'interval-lower-bounds->vector)" returns a copy of "(<code> (<var>"lower-bounds"))
-             "  and "(<code> 'interval-upper-bounds->vector)" returns a copy of "(<code> (<var>"upper-bounds"))". It is an error to call
+             "  and "(<code> 'interval-upper-bounds->vector)" returns a copy of "(<code> (<var>"upper-bounds"))".")
+        (<p> "It is an error to call
 "(<code> 'interval-lower-bounds->vector)" or "(<code> 'interval-upper-bounds->vector)" if "(<code>(<var>"interval"))" does not satisfy these conditions.")
 
+        (format-lambda-list '(interval-widths interval))
+        (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
+        (<pre>
+         (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
+        (<p> "then, assuming the existence of "(<code>'vector-map)", "(<code> 'interval-widths)" returns ")
+        (<pre>
+         (<code> "(vector-map - "(<var>"upper-bounds")" "(<var>"lower-bounds")")"))
+        (<p> "It is an error to call "(<code> 'interval-widths)" if "(<code>(<var> 'interval))" does not satisfy this condition.")
 
         (format-lambda-list '(interval-volume interval))
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
@@ -550,8 +568,6 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
         (<p> "then, assuming the existence of "(<code>'vector-map)", "(<code> 'interval-volume)" returns ")
         (<pre>
          (<code> "(apply * (vector->list (vector-map - "(<var>"upper-bounds")" "(<var>"lower-bounds")")))"))
-
-
         (<p> "It is an error to call "(<code> 'interval-volume)" if "(<code>(<var> 'interval))" does not satisfy this condition.")
 
         (format-lambda-list '(interval= interval1 interval2))
@@ -614,9 +630,7 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
         (<p> "This procedure assumes that "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'f))" is a procedure whose domain includes elements of "(<code>(<var> 'interval))".  It is an error to call
 "(<code> 'interval-for-each)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'f))" do not satisfy these conditions.")
         (<p>  (<code> 'interval-for-each)" calls "(<code>(<var> 'f))" with each multi-index of "(<code>(<var> 'interval))" as arguments, all in lexicographical order.")
-        
-        
-        
+
         (format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
         (<p> "If "(<code>(<var> 'interval))" is an interval with
 lower bounds $\\ell_0,\\dots,\\ell_{d-1}$ and
@@ -974,14 +988,14 @@ if "(<code>(<var> 'array))" is not a mutable array.")
             (make-specialized-array-from-data board u1-storage-class)
             (make-interval '#(9)))
            (make-interval '#(3 3))))
-       (B (list->array '(1 1 1
+       (B (list->array (make-interval '#(3 3))
+                       '(1 1 1
                          0 1 1
                          0 0 1)
-                       (make-interval '#(3 3))
                        u1-storage-class)))
   (define (pad n s)
     (string-append (make-string (- n (string-length s)) #\\0) s))
-  
+
   (for-each display (list \"(array-every = A B) => \" (array-every = A B) #\\newline))
   (for-each display (list \"(array-body A) => \" (array-body A) #\\newline))
   (for-each display (list \"(array-body B) => \" (array-body B) #\\newline))
@@ -994,9 +1008,9 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 "(array-every = A B) => #t
 (array-body A) => #(16 #u16(3895))
 (array-body B) => #(9 #u16(311))
-(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => 
+(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =>
 0000111100110111
-(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => 
+(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =>
 0000000100110111")
 (<p> "The 9 low-order bits of board represent the entries of the array "(<code>'A)", ignoring higher order bits, and you can see the bit order that is used to represent a "(<code>'u1-storage-class-body)".")
 
@@ -1087,8 +1101,8 @@ indexer:       (lambda multi-index
 (<p> "The specialized array returned by "(<code> 'array-copy)" can be defined conceptually by:")
 (<pre>
  (<code>
-"(list->array (array->list array)
-             (array-domain array)
+"(list->array (array-domain array)
+             (array->list array)
              result-storage-class
              mutable?
              safe?)
@@ -1695,7 +1709,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated list in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
 
-(format-lambda-list '(list->array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list-rarrow-array)
+(format-lambda-list '(list->array domain l #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list-rarrow-array)
 (<p> "Assumes that "
      (<code>(<var> 'l))" is an list, "
      (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
@@ -1705,7 +1719,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
 
-(format-lambda-list '(list*->array nested-list d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
+(format-lambda-list '(list*->array d nested-list #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
@@ -1744,9 +1758,9 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated vector in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
 
-(format-lambda-list '(vector->array l domain  #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector-rarrow-array)
+(format-lambda-list '(vector->array domain v #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector-rarrow-array)
 (<p> "Assumes that "
-     (<code>(<var> 'l))" is a vector, "
+     (<code>(<var> 'v))" is a vector, "
      (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
      (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'l))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
@@ -1755,7 +1769,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
 
 
-(format-lambda-list '(vector*->array nested-vector d #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
+(format-lambda-list '(vector*->array d nested-vector #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
@@ -2345,17 +2359,17 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
  (<code>
 "(define sharpen-filter
   (list->array
+   (make-interval '#(-1 -1) '#(2 2))
    '(0 -1  0
     -1  5 -1
-     0 -1  0)
-   (make-interval '#(-1 -1) '#(2 2))))
+     0 -1  0)))
 
 (define edge-filter
   (list->array
+   (make-interval '#(-1 -1) '#(2 2))
    '(0 -1  0
     -1  4 -1
-     0 -1  0)
-   (make-interval '#(-1 -1) '#(2 2))))
+     0 -1  0)))
 "))
 (<p> "Our computations might results in pixel values outside the valid range, so we define ")
 (<pre>
@@ -2766,10 +2780,10 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-  
+
   (define (display-item x)
     (display x) (display \"\\t\"))
-  
+
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
@@ -2913,6 +2927,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 
 (define glider
   (list*->array
+   2
    '((0 0 0 0 0 0 0 0 0 0)
      (0 0 1 0 0 0 0 0 0 0)
      (0 0 0 1 0 0 0 0 0 0)
@@ -2923,7 +2938,6 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
      (0 0 0 0 0 0 0 0 0 0)
      (0 0 0 0 0 0 0 0 0 0)
      (0 0 0 0 0 0 0 0 0 0))
-   2
    u1-storage-class))
 
 (define (generations a N)
@@ -3003,16 +3017,16 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 
 (define TABLE1
   (list->array
+   (make-interval '#(3 2))
    '(1 2
      5 4
-     3 0)
-   (make-interval '#(3 2))))
+     3 0)))
 
 (define TABLE2
   (list->array
+   (make-interval '#(2 4))
    '(6 2 3 4
-     7 0 1 8)
-   (make-interval '#(2 4))))
+     7 0 1 8)))
 
 (array-display (inner-product TABLE1 + * TABLE2))
 
@@ -3022,10 +3036,10 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 ;;; 18      6       9       12
 
 (define X   ;; a \"row vector\"
-  (list->array '(1 3 5 7) (make-interval '#(1 4))))
+  (list->array (make-interval '#(1 4)) '(1 3 5 7)))
 
 (define Y   ;; a \"column vector\"
-  (list->array '(2 3 6 7) (make-interval '#(4 1))))
+  (list->array (make-interval '#(4 1)) '(2 3 6 7)))
 
 (array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 
