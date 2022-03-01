@@ -11,11 +11,11 @@
     make-interval
     interval?
     interval-dimension
-    interval-lower-bound interval-upper-bound
+    interval-lower-bound interval-upper-bound interval-width
     interval-lower-bounds->list interval-upper-bounds->list
     interval-lower-bounds->vector interval-upper-bounds->vector
     interval=
-    interval-volume
+    interval-widths interval-volume
     interval-subset?
     interval-contains-multi-index?
     interval-projections

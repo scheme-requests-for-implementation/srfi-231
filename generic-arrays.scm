@@ -183,6 +183,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (%%interval-upper-bound interval i)
   (vector-ref (%%interval-upper-bounds interval) i))
 
+(define (%%interval-width interval k)
+  (- (%%interval-upper-bound interval k)
+     (%%interval-lower-bound interval k)))
+
+(define (%%interval-widths interval)
+  (vector-map -
+              (%%interval-upper-bounds interval)
+              (%%interval-lower-bounds interval)))
+
 (define (%%interval-lower-bounds->vector interval)
   (vector-copy (%%interval-lower-bounds interval)))
 
@@ -220,6 +229,21 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): " interval i))
         (else
          (%%interval-upper-bound interval i))))
+
+(define (interval-width interval k)
+  (cond ((not (interval? interval))
+         (error "interval-width: The first argument is not an interval: " interval k))
+        ((not (and (fixnum? k)
+                   (fx< -1 k (%%interval-dimension interval))))
+         (error "interval-width: The second argument is not an exact integer between 0 (inclusive) and the dimension of the first argument (exclusive): " interval k))
+        (else
+         (%%interval-width interval k))))
+
+(define (interval-widths interval)
+  (cond ((not (interval? interval))
+         (error "interval-widths: The argument is not an interval: " interval))
+        (else
+         (%%interval-widths interval))))
 
 (define (interval-lower-bounds->vector interval)
   (cond ((not (interval? interval))
@@ -1844,9 +1868,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((2) (let* ((low-0 (%%interval-lower-bound interval 0))
                 (low-1 (%%interval-lower-bound interval 1))
                 (increment-1 1)
-                (increment-0 (* increment-1
-                                (- (%%interval-upper-bound interval 1)
-                                   (%%interval-lower-bound interval 1)))))
+                (increment-0 (* increment-1 (%%interval-width interval 1))))
            (%%indexer-2 0
                         low-0 low-1
                         increment-0 increment-1)))
@@ -1854,12 +1876,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (low-1 (%%interval-lower-bound interval 1))
                 (low-2 (%%interval-lower-bound interval 2))
                 (increment-2 1)
-                (increment-1 (* increment-2
-                                (- (%%interval-upper-bound interval 2)
-                                   (%%interval-lower-bound interval 2))))
-                (increment-0 (* increment-1
-                                (- (%%interval-upper-bound interval 1)
-                                   (%%interval-lower-bound interval 1)))))
+                (increment-1 (* increment-2 (%%interval-width interval 2)))
+                (increment-0 (* increment-1 (%%interval-width interval 1))))
            (%%indexer-3 0
                         low-0 low-1 low-2
                         increment-0 increment-1 increment-2)))
@@ -1868,26 +1886,22 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (low-2 (%%interval-lower-bound interval 2))
                 (low-3 (%%interval-lower-bound interval 3))
                 (increment-3 1)
-                (increment-2 (* increment-3
-                                (- (%%interval-upper-bound interval 3)
-                                   (%%interval-lower-bound interval 3))))
-                (increment-1 (* increment-2
-                                (- (%%interval-upper-bound interval 2)
-                                   (%%interval-lower-bound interval 2))))
-                (increment-0 (* increment-1
-                                (- (%%interval-upper-bound interval 1)
-                                   (%%interval-lower-bound interval 1)))))
+                (increment-2 (* increment-3 (%%interval-width interval 3)))
+                (increment-1 (* increment-2 (%%interval-width interval 2)))
+                (increment-0 (* increment-1 (%%interval-width interval 1))))
            (%%indexer-4 0
                         low-0 low-1 low-2 low-3
                         increment-0 increment-1 increment-2 increment-3)))
     (else
-     (let ((lower-bounds (%%interval-lower-bounds->list interval))
-           (upper-bounds (%%interval-upper-bounds->list interval)))
-       (let ((ranges (map (lambda (u l) (- u l)) upper-bounds lower-bounds)))
-         (do ((ranges (reverse ranges) (cdr ranges))
-              (increments (list 1) (cons (* (car increments) (car ranges))
-                                         increments)))
-             ((null? (cdr ranges)) (%%indexer-generic 0 lower-bounds increments))))))))
+     (do ((widths
+           (reverse (vector->list (%%interval-widths interval)))
+           (cdr widths))
+          (increments
+           (list 1)
+           (cons (* (car increments) (car widths))
+                 increments)))
+         ((null? (cdr widths))
+          (%%indexer-generic 0 (%%interval-lower-bounds->list interval) increments))))))
 
 (define (%%make-specialized-array interval
                                   storage-class
@@ -1938,9 +1952,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 safe?
                                 #t)))         ;; this array is in order by definition
 
-(define (%%list*->array nested-list dimension storage-class mutable? safe? message)
+(define (%%list*->array dimension nested-list storage-class mutable? safe? message)
 
-  (define (check-nested-list nested-data dimension)
+  (define (check-nested-list dimension nested-data)
     ;; Assumes dimension >= 1
     (and (list? nested-data)
          (let ((len (length nested-data)))
@@ -1949,7 +1963,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (list len)
                     (let* ((sublists
                             (map (lambda (l)
-                                   (check-nested-list l (fx- dimension 1)))
+                                   (check-nested-list (fx- dimension 1) l))
                                  nested-data))
                            (first
                             (car sublists)))
@@ -1958,18 +1972,18 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       (equal? first l))
                                     (cdr sublists))
                            (cons len first))))))))
-  
-  (define (nested-list->array nested-data dimension)
+
+  (define (nested-list->array dimension nested-data)
     (if (eqv? dimension 1)
-        (%%list->array nested-data
-                       (make-interval (vector (length nested-data)))
+        (%%list->array (make-interval (vector (length nested-data)))
+                       nested-data
                        storage-class
                        mutable?
                        safe?
                        message)
         (let ((subarrays
                (map (lambda (l)
-                      (nested-list->array l (- dimension 1)))
+                      (nested-list->array (- dimension 1) l))
                     nested-data)))
           (%%array-stack 0             ;; the new dimension is always the first
                          subarrays
@@ -1978,34 +1992,34 @@ OTHER DEALINGS IN THE SOFTWARE.
                          safe?
                          message))))
 
-  (if (check-nested-list nested-list dimension)
-      (nested-list->array nested-list dimension)
-      (error (string-append message "The first argument is not the right shape to be converted to an array of the given dimension: ") nested-list dimension)))
+  (if (check-nested-list dimension nested-list)
+      (nested-list->array dimension nested-list)
+      (error (string-append message "The first argument is not the right shape to be converted to an array of the given dimension: ") dimension nested-list)))
 
-(define (list*->array nested-data
-                      dimension
+(define (list*->array dimension
+                      nested-data
                       #!optional
                       (storage-class generic-storage-class)
                       (mutable?      (specialized-array-default-mutable?))
                       (safe?         (specialized-array-default-safe?)))
   (cond ((not (boolean? safe?))
-         (error "list*->array: The fifth argument is not a boolean: " nested-data dimension storage-class mutable? safe?))
+         (error "list*->array: The fifth argument is not a boolean: " dimension nested-data storage-class mutable? safe?))
         ((not (boolean? mutable?))
-         (error "list*->array: The fourth argument is not a boolean: " nested-data dimension storage-class mutable?))
+         (error "list*->array: The fourth argument is not a boolean: " dimension nested-data storage-class mutable?))
         ((not (storage-class? storage-class))
-         (error "list*->array: The third argument is not a storage class: " nested-data dimension storage-class))
+         (error "list*->array: The third argument is not a storage class: " dimension nested-data storage-class))
         ((not (and (fixnum? dimension)
                    (fxpositive? dimension)))
-         (error "list*->array: The second argument is not a positive fixnum: " nested-data dimension))
+         (error "list*->array: The first argument is not a positive fixnum: " dimension nested-data))
         ((not (and (list? nested-data)
                    (not (null? nested-data))))
-         (error "list*->array: The first argument is not a nested list: " nested-data dimension))
+         (error "list*->array: The second argument is not a nested list: " dimension nested-data))
         (else
-         (%%list*->array nested-data dimension storage-class mutable? safe? "list*->array: "))))
-  
- (define (%%vector*->array nested-vector dimension storage-class mutable? safe? message)
+         (%%list*->array dimension nested-data storage-class mutable? safe? "list*->array: "))))
 
-  (define (check-nested-vector nested-data dimension)
+ (define (%%vector*->array dimension nested-vector storage-class mutable? safe? message)
+
+  (define (check-nested-vector dimension nested-data)
     ;; Assumes dimension >= 1
     (and (vector? nested-data)
          (let ((len (vector-length nested-data)))
@@ -2014,7 +2028,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (list len)
                     (let* ((sublists
                             (vector-map (lambda (l)
-                                          (check-nested-vector l (fx- dimension 1)))
+                                          (check-nested-vector (fx- dimension 1) l))
                                         nested-data))
                            (first
                             (vector-ref sublists 0)))
@@ -2024,7 +2038,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                            sublists)
                            (cons len first))))))))
 
-  (define (nested-vector->array nested-data dimension)
+  (define (nested-vector->array dimension nested-data)
     (if (eqv? dimension 1)
         (let ((generic-array
                (%%make-specialized-array-from-data nested-data generic-storage-class mutable? safe?)))
@@ -2036,7 +2050,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                         message))
         (let ((subarrays
                (map (lambda (l)
-                      (nested-vector->array l (- dimension 1)))
+                      (nested-vector->array (- dimension 1) l))
                     (vector->list nested-data))))
           (%%array-stack 0             ;; the new dimension is always the first
                          subarrays
@@ -2044,31 +2058,31 @@ OTHER DEALINGS IN THE SOFTWARE.
                          mutable?
                          safe?
                          message))))
-  
-  (if (check-nested-vector nested-vector dimension)
-      (nested-vector->array nested-vector dimension)
-      (error (string-append message "The first argument is not the right shape to be converted to an array of the given dimension: ") nested-vector dimension)))
 
-(define (vector*->array nested-data
-                        dimension
+  (if (check-nested-vector dimension nested-vector)
+      (nested-vector->array dimension nested-vector)
+      (error (string-append message "The first argument is not the right shape to be converted to an array of the given dimension: ") dimension nested-vector)))
+
+(define (vector*->array dimension
+                        nested-data
                         #!optional
                         (storage-class generic-storage-class)
                         (mutable?      (specialized-array-default-mutable?))
                         (safe?         (specialized-array-default-safe?)))
   (cond ((not (boolean? safe?))
-         (error "vector*->array: The fifth argument is not a boolean: " nested-data dimension storage-class mutable? safe?))
+         (error "vector*->array: The fifth argument is not a boolean: " dimension nested-data storage-class mutable? safe?))
         ((not (boolean? mutable?))
-         (error "vector*->array: The fourth argument is not a boolean: " nested-data dimension storage-class mutable?))
+         (error "vector*->array: The fourth argument is not a boolean: " dimension nested-data storage-class mutable?))
         ((not (storage-class? storage-class))
-         (error "vector*->array: The third argument is not a storage class: " nested-data dimension storage-class))
+         (error "vector*->array: The third argument is not a storage class: " dimension nested-data storage-class))
         ((not (and (fixnum? dimension)
                    (fxpositive? dimension)))
-         (error "vector*->array: The second argument is not a positive fixnum: " nested-data dimension))
+         (error "vector*->array: The first argument is not a positive fixnum: " dimension nested-data))
         ((not (and (vector? nested-data)
                    (fxpositive? (vector-length nested-data))))
-         (error "vector*->array: The first argument is not a nested vector: " nested-data dimension))
+         (error "vector*->array: The second argument is not a nested vector: " dimension nested-data))
         (else
-         (%%vector*->array nested-data dimension storage-class mutable? safe? "vector*->array: "))))
+         (%%vector*->array dimension nested-data storage-class mutable? safe? "vector*->array: "))))
 
 (define make-specialized-array
   (let ()
@@ -2199,7 +2213,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; We consolidate all moving of array elements to the following procedure.
 
 (define (%%move-array-elements destination source caller)
-  
+
   ;; Here's the logic:
   ;; We require the source and destination to have the same number of elements.
   ;; If destination is a specialized array
@@ -2239,14 +2253,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   ;; We check that the elements we move to the destination are OK for the
   ;; destination because if we don't catch errors here they can be very tricky to find.
-  
+
   (if (not (%%interval= (%%array-domain source)
                         (%%array-domain destination)))
       (error (string-append
               caller
               "Arrays must have the same domains: ")
              destination source))
-  
+
   (if (specialized-array? destination)
       (if (%%array-elements-in-order? destination)
           ;; Now we do not assume that the domains are the same
@@ -2577,7 +2591,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define array-copy
   (let ()
-    
+
     (define (four-args array result-storage-class mutable? safe?)
       (if (not (boolean? safe?))
           (error "array-copy: The fourth argument is not a boolean: " safe?)
@@ -2585,7 +2599,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       result-storage-class
                       mutable?
                       safe?)))
-    
+
     (define (three-args array result-storage-class mutable? safe?)
       (if (not (boolean? mutable?))
           (error "array-copy: The third argument is not a boolean: " mutable?)
@@ -2593,7 +2607,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     result-storage-class
                     mutable?
                     safe?)))
-    
+
     (define (two-args array result-storage-class mutable? safe?)
       (if (not (storage-class? result-storage-class))
           (error "array-copy: The second argument is not a storage-class: " result-storage-class)
@@ -2601,7 +2615,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                    result-storage-class
                    mutable?
                    safe?)))
-  
+
     (define (one-arg array result-storage-class mutable? safe?)
       (if (not (array? array))
           (error "array-copy: The first argument is not an array: " array)
@@ -2611,7 +2625,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                         mutable?
                         safe?
                         "array-copy: ")))
-                            
+
     (case-lambda
      ((array)
       (if (specialized-array? array)
@@ -3851,6 +3865,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (macro-make-predicates)
 
+(define (%%array-every f array arrays)
+  (%%interval-every (%%specialize-function-applied-to-array-getters f array arrays)
+                    (%%array-domain array)))
+
 (define (array-every f array #!rest arrays)
   (cond ((not (procedure? f))
          (apply error "array-every: The first argument is not a procedure: " f array arrays))
@@ -3859,8 +3877,11 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
          (apply error "array-every: Not all arguments after the first have the same domain: " f array arrays))
         (else
-         (%%interval-every (%%specialize-function-applied-to-array-getters f array arrays)
-                           (%%array-domain array)))))
+         (%%array-every f array arrays))))
+
+(define (%%array-any f array arrays)
+  (%%interval-any (%%specialize-function-applied-to-array-getters f array arrays)
+                  (%%array-domain array)))
 
 (define (array-any f array #!rest arrays)
   (cond ((not (procedure? f))
@@ -3870,9 +3891,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
          (apply error "array-any: Not all arguments after the first have the same domain: " f array arrays))
         (else
-         (%%interval-any (%%specialize-function-applied-to-array-getters f array arrays)
-                         (%%array-domain array)))))
-
+         (%%array-any f array arrays))))
 
 (define (%%array-foldl op id a)
   (%%interval-foldl (%%array-getter a) op id (%%array-domain a)))
@@ -3982,8 +4001,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; Refactored for use in list*->array
 
-(define (%%list->array l
-                       interval
+(define (%%list->array interval
+                       l
                        result-storage-class
                        mutable?
                        safe?
@@ -4009,7 +4028,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (if (not mutable?)
                     (%%array-setter-set! result #f))
                 result)
-              (error (string-append message "The length of the first argument does not equal the volume of the second: ") l interval))
+              (error (string-append message "The volume of the first argument does not equal the length of the second: ") l interval))
           (let ((item (car local)))
             (if (checker item)
                 (begin
@@ -4018,16 +4037,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                         (cdr local)))
                 (error (string-append message "Not all elements of the source can be stored in destination: ") l interval item)))))))
 
-(define (list->array l
-                     interval
+(define (list->array interval
+                     l
                      #!optional
                      (result-storage-class generic-storage-class)
                      (mutable? (specialized-array-default-mutable?))
                      (safe? (specialized-array-default-safe?)))
-  (cond ((not (list? l))
-         (error "list->array: The first argument is not a list: " l interval))
-        ((not (interval? interval))
-         (error "list->array: The second argument is not an interval: " l interval))
+  (cond ((not (interval? interval))
+         (error "list->array: The first argument is not an interval: " l interval))
+        ((not (list? l))
+         (error "list->array: The second argument is not a list: " l interval))
         ((not (storage-class? result-storage-class))
          (error "list->array: The third argument is not a storage-class: " l interval result-storage-class))
         ((not (boolean? mutable?))
@@ -4035,26 +4054,26 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (boolean? safe?))
          (error "list->array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
         (else
-         (%%list->array l
-                        interval
+         (%%list->array interval
+                        l
                         result-storage-class
                         mutable?
                         safe?
                         "list->array: "))))
 
-(define (vector->array  v
-                        interval
+(define (vector->array  interval
+                        v
                         #!optional
                         (result-storage-class generic-storage-class)
                         (mutable? (specialized-array-default-mutable?))
                         (safe? (specialized-array-default-safe?)))
-  (cond ((not (vector? v))
-         (error "vector->array: The first argument is not a vector: " v interval))
-        ((not (interval? interval))
-         (error "vector->array: The second argument is not an interval: " v interval))
+  (cond ((not (interval? interval))
+         (error "vector->array: The first argument is not an interval: " v interval))
+        ((not (vector? v))
+         (error "vector->array: The second argument is not a vector: " v interval))
         ((not (= (vector-length v)
                  (%%interval-volume interval)))
-         (error "vector->array: The length of the first argument does not equal the volume of the second: " v interval))
+         (error "vector->array: The volume of the first argument does not equal the length of the second: " v interval))
         ((not (storage-class? result-storage-class))
          (error "vector->array: The third argument is not a storage-class: " v interval result-storage-class))
         ((not (boolean? mutable?))
@@ -4142,7 +4161,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-inner-product A f g B))))
 
-;;; Refactored from array-stack to use in list*->array and vector*->array 
+;;; Refactored from array-stack to use in list*->array and vector*->array
 
 (define (%%array-stack k arrays storage-class mutable? safe? message)
   (let* ((first-array
@@ -4177,7 +4196,8 @@ OTHER DEALINGS IN THE SOFTWARE.
     (array-for-each (lambda (destination source)
                       (%%move-array-elements destination source message))
                     permuted-and-curried-result
-                    (list->array arrays (make-interval (vector number-of-arrays))))
+                    (list->array (make-interval (vector number-of-arrays))
+                                 arrays))
     (if (not mutable?)
         (%%array-setter-set! result-array #f))
     result-array))
@@ -4190,7 +4210,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                           message
                           ": ")
            args))
-  
+
   (define (initial-parse args)
     (cond ((or (null? args)
                (null? (cdr args)))
@@ -4227,7 +4247,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                          (cadddr args)                        ;; k (maybe)
                          (cddddr args)))))                    ;; arrays (maybe)
 
-  
+
   (define (process-args storage-class mutable? safe? k arrays)
     (let ((argument-k
            (cond ((boolean? safe?)               4)
@@ -4289,14 +4309,14 @@ OTHER DEALINGS IN THE SOFTWARE.
   (initial-parse args))
 
 (define (array-append . args) ;; (array-append [storage-class] k array1 array2 ...)
-  
+
   (define (wrong-number-of-args message)
     (apply error
            (string-append "array-append: Wrong number of arguments"
                           message
                           ": ")
            args))
-  
+
   (define (initial-parse args)
     (cond ((or (null? args)
                (null? (cdr args)))
@@ -4458,7 +4478,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       "array-append: ")
                                      (loop (cdr arrays)
                                            (cdr subdividers))))))))))))))))
-  
+
   (initial-parse args))
 
 
@@ -4563,7 +4583,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     ;; Decides whether to include v(k) in the result vector
     ;; by testing p(k), not p(v(k)).
-  
+
     (let ((n (vector-length v)))
       (define (helper k i)
         (cond ((fx= k n)
@@ -4575,7 +4595,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (else
                (helper (fx+ k 1) i))))
       (helper 0 0)))
-  
+
   (cond ((not (specialized-array? array))
          (error "specialized-array-reshape: The first argument is not a specialized array: " array new-domain))
         ((not (interval? new-domain))
