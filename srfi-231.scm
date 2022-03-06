@@ -103,7 +103,7 @@ MathJax.Hub.Config({
         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
         (<ul>
          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
-         (<li>  (<code>'list->array)" and "(<code>'vector->array)" are now called as "(<code>"(list->array interval l ...)")" and "(<code>"(vector->array interval v ...)")"; i.e., the order of the first two arguments has been reversed.")
+         (<li>  (<code>'list->array)" is now called as "(<code>"(list->array interval list ...)")"; i.e., the order of the first two arguments has been reversed.")
          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
          (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
@@ -1811,25 +1811,24 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
 
-(format-lambda-list '(array-stack #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
-(<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
+(format-lambda-list '(array-stack k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
 (<p> "Returns a specialized array equivalent to")
 (<pre>(<code>"(array-copy
  (make-array
-  (let (("(<var>'lowers)" (interval-lower-bounds->list (array-domain "(<var>'array)")))
-        ("(<var>'uppers)" (interval-upper-bounds->list (array-domain "(<var>'array)")))
-        ("(<var>'N)" (length (cons "(<var>"array arrays")"))))
-    (make-interval (append (take "(<var>"lowers k")") (cons 0 (drop "(<var>"lowers k")")))
-                   (append (take "(<var>"uppers k")") (cons "(<var>'N)" (drop "(<var>"uppers k")")))))
-  (let (("(<var>'getters)" (map array-getter (cons "(<var>"array arrays")"))))
+  (let (("(<var>'lowers)" (interval-lower-bounds->list (array-domain (car "(<var>'arraya)"))))
+        ("(<var>'uppers)" (interval-upper-bounds->list (array-domain (car "(<var>'arrays)"))))
+        ("(<var>'N)" (length "(<var>"arrays")")))
+    (make-interval (list->vector (append (take "(<var>"lowers k")") (cons 0 (drop "(<var>"lowers k")"))))
+                   (list->vector (append (take "(<var>"uppers k")") (cons "(<var>'N)" (drop "(<var>"uppers k")"))))))
+  (let (("(<var>'getters)" (map array-getter "(<var>'arrays)")))
     (lambda indices
       (let (("(<var>'i)" (list-ref "(<var>"indices k")")))
         (apply (list-ref "(<var>"getters i")")
                (append (take "(<var>"indices k")")
                        (drop "(<var>'indices)" (+ "(<var>'k)" 1)))))))))"))
 (<p> "In other words we \"stack\" the argument arrays along a new "(<code>(<var>'k))"'th axis, the lower bound of which is set to 0.")
-(<p> "If all optional arguments are given, the resultant array has storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))".")
-(<p> "We determine the values of missing optional arguments as follows: If the argument arrays are "(<i>'all)" specialized arrays with the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "Any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 (<p> (<b> "Example: ")"Let's say we have a spreadsheet "(<code>(<var>'A))" and we want to make a new spreadsheet "(<code>(<var>'B))" with the same rows but with the data from only columns 1, 2, 5, and 8.  Using the routine "(<code>'array-display)" we define below, code to do this can look like:")
 (<pre>(<code>"(let* ((A
@@ -1842,8 +1841,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
           (array-permute A '#(1 0))
           1)))
        (B
-        (apply
-         array-stack                  ;; stack into a new 2-D array ...
+        (array-stack                  ;; stack into a new 2-D array ...
          1                            ;; along axis 1 (i.e., columns) ...
          (map column_ '(1 2 5 8)))))  ;; the columns of A you want
   (array-display B))
@@ -1854,19 +1852,16 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (1 1)   (1 2)   (1 5)   (1 8)
 (2 1)   (2 2)   (2 5)   (2 8)
 (3 1)   (3 2)   (3 5)   (3 8)"))
-(<p>"In fact, because "(<code>(<var>'A))" is a generalized array, the only elements of "(<code>(<var>'A))" that are generated are the ones that are assigned as elements of "(<code>(<var>'B))". The result could also be computed in one (rather long) line:")
+(<p>"In fact, because "(<code>(<var>'A))" is a generalized array, the only elements of "(<code>(<var>'A))" that are generated are the ones that are assigned as elements of "(<code>(<var>'B))". The result could also be computed in one line:")
 (<pre>(<code>
-"(apply array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))"))
+"(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))"))
 
-(format-lambda-list '(array-append #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\] k array #\. arrays))
-(<p> "Assumes that "(<code>"(cons "(<var>" array arrays")")")" is a list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
+(format-lambda-list '(array-append k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
 (<p> "This routine appends, or concatenates, the argument arrays along the "(<var>'k)"'th axis, with the lower bound of this axis set to 0.")
 (<p> "Returns a specialized array equivalent to the result of")
-(<pre>(<code>"(define (array-append k array . arrays)
-  (let*-values (((arrays)
-                 ;; all array arguments
-                 (cons array arrays))
-                ((axis-subdividers kth-size)
+(<pre>(<code>"(define (array-append k arrays)
+  (let*-values (((axis-subdividers kth-size)
                  ;; compute lower and upper bounds of where along the
                  ;; k'th axis we'll copy each array argument, plus
                  ;; the total size of the kth axis of the result array
@@ -1913,8 +1908,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
              (array-translate array translation))
             (loop (cdr arrays)
                   (cdr subdividers)))))))"))
- (<p> "If all optional arguments are given, the resultant array has storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))".")
-(<p> "We determine the values of missing optional arguments as follows: If the argument arrays are "(<i>'all)" specialized arrays with the same storage class, mutability, "(<i>'and)" safety, then any missing optional arguments are assigned the associated values from "(<code>(<var>'array))"; otherwise, any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "Any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 
 (format-lambda-list '(array-ref A i0 #\. i-tail))
@@ -1933,7 +1927,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(specialized-array-reshape array new-domain #\[ copy-on-failure? #f #\]))
 (<p> "Assumes that "(<code>(<var>'array))" is a specialized array, "(<code>(<var>'new-domain))" is an interval with the same volume as "(<code>"(array-domain "(<var>'array)")")", and "(<code>(<var>'copy-on-failure?))", if given, is a boolean.")
-(<p> "If there is an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells in "(<code>"(array-body "(<var>'array)")")" storing the elements of "(<code>(<var>'array))" in lexicographical order, returns a new specialized array, with the same body and elements as "(<code>(<var>'array))" and domain "(<code>(<var>'new-domain))".  The result inherits its mutability and safety from "(<code>(<var>'array))".")
+(<p> "If there is an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells in "(<code>"(array-body "(<var>'array)")")" storing the elements of "(<code>(<var>'array))" in lexicographical order, "(<code>'specialized-array-reshape)" returns a new specialized array, with the same body and elements as "(<code>(<var>'array))" and domain "(<code>(<var>'new-domain))".  The result inherits its mutability and safety from "(<code>(<var>'array))".")
 (<p> "If there is not an affine map that takes the multi-indices in "(<code>(<var>'new-domain))" to the cells storing the elements of "(<code>(<var>'array))" in lexicographical order and "(<code>(<var>'copy-on-failure?))" is "(<code>'#t)", then returns a specialized array copy of "(<code>(<var>'array))" with domain "(<code>(<var>'new-domain))", storage class "(<code>"(array-storage-class "(<var>'array)")")", mutability "(<code>"(mutable-array? "(<var>'array)")")", and safety "(<code>"(array-safe? "(<var>'array)")")".")
 (<p> "It is an error if these conditions on the arguments are not met.")
 (<p>(<b>"Note: ")"The code in the sample implementation to determine whether there exists an affine map from "(<code>(<var>'new-domain))" to the multi-indices of the elements of "(<code>(<var>'array))" in lexicographical order is modeled on the corresponding code in the Python library NumPy.")

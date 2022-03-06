@@ -41,7 +41,7 @@
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a> in the following ways:</p>
     <ul>
       <li><code>specialized-array-default-safe?</code> and <code>specialized-array-default-mutable?</code> are now <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a> parameters.</li>
-      <li><code>list-&gt;array</code> and <code>vector-&gt;array</code> are now called as <code>(list-&gt;array interval l ...)</code> and <code>(vector-&gt;array interval v ...)</code>; i.e., the order of the first two arguments has been reversed.</li>
+      <li><code>list-&gt;array</code> is now called as <code>(list-&gt;array interval list ...)</code>; i.e., the order of the first two arguments has been reversed.</li>
       <li><code>array-copy</code> no longer allows changing the domain of the result, use <code>(specialized-array-reshape (array-copy ...) <var>new-domain</var>)</code> instead.</li>
       <li><code>make-specialized-array</code> now accepts an optional initial value with which to fill the new array.</li>
       <li>The SRFI 179 procedures <code>array-fold</code> and <code>array-fold-right</code> have been replaced by <a href="#array-foldl"><code>array-foldl</code></a> and <a href="#array-foldr"><code>array-foldr</code></a>, which follow the definition of the left and right folds in <a href="https://ocaml.org/api/List.html">Ocaml</a> and <a href="https://wiki.haskell.org/Fold">Haskell</a>. The left folds of Ocaml and Haskell differ from the (left) fold of <a href="https://srfi.schemers.org/srfi-1/">SRFI 1</a>, so <code>array-foldl</code> from this SRFI has different semantics to <code>array-fold</code> from SRFI 179.</li>
@@ -690,7 +690,7 @@
                        u1-storage-class)))
   (define (pad n s)
     (string-append (make-string (- n (string-length s)) #\0) s))
-  
+
   (for-each display (list &quot;(array-every = A B) =&gt; &quot; (array-every = A B) #\newline))
   (for-each display (list &quot;(array-body A) =&gt; &quot; (array-body A) #\newline))
   (for-each display (list &quot;(array-body B) =&gt; &quot; (array-body B) #\newline))
@@ -702,9 +702,9 @@
     <pre>(array-every = A B) =&gt; #t
 (array-body A) =&gt; #(16 #u16(3895))
 (array-body B) =&gt; #(9 #u16(311))
-(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =&gt; 
+(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =&gt;
 0000111100110111
-(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =&gt; 
+(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =&gt;
 0000000100110111</pre>
     <p>The 9 low-order bits of board represent the entries of the array <code>A</code>, ignoring higher order bits, and you can see the bit order that is used to represent a <code>u1-storage-class-body</code>.</p>
     <p><b>Procedure: </b><code><a id="specialized-array?">specialized-array?</a> <var>obj</var></code></p>
@@ -1314,25 +1314,24 @@ indexer:       (lambda multi-index
     <p>Evaluates <code>(array-getter <var>source</var>)</code> on the multi-indices in <code>(array-domain <var>source</var>)</code> in lexicographical order, and assigns each value to the multi-index in <code><var>destination</var></code> in the same lexicographical order.</p>
     <p>It is an error if the arguments don't satisfy these assumptions.</p>
     <p>If assigning any element of <code><var>destination</var></code> affects the value of any element of <code><var>source</var></code>, then the result is undefined.</p>
-    <p><b>Procedure: </b><code><a id="array-stack">array-stack</a> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ] <var>k</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>Assumes that <code>(cons <var> array arrays</var>)</code> is a list of arrays with identical domains,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
+    <p><b>Procedure: </b><code><a id="array-stack">array-stack</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>arrays</var></code> is a nonnull list of arrays with identical domains,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
     <p>Returns a specialized array equivalent to</p>
     <pre><code>(array-copy
  (make-array
-  (let ((<var>lowers</var> (interval-lower-bounds-&gt;list (array-domain <var>array</var>)))
-        (<var>uppers</var> (interval-upper-bounds-&gt;list (array-domain <var>array</var>)))
-        (<var>N</var> (length (cons <var>array arrays</var>))))
-    (make-interval (append (take <var>lowers k</var>) (cons 0 (drop <var>lowers k</var>)))
-                   (append (take <var>uppers k</var>) (cons <var>N</var> (drop <var>uppers k</var>)))))
-  (let ((<var>getters</var> (map array-getter (cons <var>array arrays</var>))))
+  (let ((<var>lowers</var> (interval-lower-bounds-&gt;list (array-domain (car <var>arraya</var>))))
+        (<var>uppers</var> (interval-upper-bounds-&gt;list (array-domain (car <var>arrays</var>))))
+        (<var>N</var> (length <var>arrays</var>)))
+    (make-interval (list-&gt;vector (append (take <var>lowers k</var>) (cons 0 (drop <var>lowers k</var>))))
+                   (list-&gt;vector (append (take <var>uppers k</var>) (cons <var>N</var> (drop <var>uppers k</var>))))))
+  (let ((<var>getters</var> (map array-getter <var>arrays</var>)))
     (lambda indices
       (let ((<var>i</var> (list-ref <var>indices k</var>)))
         (apply (list-ref <var>getters i</var>)
                (append (take <var>indices k</var>)
                        (drop <var>indices</var> (+ <var>k</var> 1)))))))))</code></pre>
     <p>In other words we &quot;stack&quot; the argument arrays along a new <code><var>k</var></code>'th axis, the lower bound of which is set to 0.</p>
-    <p>If all optional arguments are given, the resultant array has storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code>.</p>
-    <p>We determine the values of missing optional arguments as follows: If the argument arrays are <i>all</i> specialized arrays with the same storage class, mutability, <i>and</i> safety, then any missing optional arguments are assigned the associated values from <code><var>array</var></code>; otherwise, any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>Any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Example: </b>Let's say we have a spreadsheet <code><var>A</var></code> and we want to make a new spreadsheet <code><var>B</var></code> with the same rows but with the data from only columns 1, 2, 5, and 8.  Using the routine <code>array-display</code> we define below, code to do this can look like:</p>
     <pre><code>(let* ((A
@@ -1345,8 +1344,7 @@ indexer:       (lambda multi-index
           (array-permute A '#(1 0))
           1)))
        (B
-        (apply
-         array-stack                  ;; stack into a new 2-D array ...
+        (array-stack                  ;; stack into a new 2-D array ...
          1                            ;; along axis 1 (i.e., columns) ...
          (map column_ '(1 2 5 8)))))  ;; the columns of A you want
   (array-display B))
@@ -1357,17 +1355,14 @@ indexer:       (lambda multi-index
 (1 1)   (1 2)   (1 5)   (1 8)
 (2 1)   (2 2)   (2 5)   (2 8)
 (3 1)   (3 2)   (3 5)   (3 8)</code></pre>
-    <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one (rather long) line:</p>
-    <pre><code>(apply array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
-    <p><b>Procedure: </b><code><a id="array-append">array-append</a> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ] <var>k</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>Assumes that <code>(cons <var> array arrays</var>)</code> is a list of arrays with domains that differ at most in the <code><var>k</var></code>'th axis,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
+    <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one line:</p>
+    <pre><code>(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
+    <p><b>Procedure: </b><code><a id="array-append">array-append</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>arrays</var></code> is a nonnull list of arrays with domains that differ at most in the <code><var>k</var></code>'th axis,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
     <p>This routine appends, or concatenates, the argument arrays along the <var>k</var>'th axis, with the lower bound of this axis set to 0.</p>
     <p>Returns a specialized array equivalent to the result of</p>
-    <pre><code>(define (array-append k array . arrays)
-  (let*-values (((arrays)
-                 ;; all array arguments
-                 (cons array arrays))
-                ((axis-subdividers kth-size)
+    <pre><code>(define (array-append k arrays)
+  (let*-values (((axis-subdividers kth-size)
                  ;; compute lower and upper bounds of where along the
                  ;; k'th axis we'll copy each array argument, plus
                  ;; the total size of the kth axis of the result array
@@ -1414,8 +1409,7 @@ indexer:       (lambda multi-index
              (array-translate array translation))
             (loop (cdr arrays)
                   (cdr subdividers)))))))</code></pre>
-    <p>If all optional arguments are given, the resultant array has storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code>.</p>
-    <p>We determine the values of missing optional arguments as follows: If the argument arrays are <i>all</i> specialized arrays with the same storage class, mutability, <i>and</i> safety, then any missing optional arguments are assigned the associated values from <code><var>array</var></code>; otherwise, any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>Any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
@@ -1429,7 +1423,7 @@ indexer:       (lambda multi-index
     <p><b>Note: </b>In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.</p>
     <p><b>Procedure: </b><code><a id="specialized-array-reshape">specialized-array-reshape</a> <var>array</var> <var>new-domain</var> [ <var>copy-on-failure?</var> #f ]</code></p>
     <p>Assumes that <code><var>array</var></code> is a specialized array, <code><var>new-domain</var></code> is an interval with the same volume as <code>(array-domain <var>array</var>)</code>, and <code><var>copy-on-failure?</var></code>, if given, is a boolean.</p>
-    <p>If there is an affine map that takes the multi-indices in <code><var>new-domain</var></code> to the cells in <code>(array-body <var>array</var>)</code> storing the elements of <code><var>array</var></code> in lexicographical order, returns a new specialized array, with the same body and elements as <code><var>array</var></code> and domain <code><var>new-domain</var></code>.  The result inherits its mutability and safety from <code><var>array</var></code>.</p>
+    <p>If there is an affine map that takes the multi-indices in <code><var>new-domain</var></code> to the cells in <code>(array-body <var>array</var>)</code> storing the elements of <code><var>array</var></code> in lexicographical order, <code>specialized-array-reshape</code> returns a new specialized array, with the same body and elements as <code><var>array</var></code> and domain <code><var>new-domain</var></code>.  The result inherits its mutability and safety from <code><var>array</var></code>.</p>
     <p>If there is not an affine map that takes the multi-indices in <code><var>new-domain</var></code> to the cells storing the elements of <code><var>array</var></code> in lexicographical order and <code><var>copy-on-failure?</var></code> is <code>#t</code>, then returns a specialized array copy of <code><var>array</var></code> with domain <code><var>new-domain</var></code>, storage class <code>(array-storage-class <var>array</var>)</code>, mutability <code>(mutable-array? <var>array</var>)</code>, and safety <code>(array-safe? <var>array</var>)</code>.</p>
     <p>It is an error if these conditions on the arguments are not met.</p>
     <p><b>Note: </b>The code in the sample implementation to determine whether there exists an affine map from <code><var>new-domain</var></code> to the multi-indices of the elements of <code><var>array</var></code> in lexicographical order is modeled on the corresponding code in the Python library NumPy.</p>
@@ -2230,10 +2224,10 @@ Reconstructed image:
                  (/ (+ 1 i j))))))
 
 (define (array-display A)
-  
+
   (define (display-item x)
     (display x) (display &quot;\t&quot;))
-  
+
   (newline)
   (case (array-dimension A)
     ((1) (array-for-each display-item A) (newline))
