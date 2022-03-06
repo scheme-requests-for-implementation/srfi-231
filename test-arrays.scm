@@ -4879,92 +4879,74 @@ that computes the componentwise products when we need them, the times are
 
 (pp "array-append tests")
 
-(define optional-arguments
-  (list '()
-        (list generic-storage-class)
-        (list generic-storage-class #t)
-        (list generic-storage-class #t #t)))
+(test (array-append 1 'a)
+      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
 
-(define k-positions
-  '(1 2 3 4))
+(test (array-append 1 '())
+      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
 
-(test (array-append)
-      "array-append: Wrong number of arguments: ")
+(test (array-append 1 '(a))
+      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
 
-(test (array-append 'a)
-      "array-append: Wrong number of arguments: ")
+(test (array-append 1 (list (make-array (make-interval '#(1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
 
-(test (array-append generic-storage-class 'a)
-      "array-append: Wrong number of arguments after seeing storage class: ")
+(test (array-append 1 (list (make-array (make-interval '#(2 2)) list) 'a))
+      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
 
-(test (array-append generic-storage-class #t 'a)
-      "array-append: Wrong number of arguments after seeing storage class and mutability: ")
+(test (array-append 'a (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
 
-(test (array-append generic-storage-class #t #f 'a)
-      "array-append: Wrong number of arguments after seeing storage class, mutability, and safety: ")
+(test (array-append -1 (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
 
-(for-each (lambda (optionals position)
-            (test (apply array-append (append optionals '(a a)))
-                  (string-append "array-append: Expecting arrays of the same dimension after argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions)
+(test (array-append 2 (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
 
-(for-each (lambda (optionals position k)
-            (test (apply array-append (append optionals (list k (make-array (make-interval '#(2 2)) list))))
-                  (string-append "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions
-          '('a 1. -1 3))
+(test (array-append 0
+                    (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list))
+                    'a)
+      "array-append: Expecting a storage class as the third argument: ")
 
-(for-each (lambda (optionals position)
-            (test (apply array-append
-                         (append optionals
-                                 (list 1
-                                       (make-array (make-interval '#(2 2)) list)
-                                       (make-array (make-interval '#(2 2 2)) list))))
-                  (string-append "array-append: Expecting arrays of the same dimension after argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions)
+(test (array-append 0
+                    (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class
+                    'a)
+      "array-append: Expecting a boolean as the fourth argument: ")
 
-(for-each (lambda (optionals position)
-            (test (apply array-append
-                         (append optionals
-                                 (list 1
-                                       (make-array (random-interval 2 3) list)
-                                       (make-array (random-interval 2 3) list))))
-                  (string-append "array-append: Expecting arrays with the same upper and lower bounds (except for index 1) after argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions)
+(test (array-append 0
+                    (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class
+                    #t
+                    'a)
+      "array-append: Expecting a boolean as the fifth argument: ")
 
-(test (array-append u1-storage-class
-                    1
-                    (make-array (make-interval '#(2 2)) list)
-                    (make-array (make-interval '#(2 2)) list))
+(test (array-append 0
+                    (list (make-array (make-interval '#(2 4)) list)
+                          (make-array (make-interval '#(3 5)) list)))
+      "array-append: Expecting arrays with the same upper and lower bounds (except for index 0 as the second argument: ")
+
+(test (array-append 0
+                    (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 1)) list))
+                    u1-storage-class)
       "array-append: Not all elements of the source can be stored in destination: ")
+
 
 
 (test (array-storage-class
        (array-append 0
-                     (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
-                     (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class)))
+                     (list (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
+                           (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class))))
       generic-storage-class)
 
 (test (myarray= (array-append
                  0
-                 (list->array (make-interval '#(2 2))
-                              '(1 2
-                                  3 4))
-                 (list->array (make-interval '#(2 2))
-                              '(5 6
-                                  7 8)))
+                 (list (list->array (make-interval '#(2 2))
+                                    '(1 2
+                                        3 4))
+                       (list->array (make-interval '#(2 2))
+                                    '(5 6
+                                        7 8))))
                 (list->array (make-interval '#(4 2))
                              '(1 2
                                  3 4
@@ -4973,16 +4955,16 @@ that computes the componentwise products when we need them, the times are
       #t)
 
 (test (myarray= (array-append
-                  1
-                  (list->array (make-interval '#(2 2))
-                               '(1 2
-                                   3 4))
-                  (list->array (make-interval '#(2 2))
-                               '(5 6
-                                   7 8)))
+                 1
+                 (list (list->array (make-interval '#(2 2))
+                                    '(1 2
+                                        3 4))
+                       (list->array (make-interval '#(2 2))
+                                    '(5 6
+                                        7 8))))
                 (list->array (make-interval '#(2 4))
                              '(1 2 5 6
-                                  3 4 7 8)))
+                                 3 4 7 8)))
       #t)
 
 (define (my-array-append k . arrays)              ;; call with at least one array
@@ -5035,31 +5017,31 @@ that computes the componentwise products when we need them, the times are
                       (cdr subdividers)))))))))
 
 (test (myarray= (array-append
-                  0
-                  (list->array (make-interval '#(2 2))
-                               '(1 2
-                                   3 4))
-                  (list->array (make-interval '#(2 2))
-                               '(5 6
-                                   7 8)))
-                 (my-array-append
-                  0
-                  (list->array (make-interval '#(2 2))
-                               '(1 2
-                                   3 4))
-                  (list->array (make-interval '#(2 2))
-                               '(5 6
-                                   7 8))))
-      #t)
-
-(test (myarray= (array-append
-                 1
+                 0
+                 (list (list->array (make-interval '#(2 2))
+                                    '(1 2
+                                        3 4))
+                       (list->array (make-interval '#(2 2))
+                                    '(5 6
+                                        7 8))))
+                (my-array-append
+                 0
                  (list->array (make-interval '#(2 2))
                               '(1 2
                                   3 4))
                  (list->array (make-interval '#(2 2))
                               '(5 6
-                                  7 8)))
+                                  7 8))))
+      #t)
+
+(test (myarray= (array-append
+                 1
+                 (list (list->array (make-interval '#(2 2))
+                                    '(1 2
+                                        3 4))
+                       (list->array (make-interval '#(2 2))
+                                    '(5 6
+                                        7 8))))
                 (my-array-append
                  1
                  (list->array (make-interval '#(2 2))
@@ -5071,8 +5053,6 @@ that computes the componentwise products when we need them, the times are
       #t)
 
 
-
-;;; FIXME: Need to test the values of other optional arguments to array-append
 
 ;;; We steal some tests from Alex Shinn's test suite.
 
@@ -5104,99 +5084,102 @@ that computes the componentwise products when we need them, the times are
                                 0)))
               (if (null? o) generic-storage-class (car o))))
 
-(test (myarray= (tensor '((4 7) (2 6) (1 0) (0 1)))
-                (array-append 0 (tensor '((4 7) (2 6))) (identity-array 2)))
+(test (myarray= (tensor '((4 7)
+                          (2 6)
+                          (1 0)
+                          (0 1)))
+                (array-append 0 (list (tensor '((4 7)
+                                                (2 6)))
+                                      (identity-array 2))))
       #t)
 
-(test (myarray= (tensor '((4 7) (2 6) (1 0) (0 1)))
+(test (myarray= (tensor '((4 7)
+                          (2 6)
+                          (1 0)
+                          (0 1)))
                 (array-append 0
-                              (list->array (make-interval '#(2 0) '#(4 2))
-                                           '(4 7 2 6))
-                              (identity-array 2)))
+                              (list (list->array (make-interval '#(2 0) '#(4 2))
+                                                 '(4 7 2 6))
+                                    (identity-array 2))))
       #t)
+
 (test (myarray= (tensor '((4 7 1 0)
                           (2 6 0 1)))
-                (array-append 1 (tensor '((4 7)
-                                          (2 6)))
-                              (identity-array 2)))
+                (array-append 1 (list (tensor '((4 7)
+                                                (2 6)))
+                                      (identity-array 2))))
       #t)
+
 (test (myarray= (tensor '((4 7 2 1 0)
                           (6 3 5 0 1)))
-                (array-append 1 (tensor '((4 7 2)
-                                          (6 3 5)))
-                              (identity-array 2)))
+                (array-append 1 (list (tensor '((4 7 2)
+                                                (6 3 5)))
+                                      (identity-array 2))))
       #t)
+
 (test (myarray= (tensor '((4 7 1 0 0 1 3)
                           (2 6 0 1 5 8 9)))
                 (array-append
                  1
-                 (list->array (make-interval '#(2 2))
-                              '(4 7 2 6))
-                 (identity-array 2)
-                 (list->array (make-interval '#(2 3))
-                              '(0 1 3 5 8 9))))
+                 (list (list->array (make-interval '#(2 2))
+                                    '(4 7 2 6))
+                       (identity-array 2)
+                       (list->array (make-interval '#(2 3))
+                                    '(0 1 3 5 8 9)))))
       #t)
 
 (pp "array-stack tests")
 
-(test (array-stack)
-      "array-stack: Wrong number of arguments: ")
+(test (array-stack 1 'a)
+      "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: ")
 
-(test (array-stack 'a)
-      "array-stack: Wrong number of arguments: ")
+(test (array-stack 1 '())
+      "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: ")
 
-(test (array-stack generic-storage-class 'a)
-      "array-stack: Wrong number of arguments after seeing storage class: ")
+(test (array-stack 1 '(a))
+      "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: ")
 
-(test (array-stack generic-storage-class #t 'a)
-      "array-stack: Wrong number of arguments after seeing storage class and mutability: ")
+(test (array-stack 1 (list (make-array (make-interval '#(1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: ")
 
-(test (array-stack generic-storage-class #t #f 'a)
-      "array-stack: Wrong number of arguments after seeing storage class, mutability, and safety: ")
+(test (array-stack 1 (list (make-array (make-interval '#(2 2)) list) 'a))
+      "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: ")
 
-(for-each (lambda (optionals position)
-            (test (apply array-stack (append optionals '(a a)))
-                  (string-append "array-stack: Expecting arrays with the same domains after argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions)
+(test (array-stack 'a (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
 
-(for-each (lambda (optionals position k)
-            (test (apply array-stack (append optionals (list k (make-array (make-interval '#(2 2)) list))))
-                  (string-append "array-stack: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions
-          '(a 1. -1 3))
+(test (array-stack -1 (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
 
-(for-each (lambda (optionals position)
-            (test (apply array-stack
-                         (append optionals
-                                 (list 1
-                                       (make-array (random-interval 2 3) list)
-                                       (make-array (random-interval 3 4) list))))
-                  (string-append "array-stack: Expecting arrays with the same domains after argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions)
+(test (array-stack 3 (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
 
-(for-each (lambda (optionals position)
-            (test (apply array-stack
-                         (append optionals
-                                 (list 1
-                                       (make-array (make-interval '#(2 2)) list)
-                                       (make-array (make-interval '#(3 2)) list))))
-                  (string-append "array-stack: Expecting arrays with the same domains after argument "
-                                 (number->string position)
-                                 ": ")))
-          optional-arguments
-          k-positions)
+(test (array-stack 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    'a)
+      "array-stack: Expecting a storage class as the third argument: ")
+
+(test (array-stack 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class
+                    'a)
+      "array-stack: Expecting a boolean as the fourth argument: ")
+
+(test (array-stack 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class
+                    #t
+                    'a)
+      "array-stack: Expecting a boolean as the fifth argument: ")
+
+
+(test (array-stack 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class)
+      "array-stack: Not all elements of the source can be stored in destination: ")
 
 (test (array-storage-class
-       (array-stack 1 (make-array (make-interval '#(10)) list)))
+       (array-stack 1 (list (make-array (make-interval '#(10)) list))))
       generic-storage-class)
 
 ;;; FIXME: Need to test the values of other optional arguments to array-append
@@ -5242,9 +5225,9 @@ that computes the componentwise products when we need them, the times are
                    (iota (random 1 5))))
              (k
               (random (+ d 1))))
-        (myarray= (apply array-stack k arrays)
+        (myarray= (array-stack k arrays)
                   (apply myarray-stack k arrays))
-        (test (myarray= (apply array-stack k arrays)
+        (test (myarray= (array-stack k arrays)
                         (apply myarray-stack k arrays))
               #t)))))
 
@@ -5253,23 +5236,29 @@ that computes the componentwise products when we need them, the times are
 
 (test (array-storage-class
        (array-stack 1
-                    (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
-                    (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class)))
+                    (list (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
+                          (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class))))
       generic-storage-class)
 
 (test (myarray= (tensor '(((4 7) (2 6))
                           ((1 0) (0 1))))
-                (array-stack 0 (tensor '((4 7) (2 6))) (identity-array 2)))
+                (array-stack 0 (list (tensor '((4 7)
+                                               (2 6)))
+                                     (identity-array 2))))
       #t)
 
 (test (myarray= (tensor '(((4 7) (1 0))
                           ((2 6) (0 1))))
-                (array-stack 1 (tensor '((4 7) (2 6))) (identity-array 2)))
+                (array-stack 1 (list (tensor '((4 7)
+                                               (2 6)))
+                                     (identity-array 2))))
       #t)
 
 (test (myarray= (tensor '(((4 1) (7 0))
                           ((2 0) (6 1))))
-                (array-stack 2 (tensor '((4 7) (2 6))) (identity-array 2)))
+                (array-stack 2 (list (tensor '((4 7)
+                                               (2 6)))
+                                     (identity-array 2))))
       #t)
 
 (let* ((A
@@ -5282,8 +5271,7 @@ that computes the componentwise products when we need them, the times are
           (array-permute A '#(1 0))
           1)))
        (B
-        (apply
-         array-stack                  ;; stack into a new 2-D array ...
+        (array-stack                  ;; stack into a new 2-D array ...
          1                            ;; along axis 1 (i.e., columns) ...
          (map column_ '(1 2 5 8)))))  ;; the columns of A you want
   (array-display B))
@@ -5293,7 +5281,7 @@ that computes the componentwise products when we need them, the times are
          (make-interval '#(4 10))
          list))
        (B
-        (apply array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))))
+        (array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))))
   (array-display B))
 
 
