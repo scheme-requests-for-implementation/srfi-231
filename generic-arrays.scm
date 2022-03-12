@@ -2428,7 +2428,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          "Not all elements of the source can be stored in destination: ")
                                         destination source i j k l item))))))
                             (else
-                             (let ((index 0))
+                             (let ((index initial-offset))
                                (lambda multi-index
                                  (let ((item (apply getter multi-index)))
                                    (if (checker item)
@@ -4315,6 +4315,111 @@ OTHER DEALINGS IN THE SOFTWARE.
                         "array-append: ")
                        (loop (cdr arrays)
                              (cdr subdividers)))))))))))
+
+(define (array-block A-arg
+                     #!optional
+                     (storage-class generic-storage-class)
+                     (mutable?      (specialized-array-default-mutable?))
+                     (safe?         (specialized-array-default-safe?)))
+  (cond ((not (array? A-arg))
+         (error "array-block: The first argument is not an array: " A-arg))
+        ((not (storage-class? storage-class))
+         (error "array-block: The second argument is not a storage class: " A-arg storage-class))
+        ((not (boolean? mutable?))
+         (error "array-block: The third argument is not a boolean: " A-arg storage-class mutable?))
+        ((not (boolean? safe?))
+         (error "array-block: The fourth argument is not a boolean: " A-arg storage-class mutable? safe?))
+        (else
+         (let* ((A                (%%array-translate     ;; make lower-bounds zero
+                                   (array-copy A-arg)  ;; evaluate all (array) elements of A-arg
+                                   (vector-map - (%%interval-lower-bounds (array-domain A-arg)))))
+                (A_D              (%%array-domain A))
+                (A_               (%%array-getter A))
+                (A_dim            (%%interval-dimension A_D))
+                (corner-index     (make-list (fx- A_dim 1) 0))
+                (ks               (list->vector (iota A_dim))))
+           (cond ((not (%%array-every array? A '()))
+                  (error "array-block: Not all elements of the first argument (an array) are arrays: " A-arg))
+                 ((not (%%array-every (lambda (a) (fx= (%%array-dimension a) A_dim)) A '()))
+                  (error "array-block: Not all elements of the first argument (an array) have the same dimension: " A-arg))
+                 ((not
+                   (%%vector-every
+                    (lambda (k)  ;; the direction
+                      (or (eqv? A_dim 1)   ;; We can always stack 1-D sticks on top of each other
+                          (let ((slices (%%array-curry (%%array-permute A (%%index-first A_dim k)) (fx- A_dim 1))))
+                            (%%array-every
+                             (lambda (slice)
+                               (let ((slice-kth-width
+                                      (%%interval-width (%%array-domain (apply (%%array-getter slice) corner-index)) k)))
+                                 (%%array-every
+                                  (lambda (a)  ;; within slice
+                                    (fx= (%%interval-width (%%array-domain a) k)
+                                         slice-kth-width))
+                                  slice
+                                  '())))
+                             slices
+                             '()))))
+                    ks))
+                  (error "array-block: Cannot stack array elements of the first argument into result array: " A-arg))
+                 (else
+                  ;; Here we repeat some of the logic of array-append; otherwise, we could apply array-append
+                  ;; iteratively in each coordinate direction, but that could incur more memory allocation.
+                  (let* ((slice-offsets       ;; the indices in each direction where the "cuts" are
+                          (vector-map
+                           (lambda (k)        ;; the direction
+                             (let* ((pencil   ;; a pencil in that direction
+                                     (if (eqv? A_dim 1)
+                                         A
+                                         (apply (%%array-getter (%%array-curry (%%array-permute A (%%index-last A_dim k)) 1))
+                                                corner-index)))
+                                    (pencil_
+                                     (%%array-getter pencil))
+                                    (pencil-size
+                                     (%%interval-width (%%array-domain pencil) 0))
+                                    (result   ;; include sum of all kth interval-widths in pencil
+                                     (make-vector (fx+ pencil-size 1) 0)))
+                               (do ((i 0 (fx+ i 1)))
+                                   ((fx= i pencil-size) result)
+                                 (vector-set! result
+                                              (fx+ i 1)
+                                              (fx+ (vector-ref result i)
+                                                   (%%interval-width (%%array-domain (pencil_ i)) k))))))
+                           ks))
+                         (result
+                          (%%make-specialized-array
+                           (make-interval
+                            (vector-map (lambda (v)
+                                          (vector-ref v (fx- (vector-length v) 1)))
+                                        slice-offsets))
+                           storage-class
+                           (storage-class-default storage-class)
+                           safe?)))
+                    ;; We copy the elements from each input array block to the corresponding block
+                    ;; in the result array.
+                    (%%interval-for-each
+                     (lambda multi-index
+                       (let* ((vector-multi-index
+                               (list->vector multi-index))
+                              (corner     ;; where the subarray will sit in the result array
+                               (vector-map (lambda (i k)
+                                             (vector-ref (vector-ref slice-offsets k) i))
+                                           vector-multi-index
+                                           ks))
+                              (subarray
+                               (apply A_ multi-index))
+                              (translated-subarray  ;; translate the subarray to corner
+                               (%%array-translate
+                                subarray
+                                (vector-map -
+                                            corner
+                                            (%%interval-lower-bounds (%%array-domain subarray))))))
+                         (%%move-array-elements (%%array-extract result (%%array-domain translated-subarray))
+                                                translated-subarray
+                                                "array-block: ")))
+                     A_D)
+                    (if (not mutable?)
+                        (%%array-setter-set! result #f))
+                    result)))))))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,
