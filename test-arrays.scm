@@ -5284,6 +5284,150 @@ that computes the componentwise products when we need them, the times are
         (array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))))
   (array-display B))
 
+(pp "array-block tests")
+
+(test (array-block 'a)
+      "array-block: The first argument is not an array: ")
+
+(test (array-block (make-array (make-interval '#(2 2)) list) 'a)
+      "array-block: The second argument is not a storage class: ")
+
+(test (array-block (make-array (make-interval '#(2 2)) list)
+                   u8-storage-class
+                   'a)
+      "array-block: The third argument is not a boolean: ")
+
+(test (array-block (make-array (make-interval '#(2 2)) list)
+                   u8-storage-class
+                   #f
+                   'a)
+      "array-block: The fourth argument is not a boolean: ")
+
+(test (array-block (make-array (make-interval '#(2 2)) list))
+      "array-block: Not all elements of the first argument (an array) are arrays: ")
+
+(test (array-block (vector*->array 1 (vector (vector*->array 1 '#(1 1))
+                                             (vector*->array 2 '#(#(1 2) #(3 4))))))
+      "array-block: Not all elements of the first argument (an array) have the same dimension: ")
+
+(test (array-block (list*->array
+                    2
+                    (list (list (list*->array 2 '((0 1)
+                                                  (2 3)))
+                                (list*->array 2 '((4)
+                                                  (5)))
+                                (list*->array 2 '((6 7)     ;; these should each have ...
+                                                  (9 10)))) ;; three elements
+                          (list (list*->array 2 '((12 13)))
+                                (list*->array 2 '((14)))
+                                (list*->array 2 '((15 16 17)))))))
+      "array-block: Cannot stack array elements of the first argument into result array: ")
+
+(let ((A (list*->array
+                    2
+                    (list (list (list*->array 2 '((0 1)
+                                                  (2 3)))
+                                (list*->array 2 '((4)
+                                                  (5)))
+                                (list*->array 2 '((6 7 8)
+                                                  (9 10 11))))
+                          (list (list*->array 2 '((12 13)))
+                                (list*->array 2 '((14)))
+                                (list*->array 2 '((15 16 17))))))))
+
+  (test (array-block A u1-storage-class)
+        "array-block: Not all elements of the source can be stored in destination: ")
+
+  (for-each (lambda (mutable?)
+              (for-each (lambda (safe?)
+                          (let ((new-A (array-block A generic-storage-class mutable? safe?)))
+                            (test (array-safe? new-A)
+                                  safe?)
+                            (test (mutable-array? new-A)
+                                  mutable?)))
+                        '(#t #f)))
+            '(#t #f))
+  (for-each (lambda (mutable?)
+              (for-each (lambda (safe?)
+                          (parameterize ((specialized-array-default-mutable? mutable?)
+                                         (specialized-array-default-safe?    safe?))
+                            (let ((new-A (array-block A generic-storage-class)))
+                              (test (array-safe? new-A)
+                                    safe?)
+                              (test (mutable-array? new-A)
+                                    mutable?))))
+                        '(#t #f)))
+            '(#t #f)))
+
+(do ((i 0 (+ i 1)))
+    ((= i random-tests))
+  (let* ((dims
+          (random 1 6))
+         (A-uppers
+          (list->vector (map (lambda (ignore) (random 3 6)) (iota dims))))
+         (A
+          (array-copy
+           (make-array (make-interval A-uppers)
+                       (lambda args
+                         (random 2)))
+           u1-storage-class))
+         (A_
+          (array-getter A))
+         (number-of-cuts
+          (array->vector
+           (make-array (make-interval (vector dims))
+                       (lambda args (random 3)))))
+         (cuts
+          (vector-map (lambda (cuts upper)
+                        (let ((bitmap (make-vector (+ upper 1) #f)))
+                          (vector-set! bitmap 0 #t)
+                          (vector-set! bitmap upper #t)
+                          (let loop ((i 0))
+                            (if (fx= i cuts)
+                                (let ((result (make-vector (fx+ cuts 2))))
+                                  (let inner ((l 0)
+                                              (j 0))
+                                    (cond ((fx> j cuts)
+                                           (vector-set! result j upper)
+                                           result)
+                                          ((vector-ref bitmap l)
+                                           (vector-set! result j l)
+                                           (inner (fx+ l 1)
+                                                  (fx+ j 1)))
+                                          (else
+                                           (inner (fx+ l 1)
+                                                  j)))))
+                                (let ((proposed-cut (random upper)))
+                                  (if (vector-ref bitmap proposed-cut)
+                                      (loop i)
+                                      (begin
+                                        (vector-set! bitmap proposed-cut #t)
+                                        (loop (fx+ i 1)))))))))
+                      number-of-cuts
+                      A-uppers))
+         (A-blocks
+          (array-map (lambda (a)
+                       (array-translate a (vector-map - (%%interval-lower-bounds (array-domain a)))))
+                     (make-array (make-interval (vector-map (lambda (v)
+                                                              (- (vector-length v) 1))
+                                                            cuts))
+                                 (lambda args
+                                   (let ((vector-args (list->vector args)))
+                                     (make-array (make-interval (vector-map (lambda (cuts i)
+                                                                              (vector-ref cuts i))
+                                                                            cuts
+                                                                            vector-args)
+                                                                (vector-map (lambda (cuts i)
+                                                                              (vector-ref cuts (+ i 1)))
+                                                                            cuts
+                                                                            vector-args))
+                                                 A_))))))
+         (reconstructed-A
+          (array-block A-blocks u1-storage-class)))
+    (test (array-every = A reconstructed-A)
+          #t)))
+
+(next-test-random-source-state!)
 
 (define (array-pad-periodically a N)
   ;; Pad a periodically with N rows and columns top and bottom, left and right.
