@@ -5324,16 +5324,16 @@ that computes the componentwise products when we need them, the times are
       "array-block: Cannot stack array elements of the first argument into result array: ")
 
 (let ((A (list*->array
-                    2
-                    (list (list (list*->array 2 '((0 1)
-                                                  (2 3)))
-                                (list*->array 2 '((4)
-                                                  (5)))
-                                (list*->array 2 '((6 7 8)
-                                                  (9 10 11))))
-                          (list (list*->array 2 '((12 13)))
-                                (list*->array 2 '((14)))
-                                (list*->array 2 '((15 16 17))))))))
+          2
+          (list (list (list*->array 2 '((0 1)
+                                        (2 3)))
+                      (list*->array 2 '((4)
+                                        (5)))
+                      (list*->array 2 '((6 7 8)
+                                        (9 10 11))))
+                (list (list*->array 2 '((12 13)))
+                      (list*->array 2 '((14)))
+                      (list*->array 2 '((15 16 17))))))))
 
   (test (array-block A u1-storage-class)
         "array-block: Not all elements of the source can be stored in destination: ")

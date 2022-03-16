@@ -77,6 +77,7 @@ MathJax.Hub.Config({
          (<li> "Draft #2 published: 2022-01-20")
          (<li> "Draft #3 published: 2022-01-26")
          (<li> "Draft #4 published: 2022-02-24")
+         (<li> "Draft #5 published: 2022-03-15")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -124,8 +125,9 @@ MathJax.Hub.Config({
                (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))", "
                (<a> href: "#array-rarrow-vector*" (<code>'array->vector*))", "
                (<a> href: "#array-inner-product" (<code>'array-inner-product))", "
-               (<a> href: "#array-stack" (<code>'array-stack))", and "
-               (<a> href: "#array-append" (<code>'array-append))".")
+               (<a> href: "#array-stack" (<code>'array-stack))", "
+               (<a> href: "#array-append" (<code>'array-append))", and "
+               (<a> href: "#array-block" (<code>'array-block))".")
          (<li> "A new set of \"Introductory remarks\" surveys some of the more important procedures in this SRFI.")
          )
 
@@ -175,6 +177,8 @@ MathJax.Hub.Config({
                ": Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to "(<code>'array-curry)".  Returns a specialized array.")
          (<li> (<a> href:"#array-append"(<code>'array-append))
                ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.")
+         (<li> (<a> href: "#array-block"(<code>'array-block))
+               ": Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  A more general inverse to "(<a> href: "#array-tile" (<code>'array-tile))".")
          (<li> (<a> href:"#array-foldl"(<code>'array-foldl))", "
                (<a> href:"#array-foldr"(<code>'array-foldr))", "
                (<a> href:"#array-reduce"(<code>'array-reduce))", "
@@ -196,7 +200,7 @@ MathJax.Hub.Config({
                (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))": Either transfer the elements of an array to a nested list or vector, or construct a specialized array from the elements of a nested list or vector."))
         (<p>"I hope this brief discussion gives a flavor for the design of this SRFI.")
 
-       (<h3> "Bawden-style arrays")
+        (<h3> "Bawden-style arrays")
         (<p>  "In a "(<a> href: "https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ" "1993 post")
               " to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. "
               "The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives "
@@ -435,6 +439,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-rarrow-vector*" "array->vector*") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-append" "array-append") END
+                 (<a> href: "#array-block" "array-block") END
                  (<a> href: "#array-stack" "array-stack") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
@@ -1911,15 +1916,72 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 
+(format-lambda-list '(array-block A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is an array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together, in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
+(<pre>(<code>"(every
+ (lambda (k)                                        ;; for each coordinate direction
+   (let ((slices                                    ;; the \"slices\" perpendicular to that direction
+          (array-curry (array-permute A (index-first (array-dimension A) k))
+                       (- (array-dimension A) 1))))
+     (array-every
+      (lambda (slice)                               ;; for every slice perpendicular to direction k
+        (let ((slice-kth-width                      ;; the kth interval width of the \"corner\" element
+               (interval-width
+                (array-domain
+                 (apply (array-getter slice)
+                        (make-list (- (array-dimension A) 1) 0)))
+                k)))
+          (array-every
+           (lambda (a)                              ;; all arrays within that slice
+             (= (interval-width (array-domain a) k) ;; have the same width in the kth direction
+                slice-kth-width))
+           slice)))
+      slices)))
+ (iota (array-dimension A)))"))
+(<p> "This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.")
+(<p> "Omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.")
+(<b>(<b> "Examples: "))
+(<pre>(<code>"(array->vector*
+ (array-block (list*->array
+               2
+               (list (list (list*->array 2 '((0 1)
+                                             (2 3)))
+                           (list*->array 2 '((4)
+                                             (5)))
+                           (list*->array 2 '((6 7 8)
+                                             (9 10 11))))
+                     (list (list*->array 2 '((12 13)))
+                           (list*->array 2 '((14)))
+                           (list*->array 2 '((15 16 17))))))))
+=>
+#(#(0 1 4 6 7 8)
+  #(2 3 5 9 10 11)
+  #(12 13 14 15 16 17))
+
+(array-block (list*->array
+              2
+              (list (list (list*->array 2 '((0 1)
+                                            (2 3)))
+                          (list*->array 2 '((4)
+                                            (5)))
+                          (list*->array 2 '((6 7)            ;; these should each have ...
+                                            (9 10))))        ;; three elements ...
+                    (list (list*->array 2 '((12 13)))
+                          (list*->array 2 '((14)))
+                          (list*->array 2 '((15 16 17))))))) ;; to match this array
+=> error"))
+
 (format-lambda-list '(array-ref A i0 #\. i-tail))
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
 (<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>"i0 i-tail")")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not an array, or if the number of arguments specified is not the correct number for "(<code>"(array-getter "(<var>'A)")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not an array,or if the number of arguments specified is not the correct number for "(<code>"(array-getter "(<var>'A)")")", or if "(<code>"(cons "(<var> "i0 i-tail")")")" is not in the domain of "(<code>(<var>'A))".")
 
 (format-lambda-list '(array-set! A v i0 #\. i-tail))
 (<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
 (<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v i0 i-tail")")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array, or if the number of arguments specified is not the correct number for "(<code>"(array-setter "(<var>'A)")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for "(<code>"(array-setter "(<var>'A)")")", or if "(<code>"(cons "(<var> "i0 i-tail")")")" is not in the domain of "(<code>(<var>'A))".")
 
 (<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
 
