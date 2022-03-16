@@ -102,6 +102,7 @@
     array-assign!
     array-copy
     array-append
+    array-block
     array-stack
     specialized-array-reshape
     array-ref
