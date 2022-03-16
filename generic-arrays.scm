@@ -4343,23 +4343,21 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ((not (%%array-every (lambda (a) (fx= (%%array-dimension a) A_dim)) A '()))
                   (error "array-block: Not all elements of the first argument (an array) have the same dimension: " A-arg))
                  ((not
-                   (%%vector-every
-                    (lambda (k)  ;; the direction
-                      (or (eqv? A_dim 1)   ;; We can always stack 1-D sticks on top of each other
+                   (or (eqv? A_dim 1)
+                       (%%vector-every
+                        (lambda (k)  ;; the direction
                           (let ((slices (%%array-curry (%%array-permute A (%%index-first A_dim k)) (fx- A_dim 1))))
-                            (%%array-every
+                            (array-every
                              (lambda (slice)
                                (let ((slice-kth-width
                                       (%%interval-width (%%array-domain (apply (%%array-getter slice) corner-index)) k)))
-                                 (%%array-every
+                                 (array-every
                                   (lambda (a)  ;; within slice
                                     (fx= (%%interval-width (%%array-domain a) k)
                                          slice-kth-width))
-                                  slice
-                                  '())))
-                             slices
-                             '()))))
-                    ks))
+                                  slice)))
+                             slices)))
+                        ks)))
                   (error "array-block: Cannot stack array elements of the first argument into result array: " A-arg))
                  (else
                   ;; Here we repeat some of the logic of array-append; otherwise, we could apply array-append

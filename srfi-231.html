@@ -24,6 +24,7 @@
       <li>Draft #2 published: 2022-01-20</li>
       <li>Draft #3 published: 2022-01-26</li>
       <li>Draft #4 published: 2022-02-24</li>
+      <li>Draft #5 published: 2022-03-15</li>
       <li>Bradley Lucier's <a href="https://github.com/gambiteer/srfi-231">personal Git repo for this SRFI</a> for reference while the SRFI is in <em>draft</em> status.</li>
     </ul>
     <h2>Abstract</h2>
@@ -49,7 +50,7 @@
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
       <li>Procedures that generate useful permutations have been added: <a href="#index-rotate"><code>index-rotate</code></a>, <a href="#index-first"><code>index-first</code></a>, and <a href="#index-last"><code>index-last</code></a>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
-      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, and <a href="#array-append"><code>array-append</code></a>.</li>
+      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -82,6 +83,7 @@
       <li><a href="#array-assign!"><code>array-assign!</code></a>: Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine <code>array-map</code>, <code>array-outer-product</code>, <code>array-extract</code>, and <code>array-assign!</code> to do one step of the elimination.</li>
       <li><a href="#array-stack"><code>array-stack</code></a>: Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to <code>array-curry</code>.  Returns a specialized array.</li>
       <li><a href="#array-append"><code>array-append</code></a>: Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.</li>
+      <li><a href="#array-block"><code>array-block</code></a>: Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  A more general inverse to <a href="#array-tile"><code>array-tile</code></a>.</li>
       <li><a href="#array-foldl"><code>array-foldl</code></a>, <a href="#array-foldr"><code>array-foldr</code></a>, <a href="#array-reduce"><code>array-reduce</code></a>, <a href="#array-for-each"><code>array-for-each</code></a>, <a href="#array-any"><code>array-any</code></a>, and <a href="#array-every"><code>array-every</code></a>: Evaluates all elements of an array (for <code>array-every</code> and <code>array-any</code>, as many as needed to know the result), and combines them in certain ways.</li>
     </ul>
     <p>Finally, we have procedures that convert between other data and arrays:</p>
@@ -254,6 +256,7 @@
         <a href="#array-rarrow-vector*">array-&gt;vector*</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-append">array-append</a>,
+        <a href="#array-block">array-block</a>,
         <a href="#array-stack">array-stack</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
@@ -1411,14 +1414,69 @@ indexer:       (lambda multi-index
                   (cdr subdividers)))))))</code></pre>
     <p>Any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
+    <p><b>Procedure: </b><code><a id="array-block">array-block</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>A</var></code> is an array of arrays, all of which have the same dimension as <code><var>A</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together, in the configuration given by their indices in <code><var>A</var></code>.  We can always do this when <code>(array-dimension <var>A</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>A</var></code> are zero, we require: </p>
+    <pre><code>(every
+ (lambda (k)                                        ;; for each coordinate direction
+   (let ((slices                                    ;; the &quot;slices&quot; perpendicular to that direction
+          (array-curry (array-permute A (index-first (array-dimension A) k))
+                       (- (array-dimension A) 1))))
+     (array-every
+      (lambda (slice)                               ;; for every slice perpendicular to direction k
+        (let ((slice-kth-width                      ;; the kth interval width of the &quot;corner&quot; element
+               (interval-width
+                (array-domain
+                 (apply (array-getter slice)
+                        (make-list (- (array-dimension A) 1) 0)))
+                k)))
+          (array-every
+           (lambda (a)                              ;; all arrays within that slice
+             (= (interval-width (array-domain a) k) ;; have the same width in the kth direction
+                slice-kth-width))
+           slice)))
+      slices)))
+ (iota (array-dimension A)))</code></pre>
+    <p>This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>A</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>A</var></code> successively along each coordinate axis of <code><var>A</var></code>, in any order of the axes.</p>
+    <p>Omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.</p><b><b>Examples: </b></b>
+    <pre><code>(array-&gt;vector*
+ (array-block (list*-&gt;array
+               2
+               (list (list (list*-&gt;array 2 '((0 1)
+                                             (2 3)))
+                           (list*-&gt;array 2 '((4)
+                                             (5)))
+                           (list*-&gt;array 2 '((6 7 8)
+                                             (9 10 11))))
+                     (list (list*-&gt;array 2 '((12 13)))
+                           (list*-&gt;array 2 '((14)))
+                           (list*-&gt;array 2 '((15 16 17))))))))
+=&gt;
+#(#(0 1 4 6 7 8)
+  #(2 3 5 9 10 11)
+  #(12 13 14 15 16 17))
+
+(array-block (list*-&gt;array
+              2
+              (list (list (list*-&gt;array 2 '((0 1)
+                                            (2 3)))
+                          (list*-&gt;array 2 '((4)
+                                            (5)))
+                          (list*-&gt;array 2 '((6 7)            ;; these should each have ...
+                                            (9 10))))        ;; three elements ...
+                    (list (list*-&gt;array 2 '((12 13)))
+                          (list*-&gt;array 2 '((14)))
+                          (list*-&gt;array 2 '((15 16 17))))))) ;; to match this array
+=&gt; error</code></pre>
     <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>
-    <p>It is an error if <code><var>A</var></code> is not an array, or if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not an array,or if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>, or if <code>(cons <var>i0 i-tail</var>)</code> is not in the domain of <code><var>A</var></code>.</p>
     <p><b>Procedure: </b><code><a id="array-set!">array-set!</a> <var>A</var> <var>v</var> <var>i0</var> . <var>i-tail</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
     <p>Returns <code>(apply (array-setter <var>A</var>) <var>v i0 i-tail</var>)</code>.</p>
-    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array, or if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>, or if <code>(cons <var>i0 i-tail</var>)</code> is not in the domain of <code><var>A</var></code>.</p>
     <p><b>Note: </b>In the sample implementation, because <code>array-ref</code> and <code>array-set!</code> take a variable number of arguments and they must check that <code><var>A</var></code> is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which <code>1D-Haar-loop</code> is coded below, can take up to three times as long runtime.</p>
     <p><b>Note: </b>In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.</p>
     <p><b>Procedure: </b><code><a id="specialized-array-reshape">specialized-array-reshape</a> <var>array</var> <var>new-domain</var> [ <var>copy-on-failure?</var> #f ]</code></p>
