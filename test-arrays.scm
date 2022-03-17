@@ -69,6 +69,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   )
 
 (declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))
+
 (declare (inlining-limit 0))
 (define random-tests 100)
 (set! random-tests random-tests)
@@ -3364,13 +3365,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-tile 'a '#(10))
       "array-tile: The first argument is not an array: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) 'a)
-      "array-tile: The second argument is not a vector of exact positive integers: ")
+      "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(a a))
-      "array-tile: The second argument is not a vector of exact positive integers: ")
+      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact positive integers that sum to width 0 of the domain of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(-1 1))
-      "array-tile: The second argument is not a vector of exact positive integers: ")
+      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact positive integers that sum to width 0 of the domain of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
-      "array-tile: The dimension of the first argument (an array) does not equal the length of the second argument (a vector): ")
+      "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 
 (do ((d 1 (fx+ d 1)))
      ((fx= d 6))
@@ -3414,6 +3415,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       lowers uppers vec-i sidelengths)))
                     (array-extract array
                                    (make-interval result-lowers result-uppers)))))))
+
+;;; The array-block random tests also test array-tile.
 
 (do ((i 0 (fx+ i 1)))
     ((fx= i random-tests))
@@ -5323,17 +5326,26 @@ that computes the componentwise products when we need them, the times are
                                 (list*->array 2 '((15 16 17)))))))
       "array-block: Cannot stack array elements of the first argument into result array: ")
 
-(let ((A (list*->array
-          2
-          (list (list (list*->array 2 '((0 1)
-                                        (2 3)))
-                      (list*->array 2 '((4)
-                                        (5)))
-                      (list*->array 2 '((6 7 8)
-                                        (9 10 11))))
-                (list (list*->array 2 '((12 13)))
-                      (list*->array 2 '((14)))
-                      (list*->array 2 '((15 16 17))))))))
+(let* ((A (list*->array
+           2
+           (list (list (list*->array 2 '((0 1)
+                                         (2 3)))
+                       (list*->array 2 '((4)
+                                         (5)))
+                       (list*->array 2 '((6 7 8)
+                                         (9 10 11))))
+                 (list (list*->array 2 '((12 13)))
+                       (list*->array 2 '((14)))
+                       (list*->array 2 '((15 16 17)))))))
+       (A-appended
+        (array-block A))
+       (A-tiled
+        (array-tile A-appended '#(#(2 1) #(2 1 3)))))
+
+  (test (array-every equal?            ;; we convert them to list*'s to ignore domains.
+                     (array-map array->list* A)
+                     (array-map array->list* A-tiled))
+        #t)
 
   (test (array-block A u1-storage-class)
         "array-block: Not all elements of the source can be stored in destination: ")
@@ -5405,10 +5417,18 @@ that computes the componentwise products when we need them, the times are
                                         (loop (fx+ i 1)))))))))
                       number-of-cuts
                       A-uppers))
+         (side-lengths
+          (vector-map
+           (lambda (cuts)
+             (let ((result
+                    (make-vector (- (vector-length cuts) 1))))
+               (do ((i 0 (fx+ i 1)))
+                   ((fx= i (vector-length result)) result)
+                 (vector-set! result i (- (vector-ref cuts (+ i 1))
+                                          (vector-ref cuts i))))))
+           cuts))
          (A-blocks
-          (array-map (lambda (a)
-                       (array-translate a (vector-map - (%%interval-lower-bounds (array-domain a)))))
-                     (make-array (make-interval (vector-map (lambda (v)
+          (make-array (make-interval (vector-map (lambda (v)
                                                               (- (vector-length v) 1))
                                                             cuts))
                                  (lambda args
@@ -5421,10 +5441,21 @@ that computes the componentwise products when we need them, the times are
                                                                               (vector-ref cuts (+ i 1)))
                                                                             cuts
                                                                             vector-args))
-                                                 A_))))))
+                                                 A_)))))
+         (A-tiled
+          (array-tile A side-lengths))
          (reconstructed-A
           (array-block A-blocks u1-storage-class)))
+    (test (array-every myarray= A-tiled A-blocks)
+          #t)
     (test (array-every = A reconstructed-A)
+          #t)
+    (test (array-every = A
+                       (array-block
+                        (array-tile A
+                                    (list->vector
+                                     (map (lambda (ignore) (random 1 5))
+                                          (iota dims))))))
           #t)))
 
 (next-test-random-source-state!)

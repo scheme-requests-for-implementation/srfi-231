@@ -2916,103 +2916,122 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-extract array new-domain))))
 
-(define (array-tile array sides)
-  (cond ((not (array? array))
-         (error "array-tile: The first argument is not an array: " array sides))
-        ((not (and (vector? sides)
-                   (%%vector-every (lambda (x) (and (exact-integer? x) (positive? x))) sides)))
-         (error "array-tile: The second argument is not a vector of exact positive integers: " array sides))
-        ((not (fx= (%%array-dimension array)
-                   (vector-length sides)))
-         (error "array-tile: The dimension of the first argument (an array) does not equal the length of the second argument (a vector): " array sides))
+(define (array-tile A slice-widths)
+
+  (define (%%vector-foldl op id v)
+  (let ((n (vector-length v)))
+    (do ((i 0 (fx+ i 1))
+         (id id (op id (vector-ref v i))))
+        ((fx= i n) id))))
+
+  (cond ((not (array? A))
+         (error "array-tile: The first argument is not an array: " A slice-widths))
+        ((not (and (vector? slice-widths)
+                   (fx= (vector-length slice-widths)
+                        (%%array-dimension A))))
+         (error "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: " A slice-widths))
         (else
-         (let* ((n
-                 (vector-length sides))
-                (domain
-                 (%%array-domain array))
-                (lower-bounds
-                 (%%interval-lower-bounds domain))
-                (upper-bounds
-                 (%%interval-upper-bounds domain))
-                (result-lower-bounds
-                 (make-vector n 0))
-                (result-upper-bounds
-                 (vector-map (lambda (l u s)
-                               (quotient (+ (- u l)
-                                            (- s 1))
-                                         s))
-                             lower-bounds upper-bounds sides))
-                (result-domain
-                 (%%finish-interval result-lower-bounds result-upper-bounds)))
+         (let* ((A-dim  (%%array-dimension A))
+                (domain (%%array-domain A))
+                (lowers (%%interval-lower-bounds domain))
+                (uppers (%%interval-upper-bounds domain))
+                (widths (%%interval-widths domain)))
+           (let slice-widths-check ((k 0))
+             (if (fx< k A-dim)
+                 (let ((S_k (vector-ref slice-widths k)))
+                   (if (or (and (exact-integer? S_k) (positive? S_k))
+                           (and (vector? S_k)
+                                (%%vector-every (lambda (x)
+                                                  (and (exact-integer? x)
+                                                       (positive? x)))
+                                                S_k)
+                                (= (%%vector-foldl + 0 S_k) (%%interval-width domain k))))
+                       (slice-widths-check (fx+ k 1))
+                       (error (string-append
+                               "array-tile: Element "
+                               (number->string k)
+                               " of the vector second argument is neither an exact positive integer nor "
+                               "a vector of exact positive integers that sum to width "
+                               (number->string k)
+                               " of the domain of the array first argument: ")
+                              A slice-widths)))
+                 (let ((offsets (make-vector A-dim)))
+                   (do ((k 0 (fx+ k 1)))
+                       ((fx= k A-dim))
+                     (let ((S_k (vector-ref slice-widths k)))
+                       (if (exact-integer? S_k)
+                           (let* ((width_k          (vector-ref widths k))
+                                  (number-of-slices (quotient (+ width_k (- S_k 1)) S_k))
+                                  (slice-offsets    (make-vector (+ number-of-slices 1))))
+                             (vector-set! slice-offsets 0 (vector-ref lowers k))
+                             (do ((i 0 (fx+ i 1)))
+                                 ((fx= i number-of-slices)
+                                  (vector-set! slice-offsets
+                                               number-of-slices
+                                               (min (vector-ref uppers k)
+                                                    (vector-ref slice-offsets number-of-slices)))
+                                  (vector-set! offsets k slice-offsets))
+                               (vector-set! slice-offsets
+                                            (fx+ i 1)
+                                            (+ (vector-ref slice-offsets i) S_k))))
+                           (let* ((number-of-slices (vector-length S_k))
+                                  (slice-offsets    (make-vector (+ number-of-slices 1))))
+                             (vector-set! slice-offsets 0 (vector-ref lowers k))
+                             (do ((i 0 (fx+ i 1)))
+                                 ((fx= i number-of-slices)
+                                  (vector-set! offsets k slice-offsets))
+                               (vector-set! slice-offsets
+                                            (fx+ i 1)
+                                            (+ (vector-ref slice-offsets i)
+                                               (vector-ref S_k i))))))))
+                   (let ((result-domain
+                          (make-interval (vector-map (lambda (v)
+                                                       (- (vector-length v) 1))
+                                                     offsets))))
 
-           (define-macro (generate-result)
+                     (define-macro (generate-result)
 
-             (define (symbol-append . args)
-               (string->symbol
-                (apply string-append (map (lambda (x)
-                                            (cond ((symbol? x)
-                                                   (symbol->string x))
-                                                  ((number? x)
-                                                   (number->string x))
-                                                  ((string? x)
-                                                   x)
-                                                  (else
-                                                   (error "Arghh!"))))
-                                          args))))
+                       (define (symbol-append . args)
+                         (string->symbol
+                          (apply string-append (map (lambda (x)
+                                                      (cond ((symbol? x) (symbol->string x))
+                                                            ((number? x) (number->string x))
+                                                            ((string? x) x)
+                                                            (else (error "Arghh!"))))
+                                                    args))))
 
-             `(case n
-                ,@(map (lambda (k)
-                         (let* ((indices
-                                 (iota k))
-                                (args
-                                 (map (lambda (j) (symbol-append 'i j)) indices))
-                                (lowers
-                                 (map (lambda (j) (symbol-append 'l j)) indices))
-                                (uppers
-                                 (map (lambda (j) (symbol-append 'u j)) indices))
-                                (sides
-                                 (map (lambda (j) (symbol-append 's j)) indices)))
-                           `((,k)
-                             (lambda ,args
-                               (if (not (and ,@(map (lambda (arg) `(exact-integer? ,arg)) args)
-                                             (,(symbol-append '%%interval-contains-multi-index?- k) result-domain ,@args)))
-                                   (error "array-tile: Index to result array is not valid: " ,@args)
-                                   (let* (,@(map (lambda (l j)
-                                                   `(,l (vector-ref lower-bounds ,j)))
-                                                 lowers indices)
-                                          ,@(map (lambda (u j)
-                                                   `(,u (vector-ref upper-bounds ,j)))
-                                                 uppers indices)
-                                          ,@(map (lambda (s j)
-                                                   `(,s (vector-ref sides ,j)))
-                                                 sides indices)
-                                          (subdomain
-                                           (%%finish-interval (vector ,@(map (lambda (l s i)
-                                                                               `(+ ,l (* ,s ,i)))
-                                                                             lowers sides args))
-                                                              (vector ,@(map (lambda (l u s i)
-                                                                               `(min ,u (+ ,l (* ,s (+ ,i 1)))))
-                                                                             lowers uppers sides args)))))
-                                     (%%array-extract array subdomain)))))))
-                       '(1 2 3 4))
-                (else
-                 (lambda i
-                   (if (not (and (fx= (length i) n)
-                                 (%%every (lambda (x) (exact-integer? x)) i)
-                                 (%%interval-contains-multi-index?-general result-domain i)))
-                       (apply error "array-tile: Index to result array is not valid: " i)
-                       (let* ((i (list->vector i))
-                              (subdomain (%%finish-interval
-                                          (vector-map (lambda (l s i)
-                                                        (+ l (* s i)))
-                                                      lower-bounds sides i)
-                                          (vector-map (lambda (l u s i)
-                                                        (min u (+ l (* s (+ i 1)))))
-                                                      lower-bounds upper-bounds sides i))))
-                         (%%array-extract array subdomain)))))))
+                       `(case A-dim
+                          ,@(map (lambda (k)
+                                   (let* ((indices (iota k))
+                                          (args    (map (lambda (j) (symbol-append 'i_ j)) indices)))
+                                     `((,k)
+                                       (lambda ,args
+                                         (if (not (and ,@(map (lambda (arg) `(exact-integer? ,arg)) args)
+                                                       (,(symbol-append '%%interval-contains-multi-index?- k) result-domain ,@args)))
+                                             (error "array-tile: Index to result array is not valid: " ,@args)
+                                             (array-extract
+                                              A
+                                              (%%finish-interval (vector ,@(map (lambda (index slice-index)
+                                                                                  `(vector-ref (vector-ref offsets ,index) ,slice-index))
+                                                                                indices args))
+                                                                 (vector ,@(map (lambda (index slice-index)
+                                                                                  `(vector-ref (vector-ref offsets ,index) (fx+ ,slice-index 1)))
+                                                                                indices args)))))))))
+                                 '(1 2 3 4))
+                          (else
+                           (lambda i
+                             (if (not (and (fx= (length i) A-dim)
+                                           (%%every (lambda (x) (exact-integer? x)) i)
+                                           (%%interval-contains-multi-index?-general result-domain i)))
+                                 (apply error "array-tile: Index to result array is not valid: " i)
+                                 (let* ((i
+                                         (list->vector i))
+                                        (subdomain
+                                         (%%finish-interval (vector-map (lambda (slice-offsets i) (vector-ref slice-offsets i)) offsets i)
+                                                            (vector-map (lambda (slice-offsets i) (vector-ref slice-offsets (fx+ i 1))) offsets i))))
+                                   (%%array-extract A subdomain)))))))
 
-           (make-array result-domain (generate-result))))))
-
+                     (make-array result-domain (generate-result))))))))))
 
 (define (%%getter-translate getter translation)
   (case (vector-length translation)
