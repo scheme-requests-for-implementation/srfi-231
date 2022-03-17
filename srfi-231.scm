@@ -77,7 +77,7 @@ MathJax.Hub.Config({
          (<li> "Draft #2 published: 2022-01-20")
          (<li> "Draft #3 published: 2022-01-26")
          (<li> "Draft #4 published: 2022-02-24")
-         (<li> "Draft #5 published: 2022-03-15")
+         (<li> "Draft #5 published: 2022-03-16")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -112,6 +112,7 @@ MathJax.Hub.Config({
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
          (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", and "(<a> href: "#index-last" (<code>'index-last))".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
+         (<li> (<code>'array-tile)" is now more flexible in how you can decompose an array.")
          (<li> "Introduced new procedures "
                (<a> href: "#interval-width" (<code>'interval-width))", "
                (<a> href: "#interval-widths" (<code>'interval-widths))", "
@@ -176,9 +177,9 @@ MathJax.Hub.Config({
          (<li> (<a> href:"#array-stack"(<code>'array-stack))
                ": Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to "(<code>'array-curry)".  Returns a specialized array.")
          (<li> (<a> href:"#array-append"(<code>'array-append))
-               ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.")
+               ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.  A partial inverse to "(<code>'array-tile)".")
          (<li> (<a> href: "#array-block"(<code>'array-block))
-               ": Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  A more general inverse to "(<a> href: "#array-tile" (<code>'array-tile))".")
+               ": Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to "(<a> href: "#array-tile" (<code>'array-tile))".")
          (<li> (<a> href:"#array-foldl"(<code>'array-foldl))", "
                (<a> href:"#array-foldr"(<code>'array-foldr))", "
                (<a> href:"#array-reduce"(<code>'array-reduce))", "
@@ -1255,19 +1256,46 @@ of whose elements is itself an (immutable) array and ")
 (<p> "If "(<code>(<var>'array))" is a specialized array, the resulting array inherits its mutability and safety from "(<code>(<var>'array))".")
 
 (format-lambda-list '(array-tile A S))
+(<p> "Decomposes  the array "(<code>(<var>'A))" into subarrays, or "(<i>'tiles)", specified by "(<i>'cuts)" perpendicular to the coordinate axes of "(<code>(<var>'A))", which are specified by the elements second argument, "(<code>(<var>'S))", and returns an array $T$ whose elements are those tiles.  If the $k$th component of "(<code>(<var>'S))" is a positive exact integer $s$, then the cuts perpendicular to the $k$th coordinate axis are evenly spaced, beginning at the lower bound in the $k$th axis, $l_k$, cutting "(<code>(<var>'A))" into slices of uniform width, except possibly for the last slice.  If the $k$ component of "(<code>(<var>'S))" is a vector $C$ of positive exact integers that sum to "(<code>"(interval-width (array-domain "(<var>'A)") k)")", then the cuts in the $k$th direction create slices with widths $C_0, C_1, \\ldots$, beginning at the lower bound $l_k$. These subarrays completely \"tile\" "(<code>(<var>'A))", in the sense that every entry in "(<code>(<var>'A))" is an entry of precisely one entry of the result $T$.")
 
-(<p> "Assume that "(<code>(<var>'A))" is an array and "(<code>(<var>'S))" is a vector of positive, exact integers.  The procedure "(<code>'array-tile)" returns a new immutable array $T$, each entry of which is a subarray of "(<code>'A)" whose domain has sidelengths given (mostly) by the entries of "(<code>(<var>'S))".  These subarrays completely \"tile\" "(<code>(<var>'A))", in the sense that every entry in "(<code>(<var>'A))" is an entry of precisely one entry of the result $T$.")
-(<p> "More formally, if "(<code>(<var>'S))" is the vector $(s_0,\\ldots,s_{d-1})$, and the domain of "(<code>(<var>'A))" is the interval $[l_0,u_0)\\times\\cdots\\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero and upper bounds given by
+(<p> "More formally, if the domain of "(<code>(<var>'A))" is the interval $[l_0,u_0)\\times\\cdots\\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero.  We specify the lower and upper bounds of the array contained in each element of $T$, which is extracted from "(<code>(<var>'A))" in the sense of "(<code>'array-extract)",  as follows.")
+(<p> "If the $k$th component of "(<code>(<var>'S))" is an exact positive integer $s$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of "(<code>(<var>'A))" with $k$th lower and upper bounds given by $l_k+j_k\\times s$ and $\\min(l_k+(j_k+1)s, u_k)$, respectively. (The \"minimum\" operator is necessary if $u_k-l_k$ is not divisible by $s$.)")
+(<p> "If, on the other hand, the $k$ component of "(<code>(<var>'S))" is a vector of positive exact integers $C$ whose components sum to $u_k-l_k$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of "(<code>(<var>'A))" with $k$th lower and upper bounds given by
 $$
-\\operatorname{ceiling}((u_0-l_0)/s_0),\\ldots,\\operatorname{ceiling}((u_{d-1}-l_{d-1})/s_{d-1}).
+l_k+\\sum_{i<j_k} C_i\\quad\\text{ and }\\quad l_k+\\sum_{i\\leq j_k} C_i,\\quad\\text{respectively.}
 $$
-The $i_0,\\ldots,i_{d-1}$ entry of $T$ is "(<code>"(array-extract "(<var>'A)" D_i)")" with the interval "(<code>'D_i)" given by
-$$
-[l_0+i_0*s_0,\\min(l_0+(i_0+1)s_0,u_0))\\times\\cdots\\times[l_{d-1}+i_{d-1}*s_{d-1},\\min(l_{d-1}+(i_{d-1}+1)s_{d-1},u_{d-1})).
-$$
-(The \"minimum\" operators are necessary if $u_j-l_j$ is not divisible by $s_j$.) Thus, each entry of $T$ will be a specialized, mutable, or immutable array, depending on the type of the input array "(<code>(<var>'A))".")
+")
 (<p> "It is an error if the arguments of "(<code>'array-tile)" do not satisfy these conditions.")
 (<p> "If "(<code>(<var>'A))" is a specialized array, the subarrays of the result inherit safety and mutability from "(<code>(<var>'A))".")
+
+(<p>(<b>"Example: "))
+(<pre>(<code>"(define T
+  (list*->array
+   2
+   '(( 1  2  3  4  5  6)
+     ( 7  8  9 10 11 12)
+     (13 14 15 16 17 18)
+     (19 20 21 22 23 24)
+     (25 26 27 28 29 30)
+     (31 32 33 34 35 36))))
+(array->list*
+ (array-map array->list*
+            (array-tile T '#(#(3 1 2)
+                             3))))
+=>
+((((1 2 3)                     ;; upper left corner
+   (7 8 9)
+   (13 14 15))
+  ((4 5 6)                     ;; upper right corner
+   (10 11 12)
+   (16 17 18)))
+ (((19 20 21))                 ;; left middle row
+  ((22 23 24)))                ;; right middle row
+ (((25 26 27)                  ;; lower left corner
+   (31 32 33))
+  ((28 29 30)                  ;; lower right corner
+   (34 35 36))))"))
+
 
 (<p> (<b> "Note: ")"The procedures "(<code>'array-tile)" and "(<code>'array-curry)" both decompose an array into subarrays, but in different ways.  For example, if "(<code>(<var>'A))" is defined as "(<code>"(make-array (make-interval '#(10 10)) list)")", then "(<code>"(array-tile "(<var>'A)" '#(1 10))")" returns an array with domain "(<code>"(make-interval '#(10 1))")" for which the value at the multi-index "(<code>"("(<var>'i)" 0)")" is an array with domain "(<code>"(make-interval (vector "(<var>'i)" 0) (vector (+ "(<var>'i)" 1) 10))")" (i.e., a two-dimensional array whose elements are two-dimensional arrays), while "(<code>"(array-curry "(<var>'A)" 1)")" returns an array with domain "(<code>"(make-interval '#(10))")", each element of which has domain "(<code>"(make-interval '#(10))")" (i.e., a one-dimensional array whose elements are one-dimensional arrays).")
 

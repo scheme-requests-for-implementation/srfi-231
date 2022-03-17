@@ -50,6 +50,7 @@
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
       <li>Procedures that generate useful permutations have been added: <a href="#index-rotate"><code>index-rotate</code></a>, <a href="#index-first"><code>index-first</code></a>, and <a href="#index-last"><code>index-last</code></a>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
+      <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
@@ -82,8 +83,8 @@
       <li><a href="#array-copy"><code>array-copy</code></a>: Evaluates the argument array at all valid indices and stores those values into a new specialized array.</li>
       <li><a href="#array-assign!"><code>array-assign!</code></a>: Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine <code>array-map</code>, <code>array-outer-product</code>, <code>array-extract</code>, and <code>array-assign!</code> to do one step of the elimination.</li>
       <li><a href="#array-stack"><code>array-stack</code></a>: Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to <code>array-curry</code>.  Returns a specialized array.</li>
-      <li><a href="#array-append"><code>array-append</code></a>: Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.</li>
-      <li><a href="#array-block"><code>array-block</code></a>: Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  A more general inverse to <a href="#array-tile"><code>array-tile</code></a>.</li>
+      <li><a href="#array-append"><code>array-append</code></a>: Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.  A partial inverse to <code>array-tile</code>.</li>
+      <li><a href="#array-block"><code>array-block</code></a>: Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to <a href="#array-tile"><code>array-tile</code></a>.</li>
       <li><a href="#array-foldl"><code>array-foldl</code></a>, <a href="#array-foldr"><code>array-foldr</code></a>, <a href="#array-reduce"><code>array-reduce</code></a>, <a href="#array-for-each"><code>array-for-each</code></a>, <a href="#array-any"><code>array-any</code></a>, and <a href="#array-every"><code>array-every</code></a>: Evaluates all elements of an array (for <code>array-every</code> and <code>array-any</code>, as many as needed to know the result), and combines them in certain ways.</li>
     </ul>
     <p>Finally, we have procedures that convert between other data and arrays:</p>
@@ -884,18 +885,43 @@ indexer:       (lambda multi-index
     <p>It is an error if the arguments of <code>array-extract</code> do not satisfy these conditions.</p>
     <p>If <code><var>array</var></code> is a specialized array, the resulting array inherits its mutability and safety from <code><var>array</var></code>.</p>
     <p><b>Procedure: </b><code><a id="array-tile">array-tile</a> <var>A</var> <var>S</var></code></p>
-    <p>Assume that <code><var>A</var></code> is an array and <code><var>S</var></code> is a vector of positive, exact integers.  The procedure <code>array-tile</code> returns a new immutable array $T$, each entry of which is a subarray of <code>A</code> whose domain has sidelengths given (mostly) by the entries of <code><var>S</var></code>.  These subarrays completely &quot;tile&quot; <code><var>A</var></code>, in the sense that every entry in <code><var>A</var></code> is an entry of precisely one entry of the result $T$.</p>
-    <p>More formally, if <code><var>S</var></code> is the vector $(s_0,\ldots,s_{d-1})$, and the domain of <code><var>A</var></code> is the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero and upper bounds given by
+    <p>Decomposes  the array <code><var>A</var></code> into subarrays, or <i>tiles</i>, specified by <i>cuts</i> perpendicular to the coordinate axes of <code><var>A</var></code>, which are specified by the elements second argument, <code><var>S</var></code>, and returns an array $T$ whose elements are those tiles.  If the $k$th component of <code><var>S</var></code> is a positive exact integer $s$, then the cuts perpendicular to the $k$th coordinate axis are evenly spaced, beginning at the lower bound in the $k$th axis, $l_k$, cutting <code><var>A</var></code> into slices of uniform width, except possibly for the last slice.  If the $k$ component of <code><var>S</var></code> is a vector $C$ of positive exact integers that sum to <code>(interval-width (array-domain <var>A</var>) k)</code>, then the cuts in the $k$th direction create slices with widths $C_0, C_1, \ldots$, beginning at the lower bound $l_k$. These subarrays completely &quot;tile&quot; <code><var>A</var></code>, in the sense that every entry in <code><var>A</var></code> is an entry of precisely one entry of the result $T$.</p>
+    <p>More formally, if the domain of <code><var>A</var></code> is the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero.  We specify the lower and upper bounds of the array contained in each element of $T$, which is extracted from <code><var>A</var></code> in the sense of <code>array-extract</code>,  as follows.</p>
+    <p>If the $k$th component of <code><var>S</var></code> is an exact positive integer $s$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of <code><var>A</var></code> with $k$th lower and upper bounds given by $l_k+j_k\times s$ and $\min(l_k+(j_k+1)s, u_k)$, respectively. (The &quot;minimum&quot; operator is necessary if $u_k-l_k$ is not divisible by $s$.)</p>
+    <p>If, on the other hand, the $k$ component of <code><var>S</var></code> is a vector of positive exact integers $C$ whose components sum to $u_k-l_k$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of <code><var>A</var></code> with $k$th lower and upper bounds given by
       $$
-      \operatorname{ceiling}((u_0-l_0)/s_0),\ldots,\operatorname{ceiling}((u_{d-1}-l_{d-1})/s_{d-1}).
+      l_k+\sum_{i&lt;j_k} C_i\quad\text{ and }\quad l_k+\sum_{i\leq j_k} C_i,\quad\text{respectively.}
       $$
-      The $i_0,\ldots,i_{d-1}$ entry of $T$ is <code>(array-extract <var>A</var> D_i)</code> with the interval <code>D_i</code> given by
-      $$
-      [l_0+i_0*s_0,\min(l_0+(i_0+1)s_0,u_0))\times\cdots\times[l_{d-1}+i_{d-1}*s_{d-1},\min(l_{d-1}+(i_{d-1}+1)s_{d-1},u_{d-1})).
-      $$
-      (The &quot;minimum&quot; operators are necessary if $u_j-l_j$ is not divisible by $s_j$.) Thus, each entry of $T$ will be a specialized, mutable, or immutable array, depending on the type of the input array <code><var>A</var></code>.</p>
+      </p>
     <p>It is an error if the arguments of <code>array-tile</code> do not satisfy these conditions.</p>
     <p>If <code><var>A</var></code> is a specialized array, the subarrays of the result inherit safety and mutability from <code><var>A</var></code>.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(define T
+  (list*-&gt;array
+   2
+   '(( 1  2  3  4  5  6)
+     ( 7  8  9 10 11 12)
+     (13 14 15 16 17 18)
+     (19 20 21 22 23 24)
+     (25 26 27 28 29 30)
+     (31 32 33 34 35 36))))
+(array-&gt;list*
+ (array-map array-&gt;list*
+            (array-tile T '#(#(3 1 2)
+                             3))))
+=&gt;
+((((1 2 3)                     ;; upper left corner
+   (7 8 9)
+   (13 14 15))
+  ((4 5 6)                     ;; upper right corner
+   (10 11 12)
+   (16 17 18)))
+ (((19 20 21))                 ;; left middle row
+  ((22 23 24)))                ;; right middle row
+ (((25 26 27)                  ;; lower left corner
+   (31 32 33))
+  ((28 29 30)                  ;; lower right corner
+   (34 35 36))))</code></pre>
     <p><b>Note: </b>The procedures <code>array-tile</code> and <code>array-curry</code> both decompose an array into subarrays, but in different ways.  For example, if <code><var>A</var></code> is defined as <code>(make-array (make-interval '#(10 10)) list)</code>, then <code>(array-tile <var>A</var> '#(1 10))</code> returns an array with domain <code>(make-interval '#(10 1))</code> for which the value at the multi-index <code>(<var>i</var> 0)</code> is an array with domain <code>(make-interval (vector <var>i</var> 0) (vector (+ <var>i</var> 1) 10))</code> (i.e., a two-dimensional array whose elements are two-dimensional arrays), while <code>(array-curry <var>A</var> 1)</code> returns an array with domain <code>(make-interval '#(10))</code>, each element of which has domain <code>(make-interval '#(10))</code> (i.e., a one-dimensional array whose elements are one-dimensional arrays).</p>
     <p><b>Procedure: </b><code><a id="array-translate">array-translate</a> <var>array</var> <var>translation</var></code></p>
     <p>Assumes that <code><var>array</var></code> is an array, <code><var>translation</var></code> is a translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain <code>(interval-translate (array-domain array) translation)</code>.</p>
