@@ -62,6 +62,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     (define c64vector-copy! #f)
     (define c128vector-copy! #f))))
 
+;;; We use the built-in Gambit procedure ##mutable?
 
 ;; Inlining the following routines causes too much code bloat
 ;; after compilation.
@@ -1942,6 +1943,9 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "make-specialized-array-from-data: The second argument is not a storage class: " data storage-class))
         ((not ((storage-class-data? storage-class) data))
          (error "make-specialized-array-from-data: The first argument is not compatible with the storage class: " data))
+        ((and mutable?
+              (not (##mutable? data)))
+         (error "make-specialized-array-from-data: Cannot make mutable array from immutable data: " data storage-class mutable? safe?))
         (else
          (%%make-specialized-array-from-data data storage-class mutable? safe?))))
 
