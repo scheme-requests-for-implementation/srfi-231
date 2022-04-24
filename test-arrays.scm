@@ -159,6 +159,13 @@ OTHER DEALINGS IN THE SOFTWARE.
       (+ a (test-random-integer (- b a)))
       (test-random-integer a)))
 
+(define (random-char)
+  (let ((n (random (fx+ ##max-char 1))))
+    (if (or (fx< n #xd800)
+            (fx< #xdfff n))
+        (##integer->char n)
+        (random-char))))
+
 (define (random-sample n #!optional (l 4))
   (list->vector (map (lambda (i)
                        (random 1 l))
@@ -691,6 +698,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (list  s64-storage-class  's64-storage-class 's64vector make-s64vector)
         (list  f32-storage-class  'f32-storage-class 'f32vector make-f32vector)
         (list  f64-storage-class  'f64-storage-class 'f64vector make-f64vector)
+        (list char-storage-class 'char-storage-class 'string    make-string)
         (list  c64-storage-class  'c64-storage-class 'f32vector make-f32vector)
         (list c128-storage-class 'c128-storage-class 'f64vector make-f64vector)
         ))
@@ -699,6 +707,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (list u8-storage-class u16-storage-class u32-storage-class u64-storage-class
         s8-storage-class s16-storage-class s32-storage-class s64-storage-class
         f32-storage-class f64-storage-class
+        char-storage-class
         c64-storage-class c128-storage-class))
 
 
@@ -1240,6 +1249,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (lambda args (test-random-real)))
            (list f64-storage-class
                  (lambda args (test-random-real)))
+           ;; char
+           (list char-storage-class
+                 (lambda args (random-char)))
            ;; complex-float
            (list c64-storage-class
                  (lambda args (make-rectangular (test-random-real) (test-random-real))))
@@ -1608,6 +1620,7 @@ OTHER DEALINGS IN THE SOFTWARE.
    (list generic-storage-class    'a)
    (list f32-storage-class       1.0)
    (list f64-storage-class       1.0)
+   (list char-storage-class (integer->char ##max-char))
    (list c64-storage-class  1.0+1.0i)
    (list c128-storage-class 1.0+1.0i)))
 
@@ -2187,6 +2200,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
                               (list f32-storage-class     (lambda indices (test-random-real)))
                               (list f64-storage-class     (lambda indices (test-random-real)))
+                              (list char-storage-class    (lambda indices (random-char)))
                               (list c64-storage-class     (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list c128-storage-class    (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list generic-storage-class (lambda indices indices)))))
@@ -2259,6 +2273,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
                               (list f32-storage-class     (lambda indices (test-random-real)))
                               (list f64-storage-class     (lambda indices (test-random-real)))
+                              (list char-storage-class    (lambda indices (random-char)))
                               (list c64-storage-class     (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list c128-storage-class    (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list generic-storage-class (lambda indices indices)))))
@@ -2450,6 +2465,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
                               (list f32-storage-class     (lambda indices (test-random-real)))
                               (list f64-storage-class     (lambda indices (test-random-real)))
+                              (list char-storage-class    (lambda indices (random-char)))
                               (list c64-storage-class     (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list c128-storage-class    (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list generic-storage-class (lambda indices indices)))))
@@ -3742,6 +3758,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))) `(a ,(expt 2 64)))
                               (list f32-storage-class     (lambda indices (test-random-real)) `(a 1))
                               (list f64-storage-class     (lambda indices (test-random-real)) `(a 1))
+                              (list char-storage-class    (lambda indices (random-char)) `(a 1))
                               (list c64-storage-class     (lambda indices (make-rectangular (test-random-real) (test-random-real))) `(a 1))
                               (list c128-storage-class    (lambda indices (make-rectangular (test-random-real) (test-random-real))) `(a 1))
                               )))
@@ -3827,6 +3844,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
                               (list f32-storage-class     (lambda indices (test-random-real)))
                               (list f64-storage-class     (lambda indices (test-random-real)))
+                              (list char-storage-class    (lambda indices (random-char)))
                               (list c64-storage-class     (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list c128-storage-class    (lambda indices (make-rectangular (test-random-real) (test-random-real))))
                               (list generic-storage-class (lambda indices indices)))))
