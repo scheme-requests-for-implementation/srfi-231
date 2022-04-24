@@ -52,6 +52,7 @@
       <li>Procedures that generate useful permutations have been added: <a href="#index-rotate"><code>index-rotate</code></a>, <a href="#index-first"><code>index-first</code></a>, and <a href="#index-last"><code>index-last</code></a>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
+      <li><code>char-storage-class</code> is provided.</li>
       <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
@@ -197,6 +198,7 @@
         <a href="#storage-class-data?">storage-class-data?</a>,
         <a href="#storage-class-data-rarrow-body">storage-class-data-&gt;body</a>,
         <a href="#generic-storage-class">generic-storage-class</a>,
+        <a href="#char-storage-class">char-storage-class</a>,
         <a href="#s8-storage-class">s8-storage-class</a>,
         <a href="#s16-storage-class">s16-storage-class</a>,
         <a href="#s32-storage-class">s32-storage-class</a>,
@@ -512,6 +514,7 @@
     <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, <code>storage-class-copier</code> returns <code><var>copier</var></code>, <code>storage-class-length</code> returns <code><var>length</var></code>,  <code>storage-class-default</code> returns <code><var>default</var></code>, <code>storage-class-data?</code> returns <code><var>data?</var></code>, and <code>storage-class-data-&gt;body</code> returns <code><var>data-&gt;body</var></code>.  Otherwise, it is an error to call any of these procedures.</p>
     <h3>Global Variables</h3>
     <p><b>Variable: </b><code><a id="generic-storage-class">generic-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a id="char-storage-class">char-storage-class</a></code></p>
     <p><b>Variable: </b><code><a id="s8-storage-class">s8-storage-class</a></code></p>
     <p><b>Variable: </b><code><a id="s16-storage-class">s16-storage-class</a></code></p>
     <p><b>Variable: </b><code><a id="s32-storage-class">s32-storage-class</a></code></p>
@@ -536,6 +539,15 @@
                       vector-copy!
                       vector-length
                       #f))</code></pre>
+    <p><code>char-storage-class</code> is defined as if by</p>
+    <pre><code>(define char-storage-class
+  (make-storage-class string-ref
+                      string-set!
+                      char?
+                      make-string
+                      string-copy!
+                      string-length
+                      #\0))</code></pre>
     <p>Implementations shall define <code>s<var>X</var>-storage-class</code> for <code><var>X</var></code>=8, 16, 32, and 64 (which have default values 0 and
       manipulate exact integer values between -2<sup><var>X</var>-1</sup> and
       2<sup><var>X</var>-1</sup>-1 inclusive),
@@ -1466,7 +1478,8 @@ indexer:       (lambda multi-index
  (iota (array-dimension A)))</code></pre>
     <p>This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>A</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>A</var></code> successively along each coordinate axis of <code><var>A</var></code>, in any order of the axes.</p>
     <p>Omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
-    <p>It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.</p><b><b>Examples: </b></b>
+    <p>It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.</p>
+    <p><b>Examples: </b></p>
     <pre><code>(array-&gt;vector*
  (array-block (list*-&gt;array
                2

@@ -58,6 +58,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     (define u16vector-copy! #f)
     (define u32vector-copy! #f)
     (define u64vector-copy! #f)
+    (define string-copy! #f)
     (define c64vector-copy! #f)
     (define c128vector-copy! #f))))
 
@@ -1031,85 +1032,92 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   `(begin
      ,@(map (lambda (name prefix default checker)
-              `(define ,(symbol-concatenate name '-storage-class)
-                 (make-storage-class
-                  ;; getter
-                  (lambda (v i)
-                    (,(symbol-concatenate prefix 'vector-ref) v i))
-                  ;; setter
-                  (lambda (v i val)
-                    (,(symbol-concatenate prefix 'vector-set!) v i val))
-                  ;; checker
-                  ,checker
-                  ;; maker
-                  ,(symbol-concatenate 'make- prefix 'vector)
-                  ;; copier
-                  ,(symbol-concatenate prefix 'vector-copy!)
-                  ;; length
-                  ,(symbol-concatenate prefix 'vector-length)
-                  ;; default
-                  ,default
-                  ;; data?
-                  (lambda (data)
-                    (and (,(symbol-concatenate prefix 'vector?) data)
-                         (fxpositive? (,(symbol-concatenate prefix 'vector-length) data))))
-                  ;; data->body
-                  (lambda (data)
-                    (if (not (and (,(symbol-concatenate prefix 'vector?) data)
-                                  (fxpositive? (,(symbol-concatenate prefix 'vector-length) data))))
-                        (error ,(symbol->string
-                                 (symbol-concatenate
-                                  "Expecting a nonempty "
-                                  prefix 'vector
-                                  " passed to "
-                                  "(storage-class-data->body "
-                                  prefix '-storage-class
-                                  "): "))
-                               data)
-                        data)))))
-            '(generic s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
-            '(""      s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
-            '(#f       0  0   0   0   0   0   0   0 0.0 0.0)
-            `((lambda (x) #t)                             ; generic
-              (lambda (x)                                 ; s8
+              (let ((name   (symbol-concatenate name '-storage-class))
+                    (ref    (symbol-concatenate prefix '-ref))
+                    (set!   (symbol-concatenate prefix '-set!))
+                    (make   (symbol-concatenate 'make- prefix))
+                    (copy!  (symbol-concatenate prefix '-copy!))
+                    (length (symbol-concatenate prefix '-length))
+                    (?      (symbol-concatenate prefix '?)))
+                `(define ,name
+                   (make-storage-class
+                    ;; getter
+                    (lambda (v i)
+                      (,ref v i))
+                    ;; setter
+                    (lambda (v i val)
+                      (,set! v i val))
+                    ;; checker
+                    ,checker
+                    ;; maker
+                    ,make
+                    ;; copier
+                    ,copy!
+                    ;; length
+                    ,length
+                    ;; default
+                    ,default
+                    ;; data?
+                    (lambda (data)
+                      (and (,? data)
+                           (fxpositive? (,length data))))
+                    ;; data->body
+                    (lambda (data)
+                      (if (not (and (,? data)
+                                    (fxpositive? (,length data))))
+                          (error ,(symbol->string
+                                   (symbol-concatenate
+                                    "Expecting a nonempty "
+                                    prefix
+                                    " passed to "
+                                    "(storage-class-data->body "
+                                    name
+                                    "): "))
+                                 data)
+                          data))))))
+            '(generic s8       u8       s16       u16       s32       u32       s64       u64       f32       f64       char)
+            '(vector  s8vector u8vector s16vector u16vector s32vector u32vector s64vector u64vector f32vector f64vector string)
+            '(#f      0        0        0         0         0         0         0         0         0.0        0.0     #\0)
+            `((lambda (x) #t)                        ; generic
+              (lambda (x)                            ; s8
                 (and (fixnum? x)
                      (fx<= ,(- (expt 2 7))
                            x
                            ,(- (expt 2 7) 1))))
-              (lambda (x)                                ; u8
+              (lambda (x)                            ; u8
                 (and (fixnum? x)
                      (fx<= 0
                            x
                            ,(- (expt 2 8) 1))))
-              (lambda (x)                               ; s16
+              (lambda (x)                            ; s16
                 (and (fixnum? x)
                      (fx<= ,(- (expt 2 15))
                            x
                            ,(- (expt 2 15) 1))))
-              (lambda (x)                               ; u16
+              (lambda (x)                            ; u16
                 (and (fixnum? x)
                      (fx<= 0
                            x
                            ,(- (expt 2 16) 1))))
-              (lambda (x)                               ; s32
+              (lambda (x)                            ; s32
                 (declare (generic))
                 (and (exact-integer? x)
                      (<= ,(- (expt 2 31))
                          x
                          ,(- (expt 2 31) 1))))
-              (lambda (x)                               ; u32
+              (lambda (x)                            ; u32
                 (declare (generic))
                 (and (exact-integer? x)
                      (<= 0
                          x
                          ,(- (expt 2 32) 1))))
-              (lambda (x)                              ; s64
+              (lambda (x)                            ; s64
                 (declare (generic))
                 (and (exact-integer? x)
                      (<= ,(- (expt 2 63))
                          x
                          ,(- (expt 2 63) 1))))
-              (lambda (x)                              ; u64
+              (lambda (x)                            ; u64
                 (declare (generic))
                 (and (exact-integer? x)
                      (<= 0
@@ -1117,6 +1125,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                          ,(- (expt 2 64) 1))))
               (lambda (x) (flonum? x))               ; f32
               (lambda (x) (flonum? x))               ; f64
+              (lambda (x) (char? x))                 ; char
               ))))
 
 (make-standard-storage-classes)
@@ -2203,6 +2212,8 @@ OTHER DEALINGS IN THE SOFTWARE.
    (list f64-storage-class    ;; the checker for these classes are the same, no point in checking
          f32-storage-class    ;; going from f64-storage-class to f32-storage-class
          generic-storage-class)
+   (list char-storage-class
+         generic-storage-class)
    (list c64-storage-class
          generic-storage-class
          c128-storage-class)
@@ -2332,12 +2343,14 @@ OTHER DEALINGS IN THE SOFTWARE.
                           domain))
                        "In order, no checks needed, generic-storage-class")
                       ((and (specialized-array? source)
-                            (let ((compatibility-list
-                                   (assq (%%array-storage-class source)
-                                         %%storage-class-compatibility-alist)))
-                              (and compatibility-list
-                                   (memq destination-storage-class
-                                         compatibility-list))))
+                            (or (eq? (%%array-storage-class source)
+                                     destination-storage-class)
+                                (let ((compatibility-list
+                                       (assq (%%array-storage-class source)
+                                             %%storage-class-compatibility-alist)))
+                                  (and compatibility-list
+                                       (memq destination-storage-class
+                                             compatibility-list)))))
                        ;; No checks needed
                        (let ((setter (storage-class-setter destination-storage-class))
                              (body (%%array-body destination)))

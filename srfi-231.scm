@@ -114,6 +114,7 @@ MathJax.Hub.Config({
          (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", and "(<a> href: "#index-last" (<code>'index-last))".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> (<code>'array-tile)" is now more flexible in how you can decompose an array.")
+         (<li> (<code>'char-storage-class)" is provided.")
          (<li> "Introduced new procedures "
                (<a> href: "#interval-width" (<code>'interval-width))", "
                (<a> href: "#interval-widths" (<code>'interval-widths))", "
@@ -379,6 +380,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#storage-class-data?" "storage-class-data?") END
                  (<a> href: "#storage-class-data-rarrow-body" "storage-class-data->body") END
                  (<a> href: "#generic-storage-class" "generic-storage-class") END
+                 (<a> href: "#char-storage-class" "char-storage-class") END
                  (<a> href: "#s8-storage-class" "s8-storage-class") END
                  (<a> href: "#s16-storage-class" "s16-storage-class") END
                  (<a> href: "#s32-storage-class" "s32-storage-class") END
@@ -770,6 +772,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 
 (<h3> "Global Variables")
 (format-global-variable 'generic-storage-class)
+(format-global-variable 'char-storage-class)
 (format-global-variable 's8-storage-class)
 (format-global-variable 's16-storage-class)
 (format-global-variable 's32-storage-class)
@@ -797,6 +800,17 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
                       vector-copy!
                       vector-length
                       #f))"))
+(<p> (<code> 'char-storage-class)" is defined as if by")
+(<pre>
+ (<code>
+"(define char-storage-class
+  (make-storage-class string-ref
+                      string-set!
+                      char?
+                      make-string
+                      string-copy!
+                      string-length
+                      #\\0))"))
 (<p> "Implementations shall define "(<code> "s"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"=8, 16, 32, and 64 (which have default values 0 and
 manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 2"(<sup> (<var> 'X)"-1")"-1 inclusive),
@@ -1971,7 +1985,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.")
 (<p> "Omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.")
-(<b>(<b> "Examples: "))
+(<p>(<b> "Examples: "))
 (<pre>(<code>"(array->vector*
  (array-block (list*->array
                2
