@@ -34,7 +34,7 @@
        lang: 'en
        (<head>
         (<meta> charset: "utf-8")
-        (<title> (string-append "SRFI " SRFI ": Nonempty Intervals and Generalized Arrays (Updated^2)"))
+        (<title> (string-append "SRFI " SRFI ": Intervals and Generalized Arrays (Updated^2)"))
         (<link>
          rel: "icon"
          sizes: "192x192"
@@ -55,7 +55,7 @@ MathJax.Hub.Config({
                   src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
         )
        (<body>
-        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Nonempty Intervals and Generalized Arrays (Updated^2)")
+        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Intervals and Generalized Arrays (Updated^2)")
 
         (<p> " by Bradley J. Lucier")
 
@@ -87,7 +87,7 @@ MathJax.Hub.Config({
          "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a "
          "mapping, or function, from multi-indices of exact integers $i_0,\\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices "
          "$i_0,\\ldots,i_{d-1}$ that are valid for a given array form the "(<i>'domain)" of the array.  In this SRFI, each array's domain consists "
-         " of the cross product of nonempty intervals of exact integers $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ of $\\mathbb Z^d$, $d$-tuples of "
+         " of the cross product of intervals of exact integers $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ of $\\mathbb Z^d$, $d$-tuples of "
          "integers.  Thus, we introduce a data type "
          "called $d$-"(<i> 'intervals)", or more briefly "(<i>'intervals)", that encapsulates this notion. (We borrow this terminology from, e.g., "
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
@@ -118,6 +118,7 @@ MathJax.Hub.Config({
          (<li> "Introduced new procedures "
                (<a> href: "#interval-width" (<code>'interval-width))", "
                (<a> href: "#interval-widths" (<code>'interval-widths))", "
+               (<a> href: "#interval-empty?" (<code>'interval-empty?))", "
                (<a> href: "#storage-class-data?" (<code>'storage-class-data?))", "
                (<a> href: "#storage-class-data-rarrow-body" (<code>'storage-class-data->body))", "
                (<a> href: "#make-specialized-array-from-data" (<code>'make-specialized-array-from-data))", "
@@ -286,10 +287,12 @@ MathJax.Hub.Config({
         (<h3> "Generalized arrays")
         (<p> "Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. "
              "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers
-in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ (the "(<i>'domain)" of the array) to Scheme objects.
+in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$, $l_k<u_k$,  (the "(<i>'domain)" of the array) to Scheme objects.
 Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.")
         (<p> "Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.")
-        (<p> "Specifically, an array specifies a nonempty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to Scheme objects.  This mapping is called the "(<i> 'getter)" of the array, accessed with the procedure "(<code>'array-getter)"; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure "(<code>'array-domain)".")
+        (<p> "We also consider as Scheme objects the case when $d>0$ and some $l_k=u_k$; in this case the mathematical cross product is empty, and arrays with such a domain have no elements but still \"dimension\" $d$.  Applying the function associated with this array is an error.")
+        (<p> "Finally, we allow $d=0$; such an array would have one element, and the function that accesses it is a function with no arguments (i.e., a \"thunk\").")
+        (<p> "So an array specifies a  multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to Scheme objects.  This mapping is called the "(<i> 'getter)" of the array, accessed with the procedure "(<code>'array-getter)"; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure "(<code>'array-domain)".")
         (<p> "If this mapping can be changed, the array is said to be "(<i> 'mutable)" and the mutation is effected
 by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" procedure, i.e., the value it returns may not depend solely on the arguments passed to the getter.")
         (<p> "In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
@@ -328,7 +331,6 @@ they may have hash tables or databases behind an implementation, one may read th
                (<code>'interval-projections)" can be thought of as currying the" #\newline
                "characteristic procedure of the interval,  encapsulated here as "(<code> 'interval-contains-multi-index?)".")
          (<li> (<b> "Choice of procedures on intervals. ")"The choice of procedures for both arrays and intervals was motivated almost solely by what I needed for arrays.")
-         (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
          (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.")
          )
         (<h2> "Specification")
@@ -356,6 +358,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#interval=" "interval=")END
                  (<a> href: "#interval-widths" "interval-widths")END
                  (<a> href: "#interval-volume" "interval-volume")END
+                 (<a> href: "#interval-empty?" "interval-empty?")END
                  (<a> href: "#interval-subset?" "interval-subset?")END
                  (<a> href: "#interval-contains-multi-index?" "interval-contains-multi-index?")END
                  (<a> href: "#interval-projections" "interval-projections")END
@@ -505,11 +508,11 @@ $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
 
         (<h3> "Procedures")
         (format-lambda-list '(make-interval arg1 #!optional arg2))
-        (<p> "Create a new interval. "(<code> (<var>"arg1"))" and "(<code> (<var>"arg2"))" (if given) are nonempty vectors (of the same length) of exact integers.")
-        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))" must be positive, and they are taken as the "(<code>(<var>"upper-bounds"))" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
+        (<p> "Create a new interval. "(<code> (<var>"arg1"))" and "(<code> (<var>"arg2"))" (if given) are vectors (of the same length) of exact integers.")
+        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))" must be nonnegative, and they are taken as the "(<code>(<var>"upper-bounds"))" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
         (<p> "If "(<code> (<var>"arg2"))" is given, then "(<code> (<var>"arg1"))" is taken to be "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"arg2"))" is taken to be "(<code> (<var>"upper-bounds"))", which must satisfy")
         (<pre>
-         (<code>"(< (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
+         (<code>"(<= (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
         (<p> " for
 $0\\leq i<{}$"(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error if
 "(<code>(<var>"lower-bounds"))" and "(<code>(<var>"upper-bounds"))" do not satisfy these conditions.")
@@ -579,6 +582,10 @@ if "(<code>(<var>"interval"))" is not an interval.")
          (<code> "(apply * (vector->list (vector-map - "(<var>"upper-bounds")" "(<var>"lower-bounds")")))"))
         (<p> "It is an error to call "(<code> 'interval-volume)" if "(<code>(<var> 'interval))" does not satisfy this condition.")
 
+        (format-lambda-list '(interval-empty? interval))
+        (<p> "Assumes "(<code>(<var>'interval))" is an interval; returns "(<code>"(eqv? 0 (interval-volume "(<var>'interval)"))")".")
+        (<p> "It is an error to call "(<code> 'interval-empty?)" if "(<code>(<var> 'interval))" does not satisfy this condition.")
+
         (format-lambda-list '(interval= interval1 interval2))
         (<p> "If "(<code>(<var>"interval1"))" and "(<code>(<var>"interval2"))" are intervals built with ")
         (<pre>
@@ -601,12 +608,8 @@ if "(<code>(<var>"interval"))" is not an interval.")
          (<code>"(<= (interval-upper-bound "(<var>'interval1)" j) (interval-upper-bound "(<var>'interval2)" j))"))
         (<p> "for all $0\\leq j<d$, otherwise it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
 
-        (format-lambda-list '(interval-contains-multi-index? interval index-0 index-1 ...))
-        (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var> 'index-0))", "(<code>(<var> 'index-1))", ..., is a multi-index of length $d$,
-then "(<code> 'interval-contains-multi-index?)" returns "(<code> #t)" if ")
-        (<blockquote>
-         (<code> "(interval-lower-bound "(<var> 'interval)" j)")" $\\leq$ "(<code> (<var> 'index-j))" $<$ "(<code> "(interval-upper-bound "(<var> 'interval)" j)"))
-        (<p>"for $0\\leq j < d$, and "(<code>'#f)" otherwise.")
+        (format-lambda-list '(interval-contains-multi-index? interval #\. multi-index))
+        (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (array-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (array-upper-bounds->list "(<var>'interval)"))")".")
         (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
 
         (format-lambda-list '(interval-projections interval right-dimension))
@@ -618,7 +621,7 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
         (<blockquote> "$[l_{d-\\text{right-dimension}},u_{d-\\text{right-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$")
         (<p> "This procedure, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.")
         (<p> "More precisely, if "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'right-dimension))" is an exact integer that satisfies "
-             (<code> "0 < "(<var> 'right-dimension)" < "(<var>'d))" then "(<code> 'interval-projections)" returns two intervals:")
+             (<code> "0 <= "(<var> 'right-dimension)" <= "(<var>'d))" then "(<code> 'interval-projections)" returns two intervals:")
         (<pre>(<code>"(let ((left-dimension
        (- (interval-dimension interval right-dimension)))
       (lowers
@@ -649,7 +652,7 @@ upper bounds $u_0,\\dots,u_{d-1}$, and "
              (<code>"interval-dilate")" returns a new interval with
 lower bounds $\\ell_0+L_0,\\dots,\\ell_{d-1}+L_{d-1}$ and
 upper bounds $u_0+U_0,\\dots,u_{d-1}+U_{d-1}$, as long as this is a
-nonempty interval.  It is an error if the arguments do not satisfy these conditions.")
+valid interval.  It is an error if the arguments do not satisfy these conditions.")
         (<p> "Examples:")
 (<pre>(<code>"(interval=
  (interval-dilate (make-interval '#(100 100))
@@ -668,9 +671,15 @@ nonempty interval.  It is an error if the arguments do not satisfy these conditi
  '#(0 0) '#(-500 -50)) => error
 "))
 
-(format-lambda-list '(interval-intersect interval-1 interval-2 ...))
-(<p> "If all the arguments are intervals of the same dimension and they have a nonempty intersection,
+(format-lambda-list '(interval-intersect interval #\. intervals))
+(<p> "If all the arguments are intervals of the same dimension and they have a valid intersection,
 then "(<code> 'interval-intersect)" returns that intersection; otherwise it returns "(<code>'#f)".")
+(<p> "More precisely, "(<code>'interval-intersect)" calculates")
+(<pre>(<code>"(let* ((intervals (cons interval intervals))
+       (lower-bounds (apply vector-map max (map interval-lower-bounds intervals)))
+       (upper-bounds (apply vector-map min (map interval-upper-bounds intervals))))
+  (and (vector-every (lambda (x y) (<= x y)) lower-bounds upper-bounds)
+       (make-interval lower-bounds upper-bounds)))"))
 (<p> "It is an error if the arguments are not all intervals with the same dimension.")
 
 (format-lambda-list '(interval-translate interval translation))
@@ -799,7 +808,9 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
                       make-vector
                       vector-copy!
                       vector-length
-                      #f))"))
+                      #f
+                      vector?
+                      values))"))
 (<p> (<code> 'char-storage-class)" is defined as if by")
 (<pre>
  (<code>
@@ -810,7 +821,9 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
                       make-string
                       string-copy!
                       string-length
-                      #\\0))"))
+                      #\\0
+                      string?
+                      values))"))
 (<p> "Implementations shall define "(<code> "s"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"=8, 16, 32, and 64 (which have default values 0 and
 manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 2"(<sup> (<var> 'X)"-1")"-1 inclusive),
