@@ -224,46 +224,46 @@ OTHER DEALINGS IN THE SOFTWARE.
 (pp "Interval error tests")
 
 (test (make-interval 1 '#(3 4))
-      "make-interval: The first argument is not a nonempty vector of exact integers: ")
+      "make-interval: The first argument is not a vector of exact integers: ")
 
 (test (make-interval '#(1 1)  3)
-      "make-interval: The second argument is not a nonempty vector of exact integers: ")
+      "make-interval: The second argument is not a vector of exact integers: ")
 
 (test (make-interval '#(1 1)  '#(3))
       "make-interval: The first and second arguments are not the same length: ")
 
-(test (make-interval '#()  '#())
-      "make-interval: The first argument is not a nonempty vector of exact integers: ")
+(test (interval-volume (make-interval '#()  '#()))
+      1)
 
 (test (make-interval '#(1.)  '#(1))
-      "make-interval: The first argument is not a nonempty vector of exact integers: ")
+      "make-interval: The first argument is not a vector of exact integers: ")
 
 (test (make-interval '#(1 #f)  '#(1 2))
-      "make-interval: The first argument is not a nonempty vector of exact integers: ")
+      "make-interval: The first argument is not a vector of exact integers: ")
 
 (test (make-interval '#(1)  '#(1.))
-      "make-interval: The second argument is not a nonempty vector of exact integers: ")
+      "make-interval: The second argument is not a vector of exact integers: ")
 
 (test (make-interval '#(1 1)  '#(1 #f))
-      "make-interval: The second argument is not a nonempty vector of exact integers: ")
+      "make-interval: The second argument is not a vector of exact integers: ")
 
-(test (make-interval '#(1)  '#(1))
-      "make-interval: Each lower-bound must be less than the associated upper-bound: ")
+(test (interval-volume (make-interval '#(1)  '#(1)))
+      0)
 
-(test (make-interval '#(1 2 3)  '#(4 2 6))
-      "make-interval: Each lower-bound must be less than the associated upper-bound: ")
+(test (interval-volume (make-interval '#(1 2 3)  '#(4 2 6)))
+      0)
 
 (test (make-interval 1)
-      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+      "make-interval: The argument is not a vector of nonnegative exact integers: ")
 
-(test (make-interval '#())
-      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+(test (interval-volume (make-interval '#()))
+      1)
 
 (test (make-interval '#(1.))
-      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+      "make-interval: The argument is not a vector of nonnegative exact integers: ")
 
 (test (make-interval '#(-1))
-      "make-interval: The argument is not a nonempty vector of positive exact integers: ")
+      "make-interval: The argument is not a vector of nonnegative exact integers: ")
 
 
 (pp "interval result tests")
@@ -413,20 +413,24 @@ OTHER DEALINGS IN THE SOFTWARE.
       "interval-projections: The first argument is not an interval: ")
 
 (test (interval-projections (make-interval '#(0) '#(1)) #t)
-      "interval-projections: The dimension of the first argument is not greater than 1: ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (inclusive): ")
 
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 1/2)
-      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (inclusive): ")
 
 (test (interval-projections (make-interval '#(0 0) '#(1 1)) 1.)
-      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
+      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (inclusive): ")
 
-(test (interval-projections (make-interval '#(0 0) '#(1 1)) 0)
-      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
+(test-multiple-values
+ (interval-projections (make-interval '#(0 0) '#(1 1)) 0)
+ (list (make-interval '#(1 1))
+       (make-interval '#()) ))
 
-(test (interval-projections (make-interval '#(0 0) '#(1 1)) 2)
-      "interval-projections: The second argument is not an exact integer between 0 and the dimension of the first argument (exclusive): ")
+(test-multiple-values
+ (interval-projections (make-interval '#(0 0) '#(1 1)) 2)
+ (list (make-interval '#())
+       (make-interval '#(1 1))))
 
 (pp "interval-projections result tests")
 
@@ -602,13 +606,13 @@ OTHER DEALINGS IN THE SOFTWARE.
   (test (interval-dilate 'a '#(10 10) '#(-10 -10))
         "interval-dilate: The first argument is not an interval: ")
   (test (interval-dilate interval '#(10 10) 'a)
-"interval-dilate: The third argument is not a vector of exact integers: ")
+        "interval-dilate: The third argument is not a vector of exact integers: ")
   (test (interval-dilate interval '#(10) '#(-10 -10))
         "interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: ")
   (test (interval-dilate interval '#(10 10) '#( -10))
         "interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: ")
   (test (interval-dilate interval '#(100 100) '#(-100 -100))
-        "interval-dilate: The resulting interval is empty: "))
+        "interval-dilate: Some resulting lower bounds are greater than corresponding upper bounds: "))
 
 
 
@@ -731,7 +735,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                    (maker
                     (cadddr class-name-data-maker))
                    (message
-                    (string-append "Expecting a nonempty "
+                    (string-append "Expecting a "
                                    (symbol->string data)
                                    (if (memq class (list c64-storage-class c128-storage-class))
                                        " with an even number of elements passed to "
@@ -741,8 +745,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    "): ")))
               (test ((storage-class-data->body class) 'a)
                     message)
-              (test ((storage-class-data->body class) (maker 0))
-                    message)))
+              #;(test ((storage-class-data->body class) (maker 0))
+                    message)
+              ))
           storage-class-names)
 
 (pp "array error tests")
@@ -3156,7 +3161,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                  (car lowers)
                                  lowers))))
     ;; (pp (list args new-lowers new-uppers (vector-every < new-lowers new-uppers)))
-    (and (%%vector-every < new-lowers new-uppers)
+    (and (%%vector-every <= new-lowers new-uppers)
          (make-interval new-lowers new-uppers))))
 
 
@@ -4063,7 +4068,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       #t)
 
 (test (interval-dilate (make-interval '#(100 100)) '#(0 0) '#(-500 -50))
-      "interval-dilate: The resulting interval is empty: ")
+      "interval-dilate: Some resulting lower bounds are greater than corresponding upper bounds: ")
 
 (define a (make-array (make-interval '#(1 1) '#(11 11))
                       (lambda (i j)

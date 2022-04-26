@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>SRFI 231: Nonempty Intervals and Generalized Arrays (Updated^2)</title>
+    <title>SRFI 231: Intervals and Generalized Arrays (Updated^2)</title>
     <link type="image/png" sizes="192x192" rel="icon" href="/favicon.png">
     <link type="text/css" rel="stylesheet" href="https://srfi.schemers.org/srfi.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,7 +13,7 @@
     <script integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </head>
   <body>
-    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo"></a>231: Nonempty Intervals and Generalized Arrays (Updated^2)</h1>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo"></a>231: Intervals and Generalized Arrays (Updated^2)</h1>
     <p> by Bradley J. Lucier</p>
     <h2 id="status">Status</h2>
     <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+231+at+srfi+dotschemers+dot+org">srfi-231@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-231/">archive</a>.</p>
@@ -26,11 +26,10 @@
       <li>Draft #4 published: 2022-02-24</li>
       <li>Draft #5 published: 2022-03-16</li>
       <li>Draft #6 published: 2022-03-17</li>
-      <li>Draft #7 published: 2022-04-25</li>
       <li>Bradley Lucier's <a href="https://github.com/gambiteer/srfi-231">personal Git repo for this SRFI</a> for reference while the SRFI is in <em>draft</em> status.</li>
     </ul>
     <h2>Abstract</h2>
-    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of nonempty intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays provide portable programs with efficient representations for common use cases.</p>
+    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays provide portable programs with efficient representations for common use cases.</p>
     <p>This is a revised version of <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a>.</p>
     <h2>Rationale</h2>
     <p>This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.</p>
@@ -54,7 +53,7 @@
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li><code>char-storage-class</code> is provided.</li>
-      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
+      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -120,10 +119,12 @@
     <p>We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these procedures are in some sense &quot;convenience&quot; procedures.  Second, because the composition of any number of affine mappings is again affine, accessing or changing the elements of a restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. Examples are given below.</p>
     <h3>Generalized arrays</h3>
     <p>Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\ldots,i_{d-1})$ of exact integers
-      in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ (the <i>domain</i> of the array) to Scheme objects.
+      in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$, $l_k&lt;u_k$,  (the <i>domain</i> of the array) to Scheme objects.
       Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.</p>
     <p>Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.</p>
-    <p>Specifically, an array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to Scheme objects.  This mapping is called the <i>getter</i> of the array, accessed with the procedure <code>array-getter</code>; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure <code>array-domain</code>.</p>
+    <p>We also consider as Scheme objects the case when $d&gt;0$ and some $l_k=u_k$; in this case the mathematical cross product is empty, and arrays with such a domain have no elements but still &quot;dimension&quot; $d$.  Applying the function associated with this array is an error.</p>
+    <p>Finally, we allow $d=0$; such an array would have one element, and the function that accesses it is a function with no arguments (i.e., a &quot;thunk&quot;).</p>
+    <p>So an array specifies a  multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to Scheme objects.  This mapping is called the <i>getter</i> of the array, accessed with the procedure <code>array-getter</code>; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure <code>array-domain</code>.</p>
     <p>If this mapping can be changed, the array is said to be <i>mutable</i> and the mutation is effected
       by the array's <i>setter</i>, accessed by the procedure <code>array-setter</code>.  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a &quot;pure&quot; procedure, i.e., the value it returns may not depend solely on the arguments passed to the getter.</p>
     <p>In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
@@ -151,7 +152,6 @@
         <code>interval-projections</code> can be thought of as currying the
         characteristic procedure of the interval,  encapsulated here as <code>interval-contains-multi-index?</code>.</li>
       <li><b>Choice of procedures on intervals. </b>The choice of procedures for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
-      <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li>
       <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.</li>
     </ul>
     <h2>Specification</h2>
@@ -176,6 +176,7 @@
         <a href="#interval=">interval=</a>,
         <a href="#interval-widths">interval-widths</a>,
         <a href="#interval-volume">interval-volume</a>,
+        <a href="#interval-empty?">interval-empty?</a>,
         <a href="#interval-subset?">interval-subset?</a>,
         <a href="#interval-contains-multi-index?">interval-contains-multi-index?</a>,
         <a href="#interval-projections">interval-projections</a>,
@@ -316,10 +317,10 @@
     <p>Intervals are a data type distinct from other Scheme data types.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a id="make-interval">make-interval</a> <var>arg1</var> #!optional <var>arg2</var></code></p>
-    <p>Create a new interval. <code><var>arg1</var></code> and <code><var>arg2</var></code> (if given) are nonempty vectors (of the same length) of exact integers.</p>
-    <p>If <code><var>arg2</var></code> is not given, then the entries of <code><var>arg1</var></code> must be positive, and they are taken as the <code><var>upper-bounds</var></code> of the interval, and  <code><var>lower-bounds</var></code> is set to a vector of the same length with exact zero entries.</p>
+    <p>Create a new interval. <code><var>arg1</var></code> and <code><var>arg2</var></code> (if given) are vectors (of the same length) of exact integers.</p>
+    <p>If <code><var>arg2</var></code> is not given, then the entries of <code><var>arg1</var></code> must be nonnegative, and they are taken as the <code><var>upper-bounds</var></code> of the interval, and  <code><var>lower-bounds</var></code> is set to a vector of the same length with exact zero entries.</p>
     <p>If <code><var>arg2</var></code> is given, then <code><var>arg1</var></code> is taken to be <code><var>lower-bounds</var></code> and <code><var>arg2</var></code> is taken to be <code><var>upper-bounds</var></code>, which must satisfy</p>
-    <pre><code>(&lt; (vector-ref <var>lower-bounds</var> i) (vector-ref <var>upper-bounds</var> i))</code></pre>
+    <pre><code>(&lt;= (vector-ref <var>lower-bounds</var> i) (vector-ref <var>upper-bounds</var> i))</code></pre>
     <p> for
       $0\leq i&lt;{}$<code>(vector-length <var>lower-bounds</var>)</code>.  It is an error if
       <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code> do not satisfy these conditions.</p>
@@ -371,6 +372,9 @@
     <p>then, assuming the existence of <code>vector-map</code>, <code>interval-volume</code> returns </p>
     <pre><code>(apply * (vector-&gt;list (vector-map - <var>upper-bounds</var> <var>lower-bounds</var>)))</code></pre>
     <p>It is an error to call <code>interval-volume</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
+    <p><b>Procedure: </b><code><a id="interval-empty?">interval-empty?</a> <var>interval</var></code></p>
+    <p>Assumes <code><var>interval</var></code> is an interval; returns <code>(eqv? 0 (interval-volume <var>interval</var>))</code>.</p>
+    <p>It is an error to call <code>interval-empty?</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a id="interval=">interval=</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals built with </p>
     <pre><code>(make-interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code></pre>
@@ -385,12 +389,8 @@
     <p>and</p>
     <pre><code>(&lt;= (interval-upper-bound <var>interval1</var> j) (interval-upper-bound <var>interval2</var> j))</code></pre>
     <p>for all $0\leq j&lt;d$, otherwise it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a id="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>index-1</var> <var>...</var></code></p>
-    <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>index-0</var></code>, <code><var>index-1</var></code>, ..., is a multi-index of length $d$,
-      then <code>interval-contains-multi-index?</code> returns <code>#t</code> if </p>
-    <blockquote><code>(interval-lower-bound <var>interval</var> j)</code> $\leq$ <code><var>index-j</var></code> $&lt;$ <code>(interval-upper-bound <var>interval</var> j)</code>
-    </blockquote>
-    <p>for $0\leq j &lt; d$, and <code>#f</code> otherwise.</p>
+    <p><b>Procedure: </b><code><a id="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> . <var>multi-index</var></code></p>
+    <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>multi-index</var></code> is a multi-index of length $d$, then <code>interval-contains-multi-index?</code> returns <code>(every &lt;= (array-lower-bounds-&gt;list <var>interval</var>) <var>multi-index</var> (array-upper-bounds-&gt;list <var>interval</var>))</code>.</p>
     <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a id="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
     <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval
@@ -402,7 +402,7 @@
     <blockquote>$[l_{d-\text{right-dimension}},u_{d-\text{right-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$
     </blockquote>
     <p>This procedure, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.</p>
-    <p>More precisely, if <code><var>interval</var></code> is an interval and <code><var>right-dimension</var></code> is an exact integer that satisfies <code>0 &lt; <var>right-dimension</var> &lt; <var>d</var></code> then <code>interval-projections</code> returns two intervals:</p>
+    <p>More precisely, if <code><var>interval</var></code> is an interval and <code><var>right-dimension</var></code> is an exact integer that satisfies <code>0 &lt;= <var>right-dimension</var> &lt;= <var>d</var></code> then <code>interval-projections</code> returns two intervals:</p>
     <pre><code>(let ((left-dimension
        (- (interval-dimension interval right-dimension)))
       (lowers
@@ -427,7 +427,7 @@
       upper bounds $u_0,\dots,u_{d-1}$, and <code><var>lower-diffs</var></code> is a vector of exact integers $L_0,\dots,L_{d-1}$ and <code><var>upper-diffs</var></code> is a vector of exact integers $U_0,\dots,U_{d-1}$, then <code>interval-dilate</code> returns a new interval with
       lower bounds $\ell_0+L_0,\dots,\ell_{d-1}+L_{d-1}$ and
       upper bounds $u_0+U_0,\dots,u_{d-1}+U_{d-1}$, as long as this is a
-      nonempty interval.  It is an error if the arguments do not satisfy these conditions.</p>
+      valid interval.  It is an error if the arguments do not satisfy these conditions.</p>
     <p>Examples:</p>
     <pre><code>(interval=
  (interval-dilate (make-interval '#(100 100))
@@ -445,9 +445,15 @@
  (make-interval '#(100 100))
  '#(0 0) '#(-500 -50)) =&gt; error
 </code></pre>
-    <p><b>Procedure: </b><code><a id="interval-intersect">interval-intersect</a> <var>interval-1</var> <var>interval-2</var> <var>...</var></code></p>
-    <p>If all the arguments are intervals of the same dimension and they have a nonempty intersection,
+    <p><b>Procedure: </b><code><a id="interval-intersect">interval-intersect</a> <var>interval</var> . <var>intervals</var></code></p>
+    <p>If all the arguments are intervals of the same dimension and they have a valid intersection,
       then <code>interval-intersect</code> returns that intersection; otherwise it returns <code>#f</code>.</p>
+    <p>More precisely, <code>interval-intersect</code> calculates</p>
+    <pre><code>(let* ((intervals (cons interval intervals))
+       (lower-bounds (apply vector-map max (map interval-lower-bounds intervals)))
+       (upper-bounds (apply vector-map min (map interval-upper-bounds intervals))))
+  (and (vector-every (lambda (x y) (&lt;= x y)) lower-bounds upper-bounds)
+       (make-interval lower-bounds upper-bounds)))</code></pre>
     <p>It is an error if the arguments are not all intervals with the same dimension.</p>
     <p><b>Procedure: </b><code><a id="interval-translate">interval-translate</a> <var>interval</var> <var>translation</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
@@ -539,7 +545,9 @@
                       make-vector
                       vector-copy!
                       vector-length
-                      #f))</code></pre>
+                      #f
+                      vector?
+                      values))</code></pre>
     <p><code>char-storage-class</code> is defined as if by</p>
     <pre><code>(define char-storage-class
   (make-storage-class string-ref
@@ -548,7 +556,9 @@
                       make-string
                       string-copy!
                       string-length
-                      #\0))</code></pre>
+                      #\0
+                      string?
+                      values))</code></pre>
     <p>Implementations shall define <code>s<var>X</var>-storage-class</code> for <code><var>X</var></code>=8, 16, 32, and 64 (which have default values 0 and
       manipulate exact integer values between -2<sup><var>X</var>-1</sup> and
       2<sup><var>X</var>-1</sup>-1 inclusive),
