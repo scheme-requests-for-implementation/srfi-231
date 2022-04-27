@@ -1,7 +1,7 @@
 #|
-SRFI 231: Nonempty Intervals and Generalized Arrays (Updated)
+SRFI 231: Intervals and Generalized Arrays (Updated^2)
 
-Copyright 2016, 2018, 2020, 2021 Bradley J Lucier.
+Copyright 2016, 2018, 2020, 2021, 2022 Bradley J Lucier.
 All Rights Reserved.
 
 Permission is hereby granted, free of charge,
@@ -30,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 |#
 
 ;;; A test program for SRFI 231:
-;;; Nonempty Intervals and Generalized Arrays (Updated)
+;;; Intervals and Generalized Arrays (Updated^2)
 
 (begin
   ;; Uncomment this line to run test-arrays.scm in Gambit.
@@ -159,11 +159,16 @@ OTHER DEALINGS IN THE SOFTWARE.
       (+ a (test-random-integer (- b a)))
       (test-random-integer a)))
 
+(define (random-inclusive a #!optional b)
+  (if b
+      (+ a (test-random-integer (- b a -1)))
+      (test-random-integer (+ a 1))))
+
 (define (random-char)
-  (let ((n (random (fx+ ##max-char 1))))
+  (let ((n (random-inclusive ##max-char)))
     (if (or (fx< n #xd800)
             (fx< #xdfff n))
-        (##integer->char n)
+        (integer->char n)
         (random-char))))
 
 (define (random-sample n #!optional (l 4))
@@ -630,7 +635,23 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define use-bignum-intervals #f)
 
 
-(define (random-interval #!optional (min 1) (max 6))
+(define (random-interval #!optional (min 0) (max 6))
+  ;; a random interval with min <= dimension < max
+  ;; positive and negative lower bounds
+  (let* ((lower
+          (map (lambda (x)
+                 (if use-bignum-intervals
+                     (random (- (expt 2 90)) (expt 2 90))
+                     (random -10 10)))
+               (vector->list (make-vector (random min max)))))
+         (upper
+          (map (lambda (x)
+                 (+ (random 0 8) x))
+               lower)))
+    (make-interval (list->vector lower)
+                   (list->vector upper))))
+
+(define (random-nonempty-interval #!optional (min 0) (max 6))
   ;; a random interval with min <= dimension < max
   ;; positive and negative lower bounds
   (let* ((lower
@@ -649,9 +670,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (random-subinterval interval)
   (let* ((lowers (interval-lower-bounds->vector interval))
          (uppers (interval-upper-bounds->vector interval))
-         (new-lowers (vector-map random lowers uppers))
-         (new-uppers (vector-map (lambda (x) (+ x 1))
-                                 (vector-map random new-lowers uppers)))
+         (new-lowers (vector-map random-inclusive lowers uppers))
+         (new-uppers (vector-map random-inclusive new-lowers uppers))
          (subinterval (make-interval new-lowers new-uppers)))
     subinterval))
 
@@ -946,6 +966,9 @@ OTHER DEALINGS IN THE SOFTWARE.
       "make-specialized-array: The second argument is not a storage-class: ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) u16-storage-class 'a)
+      "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): ")
+
+(test (make-specialized-array (make-interval '#()) u16-storage-class 'a)
       "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a 'a)
@@ -1307,6 +1330,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
+;; Extracted arrays are in order if they are empty or have
+;; dimension 0.
 ;; Elements of extracted arrays of newly created specialized
 ;; arrays are not in order unless
 ;; (1) the differences in the upper and lower bounds of the
@@ -1320,23 +1345,25 @@ OTHER DEALINGS IN THE SOFTWARE.
   (let ((base-domain (array-domain base))
         (extracted-domain (array-domain extracted))
         (dim (array-dimension base)))
-    (let loop-1 ((i 0))
-      (or (= i (- dim 1))
-          (or (and (= 1 (- (interval-upper-bound extracted-domain i)
-                           (interval-lower-bound extracted-domain i)))
-                   (loop-1 (+ i 1)))
-              (let loop-2 ((i (+ i 1)))
-                (or (= i dim)
-                    (and (= (interval-upper-bound extracted-domain i)
-                            (interval-upper-bound base-domain i))
-                         (= (interval-lower-bound extracted-domain i)
-                            (interval-lower-bound base-domain i))
-                         (loop-2 (+ i 1))))))))))
+    (or (interval-empty? extracted-domain)
+        (eqv? dim 0)
+        (let loop-1 ((i 0))
+          (or (= i (- dim 1))
+              (or (and (= 1 (- (interval-upper-bound extracted-domain i)
+                               (interval-lower-bound extracted-domain i)))
+                       (loop-1 (+ i 1)))
+                  (let loop-2 ((i (+ i 1)))
+                    (or (= i dim)
+                        (and (= (interval-upper-bound extracted-domain i)
+                                (interval-upper-bound base-domain i))
+                             (= (interval-lower-bound extracted-domain i)
+                                (interval-lower-bound base-domain i))
+                             (loop-2 (+ i 1)))))))))))
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((base
-          (make-specialized-array (random-interval 2 6)
+          (make-specialized-array (random-interval 0 6)
                                   u1-storage-class))
          (extracted
           (array-extract base (random-subinterval (array-domain base)))))
@@ -1360,20 +1387,21 @@ OTHER DEALINGS IN THE SOFTWARE.
          (reversed
           (array-reverse base reversed-dimensions)))
     (test (array-elements-in-order? reversed)
-          (%%vector-every
-           (lambda (lower upper reversed)
-             (or (= (+ 1 lower) upper) ;; side-length 1
-                 (not reversed)))      ;; dimension not reversed
-           (interval-lower-bounds->vector domain)
-           (interval-upper-bounds->vector domain)
-           reversed-dimensions))))
+          (or (array-empty? reversed)
+              (%%vector-every
+               (lambda (lower upper reversed)
+                 (or (= (+ 1 lower) upper)  ;; side-length 1
+                     (not reversed)))       ;; dimension not reversed
+               (interval-lower-bounds->vector domain)
+               (interval-upper-bounds->vector domain)
+               reversed-dimensions)))))
 
 (next-test-random-source-state!)
 
 ;; permutations
 
 ;; A permuted array has elements in order iff all the dimensions with
-;; sidelength > 1 are in the same order.
+;; sidelength > 1 are in the same order, or if it's empty.
 
 (define (permuted-array-elements-in-order? array permutation)
   (let* ((domain
@@ -1385,14 +1413,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (interval-upper-bounds->vector domain)))
          (permuted-axes-and-limits
           (vector->list (vector-permute axes-and-limits permutation))))
-    (in-order (lambda (x y)
-                (< (car x) (car y)))
-              (filter (lambda (l)
-                        (let ((i (car l))
-                              (l (cadr l))
-                              (u (caddr l)))
-                          (< 1 (- u l))))
-                      permuted-axes-and-limits))))
+    (or (interval-empty? domain)
+        (in-order (lambda (x y)
+                    (< (car x) (car y)))
+                  (filter (lambda (l)
+                            (let ((i (car l))
+                                  (l (cadr l))
+                                  (u (caddr l)))
+                              (< 1 (- u l))))
+                          permuted-axes-and-limits)))))
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
@@ -1958,14 +1987,15 @@ OTHER DEALINGS IN THE SOFTWARE.
           (array-setter array1))
          (setter2
           (array-setter array2)))
-    (do ((j 0 (+ j 1)))
-        ((= j 25))
-      (let ((v (random 1000))
-            (indices (map random lower-bounds upper-bounds)))
-        (apply setter1 v indices)
-        (apply setter2 v indices)))
-    (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array-copy array1 generic-storage-class) array2) (pp "test3"))))
+    (if (not (array-empty? array1))
+        (do ((j 0 (+ j 1)))
+            ((= j 25))
+          (let ((v (random 1000))
+                (indices (map random lower-bounds upper-bounds)))
+            (apply setter1 v indices)
+            (apply setter2 v indices))))
+    (test (myarray= array1 array2) #t)
+    (test (myarray= (array-copy array1 generic-storage-class) array2) #t)))
 
 (next-test-random-source-state!)
 
@@ -2003,12 +2033,13 @@ OTHER DEALINGS IN THE SOFTWARE.
           (array-setter array1))
          (setter2
           (array-setter array2)))
-    (do ((j 0 (+ j 1)))
-        ((= j 25))
-      (let ((v (random 1000))
-            (indices (map random lower-bounds upper-bounds)))
-        (apply setter1 v indices)
-        (apply setter2 v indices)))
+    (if (not (array-empty? array1))
+        (do ((j 0 (+ j 1)))
+            ((= j 25))
+          (let ((v (random 1000))
+                (indices (map random lower-bounds upper-bounds)))
+            (apply setter1 v indices)
+            (apply setter2 v indices))))
     (or (myarray= array1 array2) (pp "test1"))
     (or (myarray= (array-copy array1 generic-storage-class) array2) (pp "test3"))))
 
@@ -2450,13 +2481,13 @@ OTHER DEALINGS IN THE SOFTWARE.
       "array-curry: The first argument is not an array: ")
 
 (test (array-curry (make-array (make-interval '#(0) '#(1)) list)  'a)
-      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): ")
+      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (inclusive): ")
 
-(test (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  0)
-      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): ")
+(test (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  -1)
+      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (inclusive): ")
 
-(test (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  2)
-      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): ")
+(test (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  3)
+      "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (inclusive): ")
 
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
@@ -2477,7 +2508,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (do ((i 0 (+ i 1)))
       ((= i random-tests))
     (let* ((domain
-            (random-interval 2 7))
+            (random-interval 0 7))
            (lower-bounds
             (interval-lower-bounds->list domain))
            (upper-bounds
@@ -2496,7 +2527,7 @@ OTHER DEALINGS IN THE SOFTWARE.
             (array-copy Array
                         storage-class))
            (inner-dimension
-            (random 1 (interval-dimension domain)))
+            (random-inclusive (interval-dimension domain)))
            (domains
             (call-with-values (lambda ()(interval-projections domain inner-dimension)) list))
            (outer-domain
@@ -2545,46 +2576,47 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                        (lambda inner-multi-index
                                                          (apply values (append outer-multi-index inner-multi-index))))))))))
       ;; mutate the curried array
-      (for-each (lambda (curried-array)
-                  (let ((outer-getter
-                         (array-getter curried-array)))
-                    (do ((i 0 (+ i 1)))
-                        ((= i 50))  ;; used to be tests, not 50, but 50 will do fine
-                      (call-with-values
-                          (lambda ()
-                            (random-multi-index outer-domain))
-                        (lambda outer-multi-index
-                          (let ((inner-setter
-                                 (array-setter (apply outer-getter outer-multi-index))))
-                            (call-with-values
-                                (lambda ()
-                                  (random-multi-index inner-domain))
-                              (lambda inner-multi-index
-                                (let ((new-element
-                                       (random-array-element)))
-                                  (apply inner-setter new-element inner-multi-index)
-                                  ;; mutate the copied array without currying
-                                  (apply (array-setter copied-array) new-element (append outer-multi-index inner-multi-index)))))))))))
-                (list mutable-curry
-                      specialized-curry
-                      mutable-curry-from-definition
-                      specialized-curry-from-definition))
+      (if (and (not (interval-empty? outer-domain))
+               (not (interval-empty? inner-domain)))
+          (for-each (lambda (curried-array)
+                      (let ((outer-getter
+                             (array-getter curried-array)))
+                        (do ((i 0 (+ i 1)))
+                            ((= i 50))  ;; used to be tests, not 50, but 50 will do fine
+                          (call-with-values
+                              (lambda ()
+                                (random-multi-index outer-domain))
+                            (lambda outer-multi-index
+                              (let ((inner-setter
+                                     (array-setter (apply outer-getter outer-multi-index))))
+                                (call-with-values
+                                    (lambda ()
+                                      (random-multi-index inner-domain))
+                                  (lambda inner-multi-index
+                                    (let ((new-element
+                                           (random-array-element)))
+                                      (apply inner-setter new-element inner-multi-index)
+                                      ;; mutate the copied array without currying
+                                      (apply (array-setter copied-array) new-element (append outer-multi-index inner-multi-index)))))))))))
+                    (list mutable-curry
+                          specialized-curry
+                          mutable-curry-from-definition
+                          specialized-curry-from-definition)))
 
-      (and (or (myarray= Array copied-array) (error "Arggh"))
-           (or (array-every array? immutable-curry) (error "Arggh"))
-           (or (array-every (lambda (a) (not (mutable-array? a))) immutable-curry) (error "Arggh"))
-           (or (array-every mutable-array? mutable-curry) (error "Arggh"))
-           (or (array-every (lambda (a) (not (specialized-array? a))) mutable-curry) (error "Arggh"))
-           (or (array-every specialized-array? specialized-curry) (error "Arggh"))
-           (or (array-every (lambda (xy) (apply myarray= xy))
-                            (array-map list immutable-curry immutable-curry-from-definition))
-               (error "Arggh"))
-           (or (array-every (lambda (xy) (apply myarray= xy))
-                            (array-map list mutable-curry mutable-curry-from-definition))
-               (error "Arggh"))
-           (or (array-every (lambda (xy) (apply myarray= xy))
-                            (array-map list specialized-curry specialized-curry-from-definition))
-               (error "Arggh"))))))
+      (test (myarray= Array copied-array) #t)
+      (test (array-every array? immutable-curry) #t)
+      (test (array-every (lambda (a) (not (mutable-array? a))) immutable-curry) #t)
+      (test (array-every (lambda (a) (not (specialized-array? a))) mutable-curry) #t)
+      (test (array-every specialized-array? specialized-curry) #t)
+      (test (array-every (lambda (xy) (apply myarray= xy))
+                         (array-map list immutable-curry immutable-curry-from-definition))
+            #t)
+      (test (array-every (lambda (xy) (apply myarray= xy))
+                         (array-map list mutable-curry mutable-curry-from-definition))
+            #t)
+      (test (array-every (lambda (xy) (apply myarray= xy))
+                         (array-map list specialized-curry specialized-curry-from-definition))
+            #t))))
 
 
 (next-test-random-source-state!)
@@ -2603,6 +2635,11 @@ OTHER DEALINGS IN THE SOFTWARE.
                                (make-interval '#(0) '#(1))
                                1)
       "specialized-array-share: The third argument is not a procedure: ")
+
+(test (specialized-array-share (make-specialized-array (make-interval '#(0 0)) generic-storage-class 2)
+                               (make-interval '#(1))
+                               (lambda (i) (values i i)))
+      "specialized-array-share: The second argument (a domain) has more elements than the domain of the first argument (an array): ")
 
 
 (test (myarray= (list->array (make-interval '#(0) '#(10))
@@ -2831,7 +2868,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       ;;(pp (list domain translation (interval-volume domain)))
       (let ((translated-array       (array-translate Array translation))
             (my-translated-array (my-array-translate Array translation)))
-        (if (mutable-array? Array)
+        (if (and (mutable-array? Array)
+                 (not (interval-empty? (array-domain Array))))
             (let ((translated-domain (interval-translate domain translation)))
               (do ((j 0 (+ j 1)))
                   ((= j 50))
@@ -3039,16 +3077,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       ;; (pp (list domain permutation (interval-volume domain)))
       (let ((permuted-array       (array-permute Array permutation))
             (my-permuted-array (my-array-permute Array permutation)))
-        (let ((permuted-domain (interval-permute domain permutation)))
-          (do ((j 0 (+ j 1)))
-              ((= j 50))
-            (call-with-values
-                (lambda ()
-                  (random-multi-index permuted-domain))
-              (lambda multi-index
-                (test (apply (array-getter permuted-array)    multi-index)
-                      (apply (array-getter my-permuted-array) multi-index))))))
-        (if (mutable-array? Array)
+        (if (and (mutable-array? Array)
+                 (not (interval-empty? (array-domain Array))))
             (let ((permuted-domain (interval-permute domain permutation)))
               (do ((j 0 (+ j 1)))
                   ((= j 50))
@@ -3098,16 +3128,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       ;; (pp (list domain permutation (interval-volume domain)))
       (let ((permuted-array       (array-permute Array permutation))
             (my-permuted-array (my-array-permute Array permutation)))
-        (let ((permuted-domain (interval-permute domain permutation)))
-          (do ((j 0 (+ j 1)))
-              ((= j 50))
-            (call-with-values
-                (lambda ()
-                  (random-multi-index permuted-domain))
-              (lambda multi-index
-                (test (apply (array-getter permuted-array)    multi-index)
-                      (apply (array-getter my-permuted-array) multi-index))))))
-        (if (mutable-array? Array)
+        (if (and (not (array-empty? Array))
+                 (mutable-array? Array))
             (let ((permuted-domain (interval-permute domain permutation)))
               (do ((j 0 (+ j 1)))
                   ((= j 50))
@@ -3368,13 +3390,14 @@ OTHER DEALINGS IN THE SOFTWARE.
                              #t)
                        (test (myarray= spec-A-extract spec-B-extract)
                              #t))
-                    (call-with-values
-                        (lambda ()
-                          (random-multi-index subdomain))
-                      (lambda multi-index
-                        (let ((val (test-random-real)))
-                          (apply A-setter val multi-index)
-                          (apply B-extract-setter val multi-index)))))))
+                    (if (not (interval-empty? subdomain))
+                        (call-with-values
+                            (lambda ()
+                              (random-multi-index subdomain))
+                          (lambda multi-index
+                            (let ((val (test-random-real)))
+                              (apply A-setter val multi-index)
+                              (apply B-extract-setter val multi-index))))))))
               (list spec-A mut-A)
               (list spec-B mut-B)
               (list spec-A-extract mut-A-extract)
@@ -3388,11 +3411,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) 'a)
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(a a))
-      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact positive integers that sum to width 0 of the domain of the array first argument: ")
+      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(-1 1))
-      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact positive integers that sum to width 0 of the domain of the array first argument: ")
+      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
+(test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 -1 2)))
+      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
+(test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 0 2)))
+      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
 
 (do ((d 1 (fx+ d 1)))
      ((fx= d 6))
@@ -3442,7 +3469,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (do ((i 0 (fx+ i 1)))
     ((fx= i random-tests))
   (let* ((domain
-          (random-interval))
+          (random-nonempty-interval))   ;; We use positive integers for the array-tile arguments here, so we need the domain to be nonempty.
          (array
           (let ((res (make-array domain list)))
             (case (test-random-integer 3)
@@ -3559,7 +3586,8 @@ OTHER DEALINGS IN THE SOFTWARE.
          (reversed-array (array-reverse Array flips))
          (my-reversed-array (myarray-reverse Array flips)))
 
-    (if (mutable-array? Array)
+    (if (and (mutable-array? Array)
+             (not (array-empty? Array)))
         (do ((j 0 (+ j 1)))
             ((= j 50))
           (call-with-values
@@ -3710,13 +3738,13 @@ OTHER DEALINGS IN THE SOFTWARE.
     ;; (pp specialized-array)
     (array-assign! specialized-subarray new-subarray)
     (array-assign! mutable-subarray new-subarray)
-    (if (not (myarray= specialized-array
-                       (make-array interval
-                                   (lambda multi-index
-                                     (if (apply interval-contains-multi-index? subinterval multi-index)
-                                         (apply (array-getter new-subarray) multi-index)
-                                         (apply (array-getter specialized-array) multi-index))))))
-        (error "arggh"))
+    (test (myarray= specialized-array
+                    (make-array interval
+                                (lambda multi-index
+                                  (if (apply interval-contains-multi-index? subinterval multi-index)
+                                      (apply (array-getter new-subarray) multi-index)
+                                      (apply (array-getter specialized-array) multi-index)))))
+          #t)
     (test (myarray= mutable-array
                     (make-array interval
                                 (lambda multi-index
@@ -3769,7 +3797,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               )))
   (do ((i 0 (+ i 1)))
       ((= i random-tests))
-    (let* ((domain (random-interval))
+    (let* ((domain (random-nonempty-interval))  ;; we're testing invalid arguments, so no zero-dimensional arrays
            (builders (vector-ref array-builders (test-random-integer (vector-length array-builders))))
            (storage-class (car builders))
            (random-entry (cadr builders))
@@ -3787,16 +3815,18 @@ OTHER DEALINGS IN THE SOFTWARE.
                          list)))
       (test (apply setter invalid-entry valid-args)
             "array-setter: value cannot be stored in body: ")
-      (set-car! valid-args 'a)
-      (test (apply getter valid-args)
-            "array-getter: multi-index component is not an exact integer: ")
-      (test (apply setter 10 valid-args)
-            "array-setter: multi-index component is not an exact integer: ")
-      (set-car! valid-args 10000) ;; outside the range of any random-interval
-      (test (apply getter valid-args)
-            "array-getter: domain does not contain multi-index: ")
-      (test (apply setter 10 valid-args)
-            "array-setter: domain does not contain multi-index: ")
+      (if (positive? dimension)
+          (begin
+            (set-car! valid-args 'a)
+            (test (apply getter valid-args)
+                  "array-getter: multi-index component is not an exact integer: ")
+            (test (apply setter 10 valid-args)
+                  "array-setter: multi-index component is not an exact integer: ")
+            (set-car! valid-args 10000) ;; outside the range of any random-interval
+            (test (apply getter valid-args)
+                  "array-getter: domain does not contain multi-index: ")
+            (test (apply setter 10 valid-args)
+                  "array-setter: domain does not contain multi-index: ")))
       (if (< 4 dimension)
           (begin
             (set! valid-args (cons 1 valid-args))

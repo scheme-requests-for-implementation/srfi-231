@@ -79,6 +79,7 @@ MathJax.Hub.Config({
          (<li> "Draft #4 published: 2022-02-24")
          (<li> "Draft #5 published: 2022-03-16")
          (<li> "Draft #6 published: 2022-03-17")
+         (<li> "Draft #7 published: 2022-04-25")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -1083,6 +1084,8 @@ indexer:       (lambda multi-index
 
 (<p> "The resulting array inherits its safety and mutability from "(<code>(<var>'array))".")
 
+(<p> "Because "(<code>(<var>'new-domain->old-domain))" is assumed to be a one-to-one mapping, the volume of "(<code>(<var>'new-domain))" must be no greater than the number of elements of "(<code>(<var>'array))".")
+
 (<p> "Note: It is assumed that the affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(array-indexer "(<var> 'array)")")" will be used to simplify:")
 (<pre>
  (<code>
@@ -1420,6 +1423,7 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
             (lambda multi-index
               (apply (array-getter "(<var>'array)")
                      ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
+(<p> "The only length-zero permutation is the empty permutation, specified by "(<code>"'#()")".")
 (<p>"It is an error to call "(<code>'array-permute)" if its arguments do not satisfy these conditions.")
 
 

@@ -769,6 +769,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%interval-foldl f operator identity interval)
   (case (%%interval-dimension interval)
+    ((0) (operator identity (f)))
     ((1) (let ((lower-i (%%interval-lower-bound interval 0))
                (upper-i (%%interval-upper-bound interval 0)))
            (let i-loop ((i lower-i) (result identity))
@@ -1579,6 +1580,15 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-safe? obj))))
 
+(define (%%array-empty? array)
+  (%%interval-empty? (%%array-domain array)))
+
+(define (array-empty? obj)
+  (cond ((not (array? obj))
+         (error "array-empty?: The argument is not an array: " obj))
+        (else
+         (%%array-empty? obj))))
+
 (define (%%compute-array-elements-in-order? domain indexer)
   (or (%%interval-empty? domain)
       (case (%%interval-dimension domain)
@@ -1752,7 +1762,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (safe?
                   (case (%%interval-dimension domain)
                     ((0)  (lambda ()
-                            (storage-class-getter body (indexeri))))
+                            (storage-class-getter body (indexer))))
                     ((1)  (lambda (i)
                             (cond ((not (exact-integer? i))
                                    (error "array-getter: multi-index component is not an exact integer: " i))
@@ -2319,11 +2329,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (apply source-indexer initial-source-index))
                      (source-end
                       (fx+ source-start (%%interval-volume (%%array-domain source)))))
-                (copier (%%array-body destination)
-                        destination-start
-                        (%%array-body source)
-                        source-start
-                        source-end)
+                (if (not (%%interval-empty? (%%array-domain source)))
+                    ;; If arrays are empty, then indexers might be meaningless, so
+                    ;; destination/source-start might be meaningless, so don't
+                    ;; call copier.
+                    (copier (%%array-body destination)
+                            destination-start
+                            (%%array-body source)
+                            source-start
+                            source-end))
                 "Block copy")
               ;;  we can step through the elements of destination in order.
               (let* ((domain
@@ -2704,6 +2718,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%compose-indexers old-indexer new-domain new-domain->old-domain)
   (case (%%interval-dimension new-domain)
+    ((0) (let ((base (call-with-values
+                         (lambda () (new-domain->old-domain))
+                       old-indexer)))
+           (%%indexer-0 base)))
     ((1) (let* ((lower-0 (%%interval-lower-bound new-domain 0))
                 (upper-0 (%%interval-upper-bound new-domain 0))
                 (base (call-with-values
@@ -2866,6 +2884,11 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (procedure? new-domain->old-domain))
          (error "specialized-array-share: The third argument is not a procedure: "
                 array new-domain new-domain->old-domain))
+        ((not (<= (%%interval-volume new-domain)
+                  (%%interval-volume (%%array-domain array))))
+         ;; If new-domain->old-domain is a 1-1 map, then the volume of
+         ;; the new-domain must have no more elements than old-domain
+         (error "specialized-array-share: The second argument (a domain) has more elements than the domain of the first argument (an array): " array new-domain new-domain->old-domain))
         (else
          (%%specialized-array-share array
                                     new-domain
@@ -2984,7 +3007,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                "array-tile: Element "
                                (number->string k)
                                " of the vector second argument is neither an exact positive integer nor "
-                               "a vector of exact positive integers that sum to width "
+                               "a vector of exact nonnegative integers that sum to width "
                                (number->string k)
                                " of the domain of the array first argument: ")
                               A slice-widths)))
@@ -3541,18 +3564,25 @@ OTHER DEALINGS IN THE SOFTWARE.
       (let ((getter (%%array-getter array)))
         (make-array left-interval
                     (case (%%interval-dimension left-interval)
+                      ((0)  (lambda () array))
                       ((1)  (case (%%interval-dimension right-interval)
-                              ((1)  (lambda (i)      (make-array right-interval (lambda (j)         (getter i j)))))
-                              ((2)  (lambda (i)      (make-array right-interval (lambda (j k)       (getter i j k)))))
-                              ((3)  (lambda (i)      (make-array right-interval (lambda (j k l)     (getter i j k l)))))
-                              (else (lambda (i)      (make-array right-interval (lambda multi-index (apply getter i multi-index)))))))
+                              ((0)  (lambda (i)       (make-array right-interval (lambda ()          (getter i)))))
+                              ((1)  (lambda (i)       (make-array right-interval (lambda (j)         (getter i j)))))
+                              ((2)  (lambda (i)       (make-array right-interval (lambda (j k)       (getter i j k)))))
+                              ((3)  (lambda (i)       (make-array right-interval (lambda (j k l)     (getter i j k l)))))
+                              (else (lambda (i)       (make-array right-interval (lambda multi-index (apply getter i multi-index)))))))
                       ((2)  (case (%%interval-dimension right-interval)
-                              ((1)  (lambda (i j)    (make-array right-interval (lambda   (k)       (getter i j k)))))
-                              ((2)  (lambda (i j)    (make-array right-interval (lambda   (k l)     (getter i j k l)))))
-                              (else (lambda (i j)    (make-array right-interval (lambda multi-index (apply getter i j multi-index)))))))
+                              ((0)  (lambda (i j)     (make-array right-interval (lambda ( )         (getter i j)))))
+                              ((1)  (lambda (i j)     (make-array right-interval (lambda (  k)       (getter i j k)))))
+                              ((2)  (lambda (i j)     (make-array right-interval (lambda (  k l)     (getter i j k l)))))
+                              (else (lambda (i j)     (make-array right-interval (lambda multi-index (apply getter i j multi-index)))))))
                       ((3)  (case (%%interval-dimension right-interval)
-                              ((1)  (lambda (i j k)  (make-array right-interval (lambda     (l)     (getter i j k l)))))
-                              (else (lambda (i j k)  (make-array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
+                              ((0)  (lambda (i j k)   (make-array right-interval (lambda (   )       (getter i j k)))))
+                              ((1)  (lambda (i j k)   (make-array right-interval (lambda (    l)     (getter i j k l)))))
+                              (else (lambda (i j k)   (make-array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
+                      ((4)  (case (%%interval-dimension right-interval)
+                              ((0)  (lambda (i j k l) (make-array right-interval (lambda (     )     (getter i j k l)))))
+                              (else (lambda (i j k l) (make-array right-interval (lambda multi-index (apply getter i j k l multi-index)))))))
                       (else (lambda left-multi-index
                               (make-array right-interval
                                           (lambda right-multi-index
@@ -3566,36 +3596,53 @@ OTHER DEALINGS IN THE SOFTWARE.
             (setter (%%array-setter   array)))
         (make-array left-interval
                     (case (%%interval-dimension left-interval)
+                      ((0)  (lambda () array))
                       ((1)  (case (%%interval-dimension right-interval)
-                              ((1)  (lambda (i)     (make-array right-interval
-                                                                (lambda (  j)     (getter   i j))
-                                                                (lambda (v j)     (setter v i j)))))
-                              ((2)  (lambda (i)     (make-array right-interval
-                                                                (lambda (  j k)   (getter   i j k))
-                                                                (lambda (v j k)   (setter v i j k)))))
-                              ((3)  (lambda (i)     (make-array right-interval
-                                                                (lambda (  j k l) (getter   i j k l))
-                                                                (lambda (v j k l) (setter v i j k l)))))
-                              (else (lambda (i)     (make-array right-interval
-                                                                (lambda      multi-index  (apply getter   i     multi-index))
-                                                                (lambda (v . multi-index) (apply setter v i     multi-index)))))))
+                              ((0)  (lambda (i)       (make-array right-interval
+                                                                  (lambda ( )       (getter   i))
+                                                                  (lambda (v)       (setter v i)))))
+                              ((1)  (lambda (i)       (make-array right-interval
+                                                                  (lambda (  j)     (getter   i j))
+                                                                  (lambda (v j)     (setter v i j)))))
+                              ((2)  (lambda (i)       (make-array right-interval
+                                                                  (lambda (  j k)   (getter   i j k))
+                                                                  (lambda (v j k)   (setter v i j k)))))
+                              ((3)  (lambda (i)       (make-array right-interval
+                                                                  (lambda (  j k l) (getter   i j k l))
+                                                                  (lambda (v j k l) (setter v i j k l)))))
+                              (else (lambda (i)       (make-array right-interval
+                                                                  (lambda      multi-index  (apply getter   i       multi-index))
+                                                                  (lambda (v . multi-index) (apply setter v i       multi-index)))))))
                       ((2)  (case (%%interval-dimension right-interval)
-                              ((1)  (lambda (i j)   (make-array right-interval
-                                                                (lambda (    k)   (getter   i j k))
-                                                                (lambda (v   k)   (setter v i j k)))))
-                              ((2)  (lambda (i j)   (make-array right-interval
-                                                                (lambda (    k l) (getter   i j k l))
-                                                                (lambda (v   k l) (setter v i j k l)))))
-                              (else (lambda (i j)   (make-array right-interval
-                                                                (lambda      multi-index  (apply getter   i j   multi-index))
-                                                                (lambda (v . multi-index) (apply setter v i j   multi-index)))))))
+                              ((0)  (lambda (i j)     (make-array right-interval
+                                                                  (lambda (   )     (getter   i j))
+                                                                  (lambda (v  )     (setter v i j)))))
+                              ((1)  (lambda (i j)     (make-array right-interval
+                                                                  (lambda (    k)   (getter   i j k))
+                                                                  (lambda (v   k)   (setter v i j k)))))
+                              ((2)  (lambda (i j)     (make-array right-interval
+                                                                  (lambda (    k l) (getter   i j k l))
+                                                                  (lambda (v   k l) (setter v i j k l)))))
+                              (else (lambda (i j)     (make-array right-interval
+                                                                  (lambda      multi-index  (apply getter   i j     multi-index))
+                                                                  (lambda (v . multi-index) (apply setter v i j     multi-index)))))))
                       ((3)  (case (%%interval-dimension right-interval)
-                              ((1)  (lambda (i j k) (make-array right-interval
-                                                                (lambda (      l) (getter   i j k l))
-                                                                (lambda (v     l) (setter v i j k l)))))
-                              (else (lambda (i j k) (make-array right-interval
-                                                                (lambda      multi-index  (apply getter   i j k multi-index))
-                                                                (lambda (v . multi-index) (apply setter v i j k multi-index)))))))
+                              ((0)  (lambda (i j k)   (make-array right-interval
+                                                                  (lambda (     )   (getter   i j k))
+                                                                  (lambda (v    )   (setter v i j k)))))
+                              ((1)  (lambda (i j k)   (make-array right-interval
+                                                                  (lambda (      l) (getter   i j k l))
+                                                                  (lambda (v     l) (setter v i j k l)))))
+                              (else (lambda (i j k)   (make-array right-interval
+                                                                  (lambda      multi-index  (apply getter   i j k   multi-index))
+                                                                  (lambda (v . multi-index) (apply setter v i j k   multi-index)))))))
+                      ((4)  (case (%%interval-dimension right-interval)
+                              ((0)  (lambda (i j k l) (make-array right-interval
+                                                                  (lambda (     )   (getter   i j k l))
+                                                                  (lambda (v    )   (setter v i j k l)))))
+                              (else (lambda (i j k l) (make-array right-interval
+                                                                  (lambda      multi-index  (apply getter   i j k l multi-index))
+                                                                  (lambda (v . multi-index) (apply setter v i j k l multi-index)))))))
                       (else (lambda left-multi-index
                               (make-array right-interval
                                           (lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
@@ -3627,18 +3674,25 @@ OTHER DEALINGS IN THE SOFTWARE.
         (make-array
          left-interval
          (case (%%interval-dimension left-interval)
+           ((0)  (lambda () array))
            ((1)  (case (%%interval-dimension right-interval)
-                   ((1)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j)                         (values i j    )) in-order?)))
-                   ((2)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j k)                       (values i j k  )) in-order?)))
-                   ((3)  (lambda (i)     (%%specialized-array-share array right-interval (lambda (j k l)                     (values i j k l)) in-order?)))
-                   (else (lambda (i)     (%%specialized-array-share array right-interval (lambda multi-index (apply values i     multi-index)) in-order?)))))
+                   ((0)  (lambda (i)       (%%specialized-array-share array right-interval (lambda ()                            (values i      )) in-order?)))
+                   ((1)  (lambda (i)       (%%specialized-array-share array right-interval (lambda (j)                           (values i j    )) in-order?)))
+                   ((2)  (lambda (i)       (%%specialized-array-share array right-interval (lambda (j k)                         (values i j k  )) in-order?)))
+                   ((3)  (lambda (i)       (%%specialized-array-share array right-interval (lambda (j k l)                       (values i j k l)) in-order?)))
+                   (else (lambda (i)       (%%specialized-array-share array right-interval (lambda multi-index (apply values i       multi-index)) in-order?)))))
            ((2)  (case (%%interval-dimension right-interval)
-                   ((1)  (lambda (i j)   (%%specialized-array-share array right-interval (lambda (  k)                       (values i j k  )) in-order?)))
-                   ((2)  (lambda (i j)   (%%specialized-array-share array right-interval (lambda (  k l)                     (values i j k l)) in-order?)))
-                   (else (lambda (i j)   (%%specialized-array-share array right-interval (lambda multi-index (apply values i j   multi-index)) in-order?)))))
+                   ((0)  (lambda (i j)     (%%specialized-array-share array right-interval (lambda ()                            (values i j    )) in-order?)))
+                   ((1)  (lambda (i j)     (%%specialized-array-share array right-interval (lambda (k)                           (values i j k  )) in-order?)))
+                   ((2)  (lambda (i j)     (%%specialized-array-share array right-interval (lambda (k l)                         (values i j k l)) in-order?)))
+                   (else (lambda (i j)     (%%specialized-array-share array right-interval (lambda multi-index (apply values i j     multi-index)) in-order?)))))
            ((3)  (case (%%interval-dimension right-interval)
-                   ((1)  (lambda (i j k) (%%specialized-array-share array right-interval (lambda (    l)                     (values i j k l)) in-order?)))
-                   (else (lambda (i j k) (%%specialized-array-share array right-interval (lambda multi-index (apply values i j k multi-index)) in-order?)))))
+                   ((0)  (lambda (i j k)   (%%specialized-array-share array right-interval (lambda ()                            (values i j k  )) in-order?)))
+                   ((1)  (lambda (i j k)   (%%specialized-array-share array right-interval (lambda (l)                           (values i j k l)) in-order?)))
+                   (else (lambda (i j k)   (%%specialized-array-share array right-interval (lambda multi-index (apply values i j k   multi-index)) in-order?)))))
+           ((4)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j k l) (%%specialized-array-share array right-interval (lambda ()                            (values i j k l)) in-order?)))
+                   (else (lambda (i j k l) (%%specialized-array-share array right-interval (lambda multi-index (apply values i j k l multi-index)) in-order?)))))
            (else (lambda left-multi-index
                    (%%specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) in-order?)))))))))
 
@@ -3654,8 +3708,8 @@ OTHER DEALINGS IN THE SOFTWARE.
   (cond ((not (array? array))
          (error "array-curry: The first argument is not an array: " array right-dimension))
         ((not (and (fixnum? right-dimension)
-                   (fx< 0 right-dimension (%%array-dimension array))))
-         (error "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (exclusive): " array right-dimension))
+                   (fx<= 0 right-dimension (%%array-dimension array))))
+         (error "array-curry: The second argument is not an exact integer between 0 and (interval-dimension (array-domain array)) (inclusive): " array right-dimension))
         (else
          (%%array-curry array right-dimension))))
 
@@ -3778,135 +3832,138 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   (define (make-predicate name connector)
     `(define (,(concat '%%interval- name) f interval)
-       (case (%%interval-dimension interval)
-         ((1) (let ((lower-i (%%interval-lower-bound interval 0))
-                    (upper-i (%%interval-upper-bound interval 0))
-                    (index   0)
-                    (n       (%%interval-volume interval)))
-                (let i-loop ((i lower-i)
-                             (index (fx- n 1)))
-                  (cond ((eqv? 0 index)
-                         (f i))
-                        (else
-                         (,connector (f i)
-                                     (i-loop (+ i 1)
-                                             (fx- index 1))))))))
-         ((2) (let ((lower-i (%%interval-lower-bound interval 0))
-                    (lower-j (%%interval-lower-bound interval 1))
-                    (upper-i (%%interval-upper-bound interval 0))
-                    (upper-j (%%interval-upper-bound interval 1))
-                    (n       (%%interval-volume interval)))
-                (let i-loop ((i lower-i)
-                             (index (fx- n 1)))
-                  ;; (< i upper-i) is always true because index is >= 0
-                  (let j-loop ((j lower-j)
-                               (index index))
-                    (cond ((= j upper-j)
-                           (i-loop (+ i 1)
-                                   index))
-                          ((eqv? 0 index)
-                           (f i j))
-                          (else
-                           (,connector (f i j)
-                                       (j-loop (+ j 1)
-                                               (fx- index 1)))))))))
-         ((3) (let ((lower-i (%%interval-lower-bound interval 0))
-                    (lower-j (%%interval-lower-bound interval 1))
-                    (lower-k (%%interval-lower-bound interval 2))
-                    (upper-i (%%interval-upper-bound interval 0))
-                    (upper-j (%%interval-upper-bound interval 1))
-                    (upper-k (%%interval-upper-bound interval 2))
-                    (n       (%%interval-volume interval)))
-                (let i-loop ((i lower-i)
-                             (index (fx- n 1)))
-                  ;; (< i upper-i) is always true because index is >= 0
-                  (let j-loop ((j lower-j)
-                               (index index))
-                    (if (< j upper-j)
-                        (let k-loop ((k lower-k)
-                                     (index index))
-                          (cond ((= k upper-k)
-                                 (j-loop (+ j 1)
-                                         index))
-                                ((eqv? 0 index)
-                                 (f i j k))
-                                (else
-                                 (,connector (f i j k)
-                                             (k-loop (+ k 1)
-                                                     (fx- index 1))))))
-                        (i-loop (+ i 1)
-                                index))))))
-         ((4) (let ((lower-i (%%interval-lower-bound interval 0))
-                    (lower-j (%%interval-lower-bound interval 1))
-                    (lower-k (%%interval-lower-bound interval 2))
-                    (lower-l (%%interval-lower-bound interval 3))
-                    (upper-i (%%interval-upper-bound interval 0))
-                    (upper-j (%%interval-upper-bound interval 1))
-                    (upper-k (%%interval-upper-bound interval 2))
-                    (upper-l (%%interval-upper-bound interval 3))
-                    (n       (%%interval-volume interval)))
-                (let i-loop ((i lower-i)
-                             (index (fx- n 1)))
-                  (let j-loop ((j lower-j)
-                               (index index))
-                    (if (< j upper-j)
-                        (let k-loop ((k lower-k)
-                                     (index index))
-                          (if (< k upper-k)
-                              (let l-loop ((l lower-l)
-                                           (index index))
-                                (cond ((= l upper-l)
-                                       (k-loop (+ k 1)
-                                               index))
-                                      ((eqv? 0 index)
-                                       (f i j k l))
-                                      (else
-                                       (,connector (f i j k l)
-                                                   (l-loop (+ l 1)
-                                                           (fx- index 1))))))
-                              (j-loop (+ j 1)
-                                      index)))
-                        (i-loop (+ i 1)
-                                index))))))
-         (else
+       (if (eqv? (%%interval-volume interval) 0)
+           ,(if (eq? name 'any) #f #t)
+           (case (%%interval-dimension interval)
+             ((0) (f))
+             ((1) (let ((lower-i (%%interval-lower-bound interval 0))
+                        (upper-i (%%interval-upper-bound interval 0))
+                        (index   0)
+                        (n       (%%interval-volume interval)))
+                    (let i-loop ((i lower-i)
+                                 (index (fx- n 1)))
+                      (cond ((eqv? 0 index)
+                             (f i))
+                            (else
+                             (,connector (f i)
+                                         (i-loop (+ i 1)
+                                                 (fx- index 1))))))))
+             ((2) (let ((lower-i (%%interval-lower-bound interval 0))
+                        (lower-j (%%interval-lower-bound interval 1))
+                        (upper-i (%%interval-upper-bound interval 0))
+                        (upper-j (%%interval-upper-bound interval 1))
+                        (n       (%%interval-volume interval)))
+                    (let i-loop ((i lower-i)
+                                 (index (fx- n 1)))
+                      ;; (< i upper-i) is always true because index is >= 0
+                      (let j-loop ((j lower-j)
+                                   (index index))
+                        (cond ((= j upper-j)
+                               (i-loop (+ i 1)
+                                       index))
+                              ((eqv? 0 index)
+                               (f i j))
+                              (else
+                               (,connector (f i j)
+                                           (j-loop (+ j 1)
+                                                   (fx- index 1)))))))))
+             ((3) (let ((lower-i (%%interval-lower-bound interval 0))
+                        (lower-j (%%interval-lower-bound interval 1))
+                        (lower-k (%%interval-lower-bound interval 2))
+                        (upper-i (%%interval-upper-bound interval 0))
+                        (upper-j (%%interval-upper-bound interval 1))
+                        (upper-k (%%interval-upper-bound interval 2))
+                        (n       (%%interval-volume interval)))
+                    (let i-loop ((i lower-i)
+                                 (index (fx- n 1)))
+                      ;; (< i upper-i) is always true because index is >= 0
+                      (let j-loop ((j lower-j)
+                                   (index index))
+                        (if (< j upper-j)
+                            (let k-loop ((k lower-k)
+                                         (index index))
+                              (cond ((= k upper-k)
+                                     (j-loop (+ j 1)
+                                             index))
+                                    ((eqv? 0 index)
+                                     (f i j k))
+                                    (else
+                                     (,connector (f i j k)
+                                                 (k-loop (+ k 1)
+                                                         (fx- index 1))))))
+                            (i-loop (+ i 1)
+                                    index))))))
+             ((4) (let ((lower-i (%%interval-lower-bound interval 0))
+                        (lower-j (%%interval-lower-bound interval 1))
+                        (lower-k (%%interval-lower-bound interval 2))
+                        (lower-l (%%interval-lower-bound interval 3))
+                        (upper-i (%%interval-upper-bound interval 0))
+                        (upper-j (%%interval-upper-bound interval 1))
+                        (upper-k (%%interval-upper-bound interval 2))
+                        (upper-l (%%interval-upper-bound interval 3))
+                        (n       (%%interval-volume interval)))
+                    (let i-loop ((i lower-i)
+                                 (index (fx- n 1)))
+                      (let j-loop ((j lower-j)
+                                   (index index))
+                        (if (< j upper-j)
+                            (let k-loop ((k lower-k)
+                                         (index index))
+                              (if (< k upper-k)
+                                  (let l-loop ((l lower-l)
+                                               (index index))
+                                    (cond ((= l upper-l)
+                                           (k-loop (+ k 1)
+                                                   index))
+                                          ((eqv? 0 index)
+                                           (f i j k l))
+                                          (else
+                                           (,connector (f i j k l)
+                                                       (l-loop (+ l 1)
+                                                               (fx- index 1))))))
+                                  (j-loop (+ j 1)
+                                          index)))
+                            (i-loop (+ i 1)
+                                    index))))))
+             (else
 
-          (let* ((lowers     (%%interval-lower-bounds interval))
-                 (uppers     (%%interval-upper-bounds interval))
-                 (dimensions (vector-length lowers))
-                 (arg        (vector->list lowers))                    ;; the argument to which f is applied
-                 (tails      (let ((result (make-vector dimensions)))  ;; the tails of the argument
-                               (do ((i 0 (fx+ i 1))
-                                    (arg arg (cdr arg)))
-                                   ((fx= i dimensions) result)
-                                 (vector-set! result i arg)))))
-            (let loop ((dimension 0)
-                       (total-index (fx- (%%interval-volume interval) 1)))
-              (cond ((= (car (vector-ref tails dimension))
-                        (vector-ref uppers dimension))
-                     ;; We're done iterating in this dimension, set the arg index
-                     ;; at this dimension back to the lower bound, increment the
-                     ;; arg index at the previous dimension, and go back to the
-                     ;; previous dimension
-                     (let ((previous-tail (vector-ref tails (fx- dimension 1))))
-                       (set-car! (vector-ref tails  dimension)
-                                 (vector-ref lowers dimension))
-                       (set-car! previous-tail
-                                 (+ 1 (car previous-tail)))
-                       (loop (fx- dimension 1)
-                             total-index)))
-                    ((fx< dimension (fx- dimensions 1))
-                     (loop (fx+ dimension 1)
-                           total-index))
-                    ;; Now we're at the final dimension
-                    ((eqv? 0 total-index)
-                     (apply f arg))
-                    (else
-                     (,connector (apply f arg)
-                                 (let ((current-tail (vector-ref tails dimension)))
-                                   (set-car! current-tail
-                                             (+ (car current-tail) 1))
-                                   (loop dimension
-                                         (fx- total-index 1))))))))))))
+              (let* ((lowers     (%%interval-lower-bounds interval))
+                     (uppers     (%%interval-upper-bounds interval))
+                     (dimensions (vector-length lowers))
+                     (arg        (vector->list lowers))                    ;; the argument to which f is applied
+                     (tails      (let ((result (make-vector dimensions)))  ;; the tails of the argument
+                                   (do ((i 0 (fx+ i 1))
+                                        (arg arg (cdr arg)))
+                                       ((fx= i dimensions) result)
+                                     (vector-set! result i arg)))))
+                (let loop ((dimension 0)
+                           (total-index (fx- (%%interval-volume interval) 1)))
+                  (cond ((= (car (vector-ref tails dimension))
+                            (vector-ref uppers dimension))
+                         ;; We're done iterating in this dimension, set the arg index
+                         ;; at this dimension back to the lower bound, increment the
+                         ;; arg index at the previous dimension, and go back to the
+                         ;; previous dimension
+                         (let ((previous-tail (vector-ref tails (fx- dimension 1))))
+                           (set-car! (vector-ref tails  dimension)
+                                     (vector-ref lowers dimension))
+                           (set-car! previous-tail
+                                     (+ 1 (car previous-tail)))
+                           (loop (fx- dimension 1)
+                                 total-index)))
+                        ((fx< dimension (fx- dimensions 1))
+                         (loop (fx+ dimension 1)
+                               total-index))
+                        ;; Now we're at the final dimension
+                        ((eqv? 0 total-index)
+                         (apply f arg))
+                        (else
+                         (,connector (apply f arg)
+                                     (let ((current-tail (vector-ref tails dimension)))
+                                       (set-car! current-tail
+                                                 (+ (car current-tail) 1))
+                                       (loop dimension
+                                             (fx- total-index 1)))))))))))))
 
   (let ((result
          `(begin
@@ -4594,6 +4651,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (error "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: " array new-domain))
         ((not (boolean? copy-on-failure?))
          (error "specialized-array-reshape: The third argument is not a boolean: " array new-domain copy-on-failure?))
+        ((%%array-empty? array)
+         ;; Any empty array can be reshaped to any other empty array.
+         (%%finish-specialized-array new-domain
+                                     (%%array-storage-class array)
+                                     (%%array-body array)
+                                     (lambda args (apply error "indexer of empty array should not be called" args))  ;; meaningless
+                                     (mutable-array? array)
+                                     (%%array-safe? array)
+                                     (%%array-in-order? array)))
         (else
          (let* ((indexer
                  (%%array-indexer array))

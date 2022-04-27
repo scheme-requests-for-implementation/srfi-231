@@ -26,6 +26,7 @@
       <li>Draft #4 published: 2022-02-24</li>
       <li>Draft #5 published: 2022-03-16</li>
       <li>Draft #6 published: 2022-03-17</li>
+      <li>Draft #7 published: 2022-04-25</li>
       <li>Bradley Lucier's <a href="https://github.com/gambiteer/srfi-231">personal Git repo for this SRFI</a> for reference while the SRFI is in <em>draft</em> status.</li>
     </ul>
     <h2>Abstract</h2>
@@ -762,6 +763,7 @@ indexer:       (lambda multi-index
                               multi-index))
                    (array-indexer <var>array</var>)))</code></pre>
     <p>The resulting array inherits its safety and mutability from <code><var>array</var></code>.</p>
+    <p>Because <code><var>new-domain-&gt;old-domain</var></code> is assumed to be a one-to-one mapping, the volume of <code><var>new-domain</var></code> must be no greater than the number of elements of <code><var>array</var></code>.</p>
     <p>Note: It is assumed that the affine structure of the composition of <code><var>new-domain-&gt;old-domain</var></code> and <code>(array-indexer <var>array</var>)</code> will be used to simplify:</p>
     <pre><code>  (lambda multi-index
     (call-with-values
@@ -1021,6 +1023,7 @@ indexer:       (lambda multi-index
             (lambda multi-index
               (apply (array-getter <var>array</var>)
                      (&pi;<sup>-1</sup> multi-index))))</code></pre>
+    <p>The only length-zero permutation is the empty permutation, specified by <code>'#()</code>.</p>
     <p>It is an error to call <code>array-permute</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="array-reverse">array-reverse</a> <var>array</var> #!optional <var>flip?</var></code></p>
     <p>We assume that <code><var>array</var></code> is an array and <code><var>flip?</var></code>, if given, is a vector of booleans whose length is the same as the dimension of <code><var>array</var></code>.  If <code><var>flip?</var></code> is not given, it is set to a vector with length the same as the dimension of <code><var>array</var></code>, all of whose elements are <code>#t</code>.</p>
