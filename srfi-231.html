@@ -1234,7 +1234,7 @@ indexer:       (lambda multi-index
 =&gt; -5
 </code></pre>
     <p><b>Procedure: </b><code><a id="array-reduce">array-reduce</a> <var>op</var> <var>A</var></code></p>
-    <p>We assume that <code><var>A</var></code> is an array and <code><var>op</var></code> is a procedure of two arguments that is associative, i.e., <code>(<var>op</var> (<var>op</var> <var>x</var> <var>y</var>) <var>z</var>)</code> is the same as <code>(<var>op</var> <var>x</var> (<var>op</var>  <var>y</var> <var>z</var>))</code>.</p>
+    <p>We assume that <code><var>A</var></code> is a nonempty array and <code><var>op</var></code> is a procedure of two arguments that is associative, i.e., <code>(<var>op</var> (<var>op</var> <var>x</var> <var>y</var>) <var>z</var>)</code> is the same as <code>(<var>op</var> <var>x</var> (<var>op</var>  <var>y</var> <var>z</var>))</code>.</p>
     <p>Then <code>(array-reduce <var>op</var> <var>A</var>)</code> returns</p>
     <pre><code>(let ((box '())
       (A_ (array-getter A)))

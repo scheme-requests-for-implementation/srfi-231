@@ -1699,7 +1699,7 @@ calls")
 
 (format-lambda-list '(array-reduce op A))
 
-(<p> "We assume that "(<code>(<var>'A))" is an array and "(<code>(<var>'op))" is a procedure of two arguments that is associative, i.e., "(<code>"("(<var>'op)" ("(<var>'op)" "(<var>'x)" "(<var>'y)") "(<var>'z)")")" is the same as "(<code>"("(<var>'op)" "(<var>'x)" ("(<var>'op)"  "(<var>'y)" "(<var>'z)"))")".")
+(<p> "We assume that "(<code>(<var>'A))" is a nonempty array and "(<code>(<var>'op))" is a procedure of two arguments that is associative, i.e., "(<code>"("(<var>'op)" ("(<var>'op)" "(<var>'x)" "(<var>'y)") "(<var>'z)")")" is the same as "(<code>"("(<var>'op)" "(<var>'x)" ("(<var>'op)"  "(<var>'y)" "(<var>'z)"))")".")
 (<p> "Then "(<code>"(array-reduce "(<var>'op)" "(<var>'A)")")" returns")
 (<pre>
  (<code>

@@ -2129,7 +2129,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                              list)
                  (make-array (make-interval '#(3 4) '#(4 5))
                              list))
-      "array-map: Not all arguments after the first have the same domain: ")
+      "array-map: Not all arrays have the same domain: ")
 
 (pp "array-every and array-any error tests")
 
@@ -2150,7 +2150,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                list)
                    (make-array (make-interval '#(3 4) '#(4 5))
                                list))
-      "array-every: Not all arguments after the first have the same domain: ")
+      "array-every: Not all arrays have the same domain: ")
 
 (test (array-any 1 2)
       "array-any: The first argument is not a procedure: ")
@@ -2169,7 +2169,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                              list)
                  (make-array (make-interval '#(3 4) '#(4 5))
                              list))
-      "array-any: Not all arguments after the first have the same domain: ")
+      "array-any: Not all arrays have the same domain: ")
 
 (pp "array-every and array-any")
 
@@ -2258,13 +2258,13 @@ OTHER DEALINGS IN THE SOFTWARE.
       "array-foldl: The first argument is not a procedure: ")
 
 (test (array-foldl list 1 1)
-      "array-foldl: The third argument is not an array: ")
+      "array-foldl: Not all arguments after the first two are arrays: ")
 
 (test (array-foldr 1 1 1)
       "array-foldr: The first argument is not a procedure: ")
 
 (test (array-foldr list 1 1)
-      "array-foldr: The third argument is not an array: ")
+      "array-foldr: Not all arguments after the first two are arrays: ")
 
 (pp "array-for-each error tests")
 
@@ -2284,7 +2284,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                   list)
                       (make-array (make-interval '#(3 4) '#(4 5))
                                   list))
-      "array-for-each: Not all arguments after the first have the same domain: ")
+      "array-for-each: Not all arrays have the same domain: ")
 
 
 (pp "array-map, array-fold, and array-for-each result tests")
@@ -2433,6 +2433,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (array-reduce 'a (make-array (make-interval '#(1) '#(3)) list))
       "array-reduce: The first argument is not a procedure: ")
+
+(test (array-reduce + (make-array (make-interval '#(0)) error))
+      "array-reduce: The second argument is an empty array: ")
+
+(test (array-reduce (lambda (a b) error) (make-array (make-interval '#()) (lambda () 42)))
+      42)
 
 ;;; OK, how to test array-reduce?
 
@@ -3043,6 +3049,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (index-rotate 5 3)
       '#(3 4 0 1 2))
 
+(pp "interval-permute and array-permute tests")
+
 (let ((int (make-interval '#(0 0) '#(10 10)))
       (permutation '#(1 0)))
   (test (interval-permute 'a 10)
@@ -3075,6 +3083,18 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (permutation? '#(1 1)) #f)
 (test (permutation? '#(1 2)) #f)
 (test (permutation? '#(1 2 0)) #t)
+
+(test (array-every equal?
+                   (array-permute (make-array (make-interval '#()) (lambda () 42))
+                                  '#())
+                   (make-array (make-interval '#()) (lambda () 42)))
+      #t)
+
+(test (array-every equal?
+                   (array-permute (make-array (make-interval '#(0 1)) error)
+                                  '#(1 0))
+                   (make-array (make-interval '#(1 0)) error))
+      #t)
 
 (let* ((specialized-array (array-copy (make-array (make-interval '#(0 0) '#(10 12))
                                                                 list)))

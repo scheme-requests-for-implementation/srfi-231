@@ -3829,7 +3829,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every array? (cons array arrays)))
          (apply error "array-map: Not all arguments after the first are arrays: " f array arrays))
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
-         (apply error "array-map: Not all arguments after the first have the same domain: " f array arrays))
+         (apply error "array-map: Not all arrays have the same domain: " f array arrays))
         (else
          (%%array-map f array arrays))))
 
@@ -3841,7 +3841,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every array? (cons array arrays)))
          (apply error "array-for-each: Not all arguments after the first are arrays: " f array arrays))
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
-         (apply error "array-for-each: Not all arguments after the first have the same domain: " f array arrays))
+         (apply error "array-for-each: Not all arrays have the same domain: " f array arrays))
         (else
          (%%interval-for-each (%%specialize-function-applied-to-array-getters f array arrays)
                               (%%array-domain array)))))
@@ -4005,7 +4005,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every array? (cons array arrays)))
          (apply error "array-every: Not all arguments after the first are arrays: " f array arrays))
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
-         (apply error "array-every: Not all arguments after the first have the same domain: " f array arrays))
+         (apply error "array-every: Not all arrays have the same domain: " f array arrays))
         (else
          (%%array-every f array arrays))))
 
@@ -4019,33 +4019,68 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every array? (cons array arrays)))
          (apply error "array-any: Not all arguments after the first are arrays: " f array arrays))
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
-         (apply error "array-any: Not all arguments after the first have the same domain: " f array arrays))
+         (apply error "array-any: Not all arrays have the same domain: " f array arrays))
         (else
          (%%array-any f array arrays))))
 
-(define (%%array-foldl op id a)
-  (%%interval-foldl (%%array-getter a) op id (%%array-domain a)))
-
-(define (array-foldl op id a)
+(define (array-foldl op id array . arrays)
   (cond ((not (procedure? op))
-         (error "array-foldl: The first argument is not a procedure: " op id a))
-        ((not (array? a))
-         (error "array-foldl: The third argument is not an array: " op id a))
+         (apply error "array-foldl: The first argument is not a procedure: " op id array arrays))
+        ((not (%%every array? (cons array arrays)))
+         (apply error "array-foldl: Not all arguments after the first two are arrays: " op id array arrays))
+        ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (array-domain array))) arrays))
+         (apply error "array-foldl: Not all arrays have the same domain: " op id array arrays))
+        ((null? arrays)
+         (%%interval-foldl (%%array-getter array) op id (%%array-domain array)))
         (else
-         (%%array-foldl op id a))))
+         (%%interval-foldl (%%array-getter (array-map list (cons array arrays)))
+                           (case (length arrays)
+                             ((1) (lambda (id elements)
+                                    (op id (car elements) (cadr elements))))
+                             ((2) (lambda (id elements)
+                                    (op id (car elements) (cadr elements) (caddr elements))))
+                             ((3) (lambda (id elements)
+                                    (op id (car elements) (cadr elements) (caddr elements) (cadddr elements))))
+                             (else
+                              (lambda (id elements)
+                                (apply op id elements))))
+                           id
+                           (%%array-domain array)))))
 
-(define (array-foldr op id a)
+(define (array-foldr op id array . arrays)
   (cond ((not (procedure? op))
-         (error "array-foldr: The first argument is not a procedure: " op id a))
-        ((not (array? a))
-         (error "array-foldr: The third argument is not an array: " op id a))
-        (else
+         (apply error "array-foldr: The first argument is not a procedure: " op id array arrays))
+        ((not (%%every array? (cons array arrays)))
+         (apply error "array-foldr: Not all arguments after the first two are arrays: " op id array arrays))
+        ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (array-domain array))) arrays))
+         (apply error "array-foldr: Not all arrays have the same domain: " op id array arrays))
+        ((null? arrays)
          ;; We let array-reverse do a redundant array? check to not generate
          ;; a new vector of #t's.
-         (%%array-foldl (lambda (result new) (op new result)) id (array-reverse a)))))
+         (%%interval-foldl (%%array-getter (array-reverse array))
+                           (lambda (id new)
+                             (op new id))
+                           id
+                           (%%array-domain array)))  ;; same as (array-domain (array-reverse array))
+        (else
+         ;; inefficient, but I don't care
+         (%%interval-foldl (%%array-getter (array-reverse (array-map list (cons array arrays))))
+                           (case (length arrays)
+                             ((1) (lambda (id elements)
+                                    (op (car elements) (cadr elements) id)))
+                             ((2) (lambda (id elements)
+                                    (op (car elements) (cadr elements) (caddr elements) id)))
+                             ((3) (lambda (id elements)
+                                    (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
+                             (else
+                              (lambda (id elements)
+                                (apply op (append elements (list id))))))
+                           id
+                           (%%array-domain array)))))
 
 (define (%%array-reduce sum A)
   (case (%%array-dimension A)
+    ((0) ((%%array-getter A)))
     ((1) (let ((box '())
                (A_ (%%array-getter A)))
            (%%interval-for-each
@@ -4102,6 +4137,8 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "array-reduce: The second argument is not an array: " sum A))
         ((not (procedure? sum))
          (error "array-reduce: The first argument is not a procedure: " sum A))
+        ((%%array-empty? A)
+         (error "array-reduce: The second argument is an empty array: " sum A))
         (else
          (%%array-reduce sum A))))
 
