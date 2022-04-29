@@ -1295,75 +1295,94 @@ indexer:       (lambda multi-index
     <p>Stores the elements of <code><var>array</var></code> into a newly allocated list in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
     <p><b>Procedure: </b><code><a id="list-rarrow-array">list-&gt;array</a> <var>domain</var> <var>l</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
-    <p>Assumes that <code><var>l</var></code> is an list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>Assumes that <code><var>l</var></code> is a list, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the list <code><var>l</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Procedure: </b><code><a id="list*-rarrow-array">list*-&gt;array</a> <var>d</var> <var>nested-list</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>d</var></code> is a positive exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>This routine builds a specialized array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-list</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-list</var></code> and <code><var>d</var></code> as arguments:</p>
-    <pre><code>(define (check-nested-list nested-list d)
-  (and (list? nested-list)
-       (let ((len (length nested-list)))
-         (and (positive? len)
-              (if (eqv? d 1)
-                  (list len)
-                  (let* ((sublists
-                          (map (lambda (l)
-                                 (check-nested-list l (fx- d 1)))
-                               nested-list))
-                         (first
-                          (car sublists)))
-                    (and (pair? first)
-                         (every (lambda (l)
-                                  (equal? first l))
-                                (cdr sublists))
-                         (cons len first))))))))</code></pre>
+    <pre><code>(define (check-nested-list dimension nested-data)
+    (or (eqv? dimension 0)  ;; anything goes in dimension 0
+        (and (list? nested-data)
+             (let ((len (length nested-data)))
+               (cond ((eqv? len 0)
+                      '())
+                     ((eqv? dimension 1)
+                      (list len))
+                     (else
+                      (let* ((sublists
+                              (map (lambda (l)
+                                     (check-nested-list (fx- dimension 1) l))
+                                   nested-data))
+                             (first
+                              (car sublists)))
+                        (and first
+                             (every (lambda (l)
+                                      (equal? first l))
+                                    (cdr sublists))
+                             (cons len first)))))))))</code></pre>
     <p>In this case, <code>list*-&gt;array</code> returns an array with domain <code>(make-interval (list-&gt;vector (check-nested-list <var>nested-list d</var>)))</code>.  If we denote the getter of the result by <code>A_</code>, then </p>
     <pre><code>(A_ i_0 ... i_d-2 i_d-1)
 =&gt; (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)</code></pre>
     <p>and we assume that this value can be manipulated by <code><var>storage-class</var></code>.</p>
+    <p>Empty and zero-dimensional lists are treated differently; see the discussion for <code>array-&gt;list*</code>.  For example</p>
+    <pre><code>(list*-&gt;array 0 '()) =&gt; An array for which ((array-getter (list*-&gt;array 0 '()))) =&gt; '()
+(list*-&gt;array 1 '()) =&gt; An empty array with domain (make-interval '#(0))
+(list*-&gt;array 2 '()) =&gt; An empty array with domain (make-interval '#(0 0))
+(list*-&gt;array 2 '(() ())) =&gt; An empty array with domain (make-interval '#(2 0))</code></pre>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Procedure: </b><code><a id="array-rarrow-list*">array-&gt;list*</a> <var>A</var></code></p>
-    <p>Assumes that <code><var>A</var></code> is an array, and returns a newly allocated nested list <code><var>nested-list</var></code>.  If we denote the getter of <code><var>A</var></code> by <code>A_</code>, then <code><var>nested-list</var></code> and <code>A_</code> satisfy</p>
+    <p>Assumes that <code><var>A</var></code> is an array, and returns a newly allocated nested list <code><var>nested-list</var></code>.  If <code><var>A</var></code> is nonempty and has positive dimension and we denote the getter of <code><var>A</var></code> by <code>A_</code>, then <code><var>nested-list</var></code> and <code>A_</code> satisfy</p>
     <pre><code>(A_ i_0 ... i_d-2 i_d-1)
 =&gt; (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>If <code><var>A</var></code> is zero dimensional, then <code>array-&gt;list*</code> returns <code>((array-getter <var>A</var>))</code>.  If the argument is an empty array, then the nested lists of the result match the first nonzero dimensions (if any).  For example:</p>
+    <pre><code>(array-&gt;list* (make-array (make-interval '#()) (lambda () 2))) =&gt; 2 ;; no list
+(array-&gt;list* (make-array (make-interval '#(0)) error)) =&gt; '()
+(array-&gt;list* (make-array (make-interval '#(0 0)) error)) =&gt; '()
+(array-&gt;list* (make-array (make-interval '#(2 0)) error)) =&gt; '(() ())
+(array-&gt;list* (make-array (make-interval '#(0 2)) error)) =&gt; '()</code></pre>
     <p>It is an error if <code><var>A</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a id="array-rarrow-vector">array-&gt;vector</a> <var>array</var></code></p>
     <p>Stores the elements of <code><var>array</var></code> into a newly allocated vector in lexicographical order.  It is an error if <code><var>array</var></code> is not an array.</p>
     <p>It is guaranteed that <code>(array-getter <var>array</var>)</code> is called precisely once for each multi-index in <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
     <p><b>Procedure: </b><code><a id="vector-rarrow-array">vector-&gt;array</a> <var>domain</var> <var>v</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
-    <p>Assumes that <code><var>v</var></code> is a vector, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>l</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>l</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>Assumes that <code><var>v</var></code> is a vector, <code><var>domain</var></code> is an interval with volume the same as the length of <code><var>v</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>v</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized array with domain <code><var>domain</var></code> whose elements are the elements of the vector <code><var>v</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
-    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>l</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>v</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Procedure: </b><code><a id="vector*-rarrow-array">vector*-&gt;array</a> <var>d</var> <var>nested-vector</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>mutable?</var> (specialized-array-default-mutable?) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Assumes that <code><var>d</var></code> is a positive exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>This routine builds a specialized array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-vector</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-vector</var></code> and <code><var>d</var></code> as arguments:</p>
-    <pre><code>(define (check-nested-vector nested-vector d)
-  (and (vector? nested-vector)
-       (let ((len (vector-length nested-vector)))
-         (and (positive? len)
-              (if (eqv? d 1)
-                  (list len)
-                  (let* ((sublists
-                          (map (lambda (l)
-                                 (check-nested-vector l (fx- d 1)))
-                               (vector-&gt;list nested-vector)))
-                         (first
-                          (car sublists)))
-                    (and (pair? first)
-                         (every (lambda (l)
-                                  (equal? first l))
-                                (cdr sublists))
-                         (cons len first))))))))</code></pre>
+    <pre><code>(define (check-nested-vector dimension nested-data)
+  (or (eqv? dimension 0)  ;; anything goes in dimension 0
+      (and (vector? nested-data)
+           (let ((len (vector-length nested-data)))
+             (cond ((eqv? len 0)
+                    '())
+                   ((eqv? dimension 1)
+                    (list len))
+                   (else
+                    (let* ((sublists
+                            (vector-map (lambda (l)
+                                          (check-nested-vector (fx- dimension 1) l))
+                                        nested-data))
+                           (first
+                            (vector-ref sublists 0)))
+                      (and first
+                           (vector-every (lambda (l)
+                                           (equal? first l))
+                                         sublists)
+                           (cons len first)))))))))</code></pre>
     <p>In this case, <code>vector*-&gt;array</code> returns an array with domain <code>(make-interval (list-&gt;vector (check-nested-vector <var>nested-vector d</var>)))</code>.  If we denote the getter of the result by <code>A_</code>, then </p>
     <pre><code>(A_ i_0 ... i_d-2 i_d-1)
 =&gt; (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)</code></pre>
     <p>and we assume that this value can be manipulated by <code><var>storage-class</var></code>.</p>
+    <p>If the resulting array would be empty or have dimension zero, see the examples for <code>list*-&gt;array</code>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Procedure: </b><code><a id="array-rarrow-vector*">array-&gt;vector*</a> <var>A</var></code></p>
     <p>Assumes that <code><var>A</var></code> is an array, and returns a newly allocated nested vector <code><var>nested-vector</var></code>.  If we denote the getter of <code><var>A</var></code> by <code>A_</code>, then <code><var>nested-vector</var></code> and <code>A_</code> satisfy</p>
     <pre><code>(A_ i_0 ... i_d-2 i_d-1)
 =&gt; (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>If <code><var>A</var></code> is empty or zero dimensional, then see the examples for <code>array-&gt;list*</code>.:</p>
     <p>It is an error if <code><var>A</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a id="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array with the same domain, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
