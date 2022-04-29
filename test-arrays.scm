@@ -2252,7 +2252,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-(pp "array-foldl error tests")
+(pp "array-fold[lr] error tests")
 
 (test (array-foldl 1 1 1)
       "array-foldl: The first argument is not a procedure: ")
@@ -2260,11 +2260,23 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-foldl list 1 1)
       "array-foldl: Not all arguments after the first two are arrays: ")
 
+(test (array-foldl list 1 (make-array (make-interval '#()) list) 1)
+      "array-foldl: Not all arguments after the first two are arrays: ")
+
+(test (array-foldl list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
+      "array-foldl: Not all arrays have the same domain: ")
+
 (test (array-foldr 1 1 1)
       "array-foldr: The first argument is not a procedure: ")
 
 (test (array-foldr list 1 1)
       "array-foldr: Not all arguments after the first two are arrays: ")
+
+(test (array-foldr list 1 (make-array (make-interval '#()) list) 1)
+      "array-foldr: Not all arguments after the first two are arrays: ")
+
+(test (array-foldr list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
+      "array-foldr: Not all arrays have the same domain: ")
 
 (pp "array-for-each error tests")
 
@@ -2286,8 +2298,37 @@ OTHER DEALINGS IN THE SOFTWARE.
                                   list))
       "array-for-each: Not all arrays have the same domain: ")
 
+(pp "array-map, array-foldr, and array-for-each result tests")
 
-(pp "array-map, array-fold, and array-for-each result tests")
+(let ((list-of-60 (iota 60)))
+  (for-each (lambda (divisor)   ;; 1 through 5
+              ;; Break up list-of-60 into equivalence classes modulo divisor
+              ;; Convert these to arrays.
+              ;; Do a simple test on array-foldl and array-foldr with cons and '()
+              (let ((parts
+                     (map (lambda (remainder)
+                            (list*->array
+                             1
+                             (filter (lambda (j)
+                                       (eqv? (modulo j divisor) remainder))
+                                     list-of-60)))
+                          (iota divisor))))
+                (test (apply array-foldl
+                             (lambda (id . lst)
+                               (foldl cons id lst))
+                             '()
+                             parts)
+                      (foldl cons '() list-of-60))
+                (test (apply array-foldr
+                             (lambda args
+                               (foldr cons (list-ref args divisor) (take args divisor)))
+                             '()
+                             parts)
+                      (foldr cons '() list-of-60))))
+            (iota 5 1)))
+
+
+
 
 (specialized-array-default-safe? #t)
 
