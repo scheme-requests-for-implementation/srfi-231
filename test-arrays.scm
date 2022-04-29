@@ -1076,41 +1076,32 @@ OTHER DEALINGS IN THE SOFTWARE.
          (string-append message "The third argument is not a storage class: "))
 
    (test (operation 'a 1 generic-storage-class #t #f)
-         (string-append message "The first argument is not a positive fixnum: "))
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
-   (test (operation 0 1 generic-storage-class #t #f)
-         (string-append message "The first argument is not a positive fixnum: "))
+   (test (operation -1 1 generic-storage-class #t #f)
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
    (test (operation 'a 1 generic-storage-class #t)
-         (string-append message "The first argument is not a positive fixnum: "))
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
-   (test (operation 0 1 generic-storage-class #t)
-         (string-append message "The first argument is not a positive fixnum: "))
+   (test (operation -1 1 generic-storage-class #t)
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
    (test (operation 'a 1 generic-storage-class)
-         (string-append message "The first argument is not a positive fixnum: "))
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
-   (test (operation 0 1 generic-storage-class)
-         (string-append message "The first argument is not a positive fixnum: "))
+   (test (operation -1 1 generic-storage-class)
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
    (test (operation 'a 1)
-         (string-append message "The first argument is not a positive fixnum: "))
+         (string-append message "The first argument is not a nonnegative fixnum: "))
 
-   (test (operation 0 1)
-         (string-append message "The first argument is not a positive fixnum: ")))
+   (test (operation -1 1)
+         (string-append message "The first argument is not a nonnegative fixnum: ")))
  (list list*->array
        vector*->array)
  (list "list*->array: "
        "vector*->array: "))
-
-(for-each (lambda (operation message)
-            (test (operation 1 1)    message)
-            (test (operation 1 '())  message)
-            (test (operation 1 '#()) message))
-          (list list*->array
-                vector*->array)
-          (list "list*->array: The second argument is not a nested list: "
-                "vector*->array: The second argument is not a nested vector: "))
 
 ;;; Output tests
 
@@ -1139,12 +1130,32 @@ OTHER DEALINGS IN THE SOFTWARE.
       #t)
 
 (test (list*->array 3 '(((a b c) (1 2))))
-      (string-append "list*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
+      (string-append "list*->array: " "The second argument is not the right shape to be converted to an array of the given dimension: "))
 
 (test (array-every equal?
                    (list*->array 2 '(((a b c) (1 2))))
                    (list->array (make-interval '#(1 2))
                                 '((a b c) (1 2))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array 0 '())
+                   (make-array (make-interval '#()) (lambda () '())))
+      #t)
+
+(test (array-every equal?
+                   (list*->array 1 '())
+                   (make-array (make-interval '#(0)) (lambda () (error))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array 2 '())
+                   (make-array (make-interval '#(0 0)) (lambda () (error))))
+      #t)
+
+(test (array-every equal?
+                   (list*->array 2 '(()()))
+                   (make-array (make-interval '#(2 0)) (lambda () (error))))
       #t)
 
 (test (array-every equal?
@@ -1166,7 +1177,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       #t)
 
 (test (vector*->array 3 '#(#(#(a b c) #(1 2))))
-      (string-append "vector*->array: " "The first argument is not the right shape to be converted to an array of the given dimension: "))
+      (string-append "vector*->array: " "The second argument is not the right shape to be converted to an array of the given dimension: "))
 
 (test (array-every equal?
                    (vector*->array 2 '#(#((a b c) (1 2))))
@@ -1174,12 +1185,37 @@ OTHER DEALINGS IN THE SOFTWARE.
                                '((a b c) (1 2))))
       #t)
 
+(test (array-every equal?
+                   (vector*->array 0 '#())
+                   (make-array (make-interval '#()) (lambda () '#())))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array 1 '#())
+                   (make-array (make-interval '#(0)) (lambda () (error))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array 2 '#())
+                   (make-array (make-interval '#(0 0)) (lambda () (error))))
+      #t)
+
+(test (array-every equal?
+                   (vector*->array 2 '#(#()#()))
+                   (make-array (make-interval '#(2 0)) (lambda () (error))))
+      #t)
 
 (test (vector*->array 2 '#(#((a b c) (1 2))) u8-storage-class)
       "vector*->array: Not all elements of the source can be stored in destination: ")
 
 (test (list*->array 2 '(((a b c) (1 2))) u8-storage-class)
       "list*->array: Not all elements of the source can be stored in destination: ")
+
+(test (list*->array 0 'a u8-storage-class)
+      "list*->array: Not all elements of the source can be stored in destination: ")
+
+(test (vector*->array 0 'a u8-storage-class)
+      "vector*->array: Not all elements of the source can be stored in destination: ")
 
 (for-each (lambda (operation data)
             (for-each (lambda (mutable?)
@@ -1245,6 +1281,36 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    0 1 1)
                                   u1-storage-class))
       '((0 1 0) (0 1 1)))
+
+(test (array->vector* (make-array (make-interval '#()) (lambda () 2)))
+      2)
+
+(test (array->vector* (make-array (make-interval '#(0)) error))
+      '#())
+
+(test (array->vector* (make-array (make-interval '#(2 0)) error))
+      '#(#() #()))
+
+(test (array->vector* (make-array (make-interval '#(0 0)) error))
+      '#())
+
+(test (array->vector* (make-array (make-interval '#(0 2)) error))
+      '#())
+
+(test (array->list* (make-array (make-interval '#()) (lambda () 2)))
+      2)
+
+(test (array->list* (make-array (make-interval '#(0)) error))
+      '())
+
+(test (array->list* (make-array (make-interval '#(2 0)) error))
+      '(() ()))
+
+(test (array->list* (make-array (make-interval '#(0 0)) error))
+      '())
+
+(test (array->list* (make-array (make-interval '#(0 2)) error))
+      '())
 
 (define random-storage-class-and-initializer
   (let* ((storage-classes

@@ -1776,7 +1776,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(list->array domain l #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list-rarrow-array)
 (<p> "Assumes that "
-     (<code>(<var> 'l))" is an list, "
+     (<code>(<var> 'l))" is a list, "
      (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
      (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'l))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
@@ -1788,35 +1788,51 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
-"(define (check-nested-list nested-list d)
-  (and (list? nested-list)
-       (let ((len (length nested-list)))
-         (and (positive? len)
-              (if (eqv? d 1)
-                  (list len)
-                  (let* ((sublists
-                          (map (lambda (l)
-                                 (check-nested-list l (fx- d 1)))
-                               nested-list))
-                         (first
-                          (car sublists)))
-                    (and (pair? first)
-                         (every (lambda (l)
-                                  (equal? first l))
-                                (cdr sublists))
-                         (cons len first))))))))"))
+"(define (check-nested-list dimension nested-data)
+    (or (eqv? dimension 0)  ;; anything goes in dimension 0
+        (and (list? nested-data)
+             (let ((len (length nested-data)))
+               (cond ((eqv? len 0)
+                      '())
+                     ((eqv? dimension 1)
+                      (list len))
+                     (else
+                      (let* ((sublists
+                              (map (lambda (l)
+                                     (check-nested-list (fx- dimension 1) l))
+                                   nested-data))
+                             (first
+                              (car sublists)))
+                        (and first
+                             (every (lambda (l)
+                                      (equal? first l))
+                                    (cdr sublists))
+                             (cons len first)))))))))"
+))
 (<p> "In this case, "(<code>'list*->array)" returns an array with domain "(<code>"(make-interval (list->vector (check-nested-list "(<var>"nested-list d")")))")".  If we denote the getter of the result by "(<code>'A_)", then ")
 (<pre>(<code>
 "(A_ i_0 ... i_d-2 i_d-1)
 => (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)"))
 (<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
+(<p> "Empty and zero-dimensional lists are treated differently; see the discussion for "(<code>'array->list*)".  For example")
+(<pre>(<code>
+"(list*->array 0 '()) => An array for which ((array-getter (list*->array 0 '()))) => '()
+(list*->array 1 '()) => An empty array with domain (make-interval '#(0))
+(list*->array 2 '()) => An empty array with domain (make-interval '#(0 0))
+(list*->array 2 '(() ())) => An empty array with domain (make-interval '#(2 0))"))
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 (format-lambda-list '(array->list* A) 'array-rarrow-list*)
-(<p> "Assumes that "(<code>(<var>'A))" is an array, and returns a newly allocated nested list "(<code>(<var>'nested-list))".  If we denote the getter of "(<code>(<var>'A))" by "(<code>'A_)", then "(<code>(<var>'nested-list))" and "(<code>'A_)" satisfy")
+(<p> "Assumes that "(<code>(<var>'A))" is an array, and returns a newly allocated nested list "(<code>(<var>'nested-list))".  If "(<code>(<var>'A))" is nonempty and has positive dimension and we denote the getter of "(<code>(<var>'A))" by "(<code>'A_)", then "(<code>(<var>'nested-list))" and "(<code>'A_)" satisfy")
 (<pre>(<code>
 "(A_ i_0 ... i_d-2 i_d-1)
 => (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)"))
+(<p> "If "(<code>(<var>'A))" is zero dimensional, then "(<code>'array->list*)" returns "(<code>"((array-getter "(<var>'A)"))")".  If the argument is an empty array, then the nested lists of the result match the first nonzero dimensions (if any).  For example:")
+(<pre>(<code>"(array->list* (make-array (make-interval '#()) (lambda () 2))) => 2 ;; no list
+(array->list* (make-array (make-interval '#(0)) error)) => '()
+(array->list* (make-array (make-interval '#(0 0)) error)) => '()
+(array->list* (make-array (make-interval '#(2 0)) error)) => '(() ())
+(array->list* (make-array (make-interval '#(0 2)) error)) => '()"))
 (<p> "It is an error if "(<code>(<var>'A))" is not an array.")
 
 (format-lambda-list '(array->vector array) 'array-rarrow-vector)
@@ -1826,40 +1842,44 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (format-lambda-list '(vector->array domain v #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector-rarrow-array)
 (<p> "Assumes that "
      (<code>(<var> 'v))" is a vector, "
-     (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'l))",  "
-     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'l))", and "
+     (<code>(<var> 'domain))" is an interval with volume the same as the length of "(<code>(<var> 'v))",  "
+     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'v))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "Returns a specialized array with domain "(<code>(<var>'domain))" whose elements are the elements of the vector "(<code>(<var>'v))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
-(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'v))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
 
 
 (format-lambda-list '(vector*->array d nested-vector #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
-"(define (check-nested-vector nested-vector d)
-  (and (vector? nested-vector)
-       (let ((len (vector-length nested-vector)))
-         (and (positive? len)
-              (if (eqv? d 1)
-                  (list len)
-                  (let* ((sublists
-                          (map (lambda (l)
-                                 (check-nested-vector l (fx- d 1)))
-                               (vector->list nested-vector)))
-                         (first
-                          (car sublists)))
-                    (and (pair? first)
-                         (every (lambda (l)
-                                  (equal? first l))
-                                (cdr sublists))
-                         (cons len first))))))))"))
+"(define (check-nested-vector dimension nested-data)
+  (or (eqv? dimension 0)  ;; anything goes in dimension 0
+      (and (vector? nested-data)
+           (let ((len (vector-length nested-data)))
+             (cond ((eqv? len 0)
+                    '())
+                   ((eqv? dimension 1)
+                    (list len))
+                   (else
+                    (let* ((sublists
+                            (vector-map (lambda (l)
+                                          (check-nested-vector (fx- dimension 1) l))
+                                        nested-data))
+                           (first
+                            (vector-ref sublists 0)))
+                      (and first
+                           (vector-every (lambda (l)
+                                           (equal? first l))
+                                         sublists)
+                           (cons len first)))))))))"))
 (<p> "In this case, "(<code>'vector*->array)" returns an array with domain "(<code>"(make-interval (list->vector (check-nested-vector "(<var>"nested-vector d")")))")".  If we denote the getter of the result by "(<code>'A_)", then ")
 (<pre>(<code>
 "(A_ i_0 ... i_d-2 i_d-1)
 => (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
 (<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
+(<p> "If the resulting array would be empty or have dimension zero, see the examples for "(<code>'list*->array)".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 (format-lambda-list '(array->vector* A) 'array-rarrow-vector*)
@@ -1867,6 +1887,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<pre>(<code>
 "(A_ i_0 ... i_d-2 i_d-1)
 => (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
+(<p> "If "(<code>(<var>'A))" is empty or zero dimensional, then see the examples for "(<code>'array->list*)".:")
+
 (<p> "It is an error if "(<code>(<var>'A))" is not an array.")
 
 (format-lambda-list '(array-assign! destination source))
