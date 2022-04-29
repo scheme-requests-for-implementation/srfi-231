@@ -4033,7 +4033,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((null? arrays)
          (%%interval-foldl (%%array-getter array) op id (%%array-domain array)))
         (else
-         (%%interval-foldl (%%array-getter (array-map list (cons array arrays)))
+         (%%interval-foldl (%%array-getter (%%array-map list array arrays))
                            (case (length arrays)
                              ((1) (lambda (id elements)
                                     (op id (car elements) (cadr elements))))
@@ -4063,8 +4063,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                            id
                            (%%array-domain array)))  ;; same as (array-domain (array-reverse array))
         (else
-         ;; inefficient, but I don't care
-         (%%interval-foldl (%%array-getter (array-reverse (array-map list (cons array arrays))))
+         (%%interval-foldl (%%array-getter (array-reverse (%%array-map list array arrays)))
                            (case (length arrays)
                              ((1) (lambda (id elements)
                                     (op (car elements) (cadr elements) id)))
