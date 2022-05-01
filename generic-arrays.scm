@@ -1,7 +1,7 @@
 #|
-SRFI 231: Nonempty Intervals and Generalized Arrays (Updated)
+SRFI 231: Intervals and Generalized Arrays (Updated)
 
-Copyright 2016, 2018, 2020, 2021 Bradley J Lucier.
+Copyright 2016, 2018, 2020, 2021, 2022 Bradley J Lucier.
 All Rights Reserved.
 
 Permission is hereby granted, free of charge,
@@ -316,7 +316,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                           (let ((identity-permutation (iota n)))
                             (append (drop identity-permutation k)
                                     (take identity-permutation k)))))
-                       (iota n))))
+                       (iota (+ n 1)))))
                (iota 5))))
 
      (define %%index-firsts
@@ -372,12 +372,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (index-rotate n k)
   (cond ((not (and (fixnum? n)
-                   (fxpositive? n)))
-         (error "index-rotate: The first argument is not a positive fixnum: " n k))
+                   (fx<= 0 n)))
+         (error "index-rotate: The first argument is not a nonnegative fixnum: " n k))
         ((not (and (fixnum? k)
-                   (fx<= 0 k)
-                   (fx< k n)))
-         (error "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+                   (fx<= 0 k n)))
+         (error "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): " n k))
         (else
          (%%index-rotate n k))))
 
@@ -1940,8 +1939,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (%%indexer-generic 0 (%%interval-lower-bounds->list interval) increments))))))
 
 (define (%%make-specialized-array interval
-                                  storage-class
                                   initial-value
+                                  storage-class
                                   ;; must be mutable
                                   safe?)
   (let* ((body    ((storage-class-maker storage-class)
@@ -2148,65 +2147,56 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define make-specialized-array
   (let ()
-    (define (one-arg interval storage-class initial-value safe?)
+    (define (one-arg interval initial-value storage-class safe?)
       (cond ((not (interval? interval))
              (error "make-specialized-array: The first argument is not an interval: "
                     interval))
             (else
              (%%make-specialized-array interval
-                                       storage-class
                                        initial-value
+                                       storage-class
                                        safe?))))
-    (define (two-args interval storage-class initial-value safe?)
+    (define (three-args interval initial-value storage-class safe?)
       (cond ((not (storage-class? storage-class))
-             (error "make-specialized-array: The second argument is not a storage-class: "
-                    interval storage-class))
+             (error "make-specialized-array: The third argument is not a storage-class: "
+                    interval initial-value storage-class))
+            ((not ((storage-class-checker storage-class) initial-value))
+             (error "make-specialized-array: The second argument cannot be manipulated by the third (a storage class): "
+                    interval initial-value storage-class))
             (else
              (one-arg interval
-                      storage-class
-                      (storage-class-default storage-class)
-                      safe?))))
-    (define (three-args interval storage-class initial-value safe?)
-      (cond ((not (storage-class? storage-class))
-             (error "make-specialized-array: The second argument is not a storage-class: "
-                    interval storage-class initial-value))
-            ((not ((storage-class-checker storage-class) initial-value))
-             (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
-                    interval storage-class initial-value))
-            (else
-             (one-arg interval           ;; calls one-arg directly, not two-args
-                      storage-class
                       initial-value
+                      storage-class
                       safe?))))
-    (define (four-args interval storage-class initial-value safe?)
+    (define (four-args interval initial-value storage-class safe?)
       (cond ((not (boolean? safe?))
              (error "make-specialized-array: The fourth argument is not a boolean: "
-                    interval storage-class initial-value safe?))
+                    interval initial-value storage-class safe?))
             (else
              (three-args interval
-                         storage-class
                          initial-value
+                         storage-class
                          safe?))))
     (case-lambda
      ((interval)
       (one-arg interval
-               generic-storage-class
                (storage-class-default generic-storage-class)
+               generic-storage-class
                (specialized-array-default-safe?)))
-     ((interval storage-class)
-      (two-args interval
-                storage-class
-                'ignore
-                (specialized-array-default-safe?)))
-     ((interval storage-class initial-value)
+     ((interval initial-value)
+      (one-arg interval
+               initial-value
+               generic-storage-class
+               (specialized-array-default-safe?)))
+     ((interval initial-value storage-class)
       (three-args interval
-                  storage-class
                   initial-value
+                  storage-class
                   (specialized-array-default-safe?)))
-     ((interval storage-class initial-value safe?)
+     ((interval initial-value storage-class safe?)
       (four-args interval
-                 storage-class
                  initial-value
+                 storage-class
                  safe?)))))
 
 (define %%storage-class-compatibility-alist
@@ -2650,8 +2640,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                       safe?
                       message)
   (let ((result (%%make-specialized-array (%%array-domain array)
-                                          result-storage-class
                                           (storage-class-default result-storage-class)
+                                          result-storage-class
                                           safe?)))
     (%%move-array-elements result array message)
     (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
@@ -3507,65 +3497,93 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%immutable-array-sample array scales))))
 
-(define (%%array-outer-product combiner array1 array2)
-  (let* ((domain1 (%%array-domain array1))
-         (domain2 (%%array-domain array2))
-         (getter1 (%%array-getter array1))
-         (getter2 (%%array-getter array2))
-         (dimension1
-          (%%interval-dimension domain1))
-         (dimension2
-          (%%interval-dimension domain2))
+(define (%%array-outer-product combiner A B)
+  (let* ((D_A (%%array-domain A))
+         (D_B (%%array-domain B))
+         (A_ (%%array-getter A))
+         (B_ (%%array-getter B))
+         (dim_A
+          (%%interval-dimension D_A))
+         (dim_B
+          (%%interval-dimension D_B))
          (result-domain
-          (%%interval-cartesian-product (list domain1 domain2)))
+          (%%interval-cartesian-product (list D_A D_B)))
          (result-getter
-          (case dimension1
+          (case dim_A
+            ((0)
+             (case dim_B
+               ((0)
+                (lambda ()
+                  (combiner (A_) (B_))))
+               ((1)
+                (lambda (i2)
+                  (combiner (A_) (B_ i2))))
+               ((2)
+                (lambda (i2 j2)
+                  (combiner (A_) (B_ i2 j2))))
+               ((3)
+                (lambda (i2 j2 k2)
+                  (combiner (A_) (B_ i2 j2 k2))))
+               ((4)
+                (lambda (i2 j2 k2 l2)
+                  (combiner (A_) (B_ i2 j2 k2 l2))))
+               (else
+                (lambda args
+                  (combiner (A_) (apply B_ args))))))
             ((1)
-             (case dimension2
+             (case dim_B
+               ((0)
+                (lambda (i1)
+                  (combiner (A_ i1) (B_))))
                ((1)
                 (lambda (i1 i2)
-                  (combiner (getter1 i1)
-                            (getter2 i2))))
+                  (combiner (A_ i1) (B_ i2))))
                ((2)
                 (lambda (i1 i2 j2)
-                  (combiner (getter1 i1)
-                            (getter2 i2 j2))))
+                  (combiner (A_ i1) (B_ i2 j2))))
                ((3)
                 (lambda (i1 i2 j2 k2)
-                  (combiner (getter1 i1)
-                            (getter2 i2 j2 k2))))
+                  (combiner (A_ i1) (B_ i2 j2 k2))))
                (else
                 (lambda (i1 . rest)
-                  (combiner (getter1 i1)
-                            (apply getter2 rest))))))
+                  (combiner (A_ i1) (apply B_ rest))))))
             ((2)
-             (case dimension2
+             (case dim_B
+               ((0)
+                (lambda (i1 j1)
+                  (combiner (A_ i1 j1) (B_))))
                ((1)
                 (lambda (i1 j1 i2)
-                  (combiner (getter1 i1 j1)
-                            (getter2 i2))))
+                  (combiner (A_ i1 j1) (B_ i2))))
                ((2)
                 (lambda (i1 j1 i2 j2)
-                  (combiner (getter1 i1 j1)
-                            (getter2 i2 j2))))
+                  (combiner (A_ i1 j1) (B_ i2 j2))))
                (else
                 (lambda (i1 j1 . rest)
-                  (combiner (getter1 i1 j1)
-                            (apply getter2 rest))))))
+                  (combiner (A_ i1 j1) (apply B_ rest))))))
             ((3)
-             (case dimension2
+             (case dim_B
+               ((0)
+                (lambda (i1 j1 k1)
+                  (combiner (A_ i1 j1 k1) (B_))))
                ((1)
                 (lambda (i1 j1 k1 i2)
-                  (combiner (getter1 i1 j1 k1)
-                            (getter2 i2))))
+                  (combiner (A_ i1 j1 k1) (B_ i2))))
                (else
                 (lambda (i1 j1 k1 . rest)
-                  (combiner (getter1 i1 j1 k1)
-                            (apply getter2 rest))))))
+                  (combiner (A_ i1 j1 k1) (apply B_ rest))))))
+            ((4)
+             (case dim_B
+               ((0)
+                (lambda (i1 j1 k1 l1)
+                  (combiner (A_ i1 j1 k1 l1) (B_))))
+               (else
+                (lambda (i1 j1 k1 l1 . rest)
+                  (combiner (A_ i1 j1 k1 l1) (apply B_ rest))))))
             (else
              (lambda args
-               (combiner (apply getter1 (take args dimension1))
-                         (apply getter2 (drop args dimension1))))))))
+               (combiner (apply A_ (take args dim_A))
+                         (apply B_ (drop args dim_A))))))))
     (make-array result-domain result-getter)))
 
 (define (array-outer-product combiner array1 array2)
@@ -4178,8 +4196,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (storage-class-setter   result-storage-class))
          (result
           (%%make-specialized-array interval
-                                    result-storage-class
                                     (storage-class-default result-storage-class)
+                                    result-storage-class
                                     safe?))
          (body
           (%%array-body result))
@@ -4299,7 +4317,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (%%array-inner-product A f g B)
   (%%array-outer-product
    (lambda (a b)
-     (%%array-reduce f (%%array-map g a (list b))))
+     (%%array-reduce f (array-map g a b)))
    (array-copy (%%array-curry A 1))
    (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
 
@@ -4312,10 +4330,10 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "array-inner-product: The third argument is not a procedure: " A f g B))
         ((not (array? B))
          (error "array-inner-product: The fourth argument is not an array: " A f g B))
-        ((not (fx< 1 (%%array-dimension A)))
-         (error "array-inner-product: The dimension of the first argument is not > 1: " A f g B))
-        ((not (fx< 1 (%%array-dimension B)))
-         (error "array-inner-product: The dimension of the fourth argument is not > 1: " A f g B))
+        ((not (fx< 0 (%%array-dimension A)))
+         (error "array-inner-product: The dimension of the first argument is zero: " A f g B))
+        ((not (fx< 0 (%%array-dimension B)))
+         (error "array-inner-product: The dimension of the fourth argument is zero: " A f g B))
         ((let* ((A-dim (%%array-dimension A))
                 (A-dom (%%array-domain A))
                 (B-dom (%%array-domain B)))
@@ -4354,8 +4372,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (fx+ 1 domain-dimension))
          (result-array
           (%%make-specialized-array result-domain
-                                    storage-class
                                     (storage-class-default storage-class)
+                                    storage-class
                                     safe?))
          (permuted-and-curried-result
           (%%array-curry (%%array-permute result-array (%%index-first result-dimension k))
@@ -4457,8 +4475,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                         (vector-set! lowers k 0)
                         (vector-set! uppers k kth-size)
                         (make-interval lowers uppers))  ;; copies lowers and uppers
-                      storage-class
                       (storage-class-default storage-class)
+                      storage-class
                       safe?))
                     (translation
                      ;; a vector we'll use to align each argument
@@ -4557,8 +4575,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                             (vector-map (lambda (v)
                                           (vector-ref v (fx- (vector-length v) 1)))
                                         slice-offsets))
-                           storage-class
                            (storage-class-default storage-class)
+                           storage-class
                            safe?)))
                     ;; We copy the elements from each input array block to the corresponding block
                     ;; in the result array.
