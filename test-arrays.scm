@@ -318,6 +318,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (interval-lower-bound (make-interval '#(1 2 3) '#(4 5 6)) 4)
       "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
+(test (interval-lower-bound (make-interval '#()) 0)
+      "interval-lower-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+
 (pp "interval-upper-bound error tests")
 
 (test (interval-upper-bound 1 0)
@@ -338,25 +341,40 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (interval-upper-bound (make-interval '#(1 2 3) '#(4 5 6)) 4)
       "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
 
+(test (interval-upper-bound (make-interval '#()) 0)
+      "interval-upper-bound: The second argument is not an exact integer between 0 (inclusive) and (interval-dimension interval) (exclusive): ")
+
 (pp "interval-lower-bounds->list error tests")
 
 (test (interval-lower-bounds->list 1)
       "interval-lower-bounds->list: The argument is not an interval: ")
+
+(test (interval-lower-bounds->list (make-interval '#()))
+      '())
 
 (pp "interval-upper-bounds->list error tests")
 
 (test (interval-upper-bounds->list #f)
       "interval-upper-bounds->list: The argument is not an interval: ")
 
+(test (interval-upper-bounds->list (make-interval '#()))
+      '())
+
 (pp "interval-lower-bounds->vector error tests")
 
 (test (interval-lower-bounds->vector 1)
       "interval-lower-bounds->vector: The argument is not an interval: ")
 
+(test (interval-lower-bounds->vector (make-interval '#()))
+      '#())
+
 (pp "interval-upper-bounds->vector error tests")
 
 (test (interval-upper-bounds->vector #f)
       "interval-upper-bounds->vector: The argument is not an interval: ")
+
+(test (interval-upper-bounds->vector (make-interval '#()))
+      '#())
 
 (pp "interval-width, interval-widths error tests")
 
@@ -381,13 +399,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (interval-widths 1)
       "interval-widths: The argument is not an interval: ")
 
+(test (interval-widths (make-interval '#()))
+      '#())
+
+(test (interval-widths (make-interval '#(1 0)))
+      '#(1 0))
+
 (pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->list, interval-upper-bounds->list,")
 (pp "interval-lower-bounds->vector, interval-upper-bounds->vector, interval-width, interval-widths result tests")
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
-         (upper (map (lambda (x) (+ (random 1 11) x)) lower)))
+         (upper (map (lambda (x) (+ (random 11) x)) lower)))
     (let ((interval (make-interval (list->vector lower)
                                    (list->vector upper)))
           (offset (random (length lower))))
@@ -406,8 +430,19 @@ OTHER DEALINGS IN THE SOFTWARE.
       (test (interval-width interval offset)
             (- (list-ref upper offset)
                (list-ref lower offset)))
+      )))
+
+(do ((i 0 (+ i 1)))
+    ((= i random-tests))
+  (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
+         (upper (map (lambda (x) (+ (random 11) x)) lower)))
+    (let ((interval (make-interval (list->vector lower)
+                                   (list->vector upper))))
       (test (interval-widths interval)
-            (list->vector (map - upper lower))))))
+            (vector-map -
+                        (interval-upper-bounds->vector interval)
+                        (interval-lower-bounds->vector interval))))))
+
 
 (next-test-random-source-state!)
 
@@ -470,8 +505,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
-  (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
-         (upper (map (lambda (x) (+ (random 1 11) x)) lower)))
+  (let* ((lower (map (lambda (x) (random 6)) (vector->list (make-vector (random 6)))))
+         (upper (map (lambda (x) (+ (random 6) x)) lower)))
     (test (interval-volume (make-interval (list->vector lower)
                                           (list->vector upper)))
           (apply * (map - upper lower)))))
@@ -490,10 +525,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
-  (let* ((lower1 (map (lambda (x) (random 2)) (vector->list (make-vector (random 1 6)))))
-         (upper1 (map (lambda (x) (+ (random 1 3) x)) lower1))
+  (let* ((lower1 (map (lambda (x) (random 2)) (vector->list (make-vector (random 4)))))
+         (upper1 (map (lambda (x) (+ (random 3) x)) lower1))
          (lower2 (map (lambda (x) (random 2)) lower1))
-         (upper2 (map (lambda (x) (+ 1 (random 1 3) x)) lower2)))
+         (upper2 (map (lambda (x) (+ (random 3) x)) lower2)))
     (test (interval= (make-interval (list->vector lower1)
                                     (list->vector upper1))
                      (make-interval (list->vector lower2)
@@ -519,10 +554,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
-  (let* ((lower1 (map (lambda (x) (random 2)) (vector->list (make-vector (random 1 6)))))
-         (upper1 (map (lambda (x) (+ (random 1 3) x)) lower1))
+  (let* ((lower1 (map (lambda (x) (random 2)) (vector->list (make-vector (random 6)))))
+         (upper1 (map (lambda (x) (+ (random 3) x)) lower1))
          (lower2 (map (lambda (x) (random 2)) lower1))
-         (upper2 (map (lambda (x) (+ (random 1 3) x)) lower2)))
+         (upper2 (map (lambda (x) (+ (random 3) x)) lower2)))
     (test (interval-subset? (make-interval (list->vector lower1)
                                            (list->vector upper1))
                             (make-interval (list->vector lower2)
@@ -959,39 +994,34 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (make-specialized-array  'a)
       "make-specialized-array: The first argument is not an interval: ")
 
-(test (make-specialized-array (make-interval '#(0) '#(10)) 'a)
-      "make-specialized-array: The second argument is not a storage-class: ")
-
 (test (make-specialized-array (make-interval '#(0) '#(10)) 'a 1)
-      "make-specialized-array: The second argument is not a storage-class: ")
+      "make-specialized-array: The third argument is not a storage-class: ")
 
-(test (make-specialized-array (make-interval '#(0) '#(10)) u16-storage-class 'a)
-      "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): ")
+(test (make-specialized-array (make-interval '#(0) '#(10)) 'a u16-storage-class)
+      "make-specialized-array: The second argument cannot be manipulated by the third (a storage class): ")
 
-(test (make-specialized-array (make-interval '#()) u16-storage-class 'a)
-      "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): ")
 
-(test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a 'a)
+(test (make-specialized-array (make-interval '#(0) '#(10)) 'a generic-storage-class 'a)
       "make-specialized-array: The fourth argument is not a boolean: ")
 
 ;;; let's test a few more
 
-(test (array-every (lambda (x) (eqv? x 42)) (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
+(test (array-every (lambda (x) (eqv? x 42)) (make-specialized-array (make-interval '#(10)) 42 u8-storage-class))
       #t)
 
-(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
+(test (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class))
       (specialized-array-default-safe?))
 
-(test (parameterize ((specialized-array-default-safe? #t)) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
+(test (parameterize ((specialized-array-default-safe? #t)) (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class)))
       #t)
 
-(test (parameterize ((specialized-array-default-safe? #f)) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
+(test (parameterize ((specialized-array-default-safe? #f)) (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class)))
       #f)
 
-(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #t))
+(test (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class  #t))
       #t)
 
-(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #f))
+(test (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class #f))
       #f)
 
 (pp "make-specialized-array-from-data error tests")
@@ -1376,6 +1406,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let ((array
          (make-specialized-array (random-interval)
+                                 0
                                  u1-storage-class)))
     (test (array-elements-in-order? array)
           #t)))
@@ -1388,6 +1419,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval 2 5)
+                                  0
                                   u1-storage-class))
          (curried
           (array-curry base (random 1 (array-dimension base)))))
@@ -1430,6 +1462,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval 0 6)
+                                  0
                                   u1-storage-class))
          (extracted
           (array-extract base (random-subinterval (array-domain base)))))
@@ -1444,6 +1477,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval)
+                                  0
                                   u1-storage-class))
          (domain
           (array-domain base))
@@ -1493,6 +1527,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval)
+                                  0
                                   u1-storage-class))
          (domain
           (array-domain base))
@@ -1543,6 +1578,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-nonnegative-interval 1 6)
+                                  0
                                    u1-storage-class))
          (scales
           (random-positive-vector (array-dimension base) 4))
@@ -1569,7 +1605,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((array
-          (make-specialized-array (random-nonnegative-interval) u8-storage-class))
+          (make-specialized-array (random-nonnegative-interval) 0 u8-storage-class))
          (ignore  ;; compute and cache the results
           (array-elements-in-order? array))
          (sampled-array
@@ -1591,7 +1627,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((array
-          (make-specialized-array (random-nonnegative-interval 2 4) u8-storage-class))
+          (make-specialized-array (random-nonnegative-interval 2 4) 0 u8-storage-class))
          (d-1
           (- (array-dimension array) 1))
          (ignore
@@ -1670,6 +1706,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                storage-class))
              (specialized-destination
               (make-specialized-array domain
+                                      (storage-class-default storage-class)
                                       storage-class))
              (source
               (make-array domain
@@ -1755,6 +1792,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                           source-storage-class))
              (destination
               (make-specialized-array domain
+                                      (storage-class-default destination-storage-class)
                                       destination-storage-class))
              (destination
               (if (zero? (random 2))
@@ -2749,7 +2787,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                1)
       "specialized-array-share: The third argument is not a procedure: ")
 
-(test (specialized-array-share (make-specialized-array (make-interval '#(0 0)) generic-storage-class 2)
+(test (specialized-array-share (make-specialized-array (make-interval '#(0 0)) 2)
                                (make-interval '#(1))
                                (lambda (i) (values i i)))
       "specialized-array-share: The second argument (a domain) has more elements than the domain of the first argument (an array): ")
@@ -3059,25 +3097,25 @@ OTHER DEALINGS IN THE SOFTWARE.
       "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
 
 (test (index-rotate 'a 'b)
-      "index-rotate: The first argument is not a positive fixnum: ")
+      "index-rotate: The first argument is not a nonnegative fixnum: ")
 
 (test (index-rotate 1. 'b)
-      "index-rotate: The first argument is not a positive fixnum: ")
+      "index-rotate: The first argument is not a nonnegative fixnum: ")
 
 (test (index-rotate -1 2)
-      "index-rotate: The first argument is not a positive fixnum: ")
+      "index-rotate: The first argument is not a nonnegative fixnum: ")
 
 (test (index-rotate 1 'a)
-      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+      "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): ")
 
 (test (index-rotate 2 1.0)
-      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+      "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): ")
 
-(test (index-rotate 2 2)
-      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+(test (index-rotate 2 3)
+      "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): ")
 
 (test (index-rotate 2 -1)
-      "index-rotate: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+      "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): ")
 
 ;;; Minimal testing of index-*
 
@@ -3089,6 +3127,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (index-rotate 5 3)
       '#(3 4 0 1 2))
+
+(test (index-rotate 0 0)
+      '#())
+
+(test (index-rotate 2 2)
+      '#(0 1))
+
+(test (index-rotate 6 6)
+      '#(0 1 2 3 4 5))
 
 (pp "interval-permute and array-permute tests")
 
@@ -3810,11 +3857,12 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= d 6))
   (let* ((unsafe-specialized-destination
           (make-specialized-array (make-interval (make-vector d 10))
+                                  0
                                   u1-storage-class))
          (safe-specialized-destination
           (make-specialized-array (make-interval (make-vector d 10))
-                                  u1-storage-class
                                   0
+                                  u1-storage-class
                                   #t))
          (mutable-destination
           (make-array (array-domain safe-specialized-destination)
@@ -4069,8 +4117,11 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((arrays
           (map (lambda (ignore)
-                 (make-array (random-interval 1 5) list))
+                 (make-array (random-interval 0 5) list))
                (make-list 2))))
+    (myarray= (apply array-outer-product append arrays)
+                    (make-array (apply my-interval-cartesian-product (map array-domain arrays))
+                                list))
     (test (myarray= (apply array-outer-product append arrays)
                     (make-array (apply my-interval-cartesian-product (map array-domain arrays))
                                 list))
@@ -5051,11 +5102,8 @@ that computes the componentwise products when we need them, the times are
 (test (array-inner-product (make-array (make-interval '#(10)) list) list list 'a)
       "array-inner-product: The fourth argument is not an array: ")
 
-(test (array-inner-product (make-array (make-interval '#(10)) list) list list (make-array (make-interval '#(10)) list))
-      "array-inner-product: The dimension of the first argument is not > 1: ")
-
 (test (array-inner-product (make-array (make-interval '#(10 1)) list) list list (make-array (make-interval '#(10)) list))
-      "array-inner-product: The dimension of the fourth argument is not > 1: ")
+      "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")
 
 (test (array-inner-product (make-array (make-interval '#(10 1)) list) list list (make-array (make-interval '#(10 1)) list))
       "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")

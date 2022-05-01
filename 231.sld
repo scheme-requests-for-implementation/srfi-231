@@ -15,7 +15,7 @@
     interval-lower-bounds->list interval-upper-bounds->list
     interval-lower-bounds->vector interval-upper-bounds->vector
     interval=
-    interval-widths interval-volume
+    interval-widths interval-volume interval-empty?
     interval-subset?
     interval-contains-multi-index?
     interval-projections
@@ -40,6 +40,7 @@
     storage-class-data?
     storage-class-data->body
     generic-storage-class
+    char-storage-class
     s8-storage-class
     s16-storage-class
     s32-storage-class
@@ -66,6 +67,7 @@
     array-setter
     specialized-array-default-safe?
     specialized-array-default-mutable?
+    array-empty?
     make-specialized-array
     make-specialized-array-from-data
     specialized-array?

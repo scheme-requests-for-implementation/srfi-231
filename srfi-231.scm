@@ -122,6 +122,7 @@ MathJax.Hub.Config({
                (<a> href: "#interval-empty?" (<code>'interval-empty?))", "
                (<a> href: "#storage-class-data?" (<code>'storage-class-data?))", "
                (<a> href: "#storage-class-data-rarrow-body" (<code>'storage-class-data->body))", "
+               (<a> href: "#array-empty?" (<code>'array-empty))", "
                (<a> href: "#make-specialized-array-from-data" (<code>'make-specialized-array-from-data))", "
                (<a> href: "#vector-rarrow-array" (<code>'vector->array))", "
                (<a> href: "#array-rarrow-vector" (<code>'array->vector))", "
@@ -411,6 +412,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-dimension" "array-dimension")END
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
+                 (<a> href: "#array-empty?" "array-empty")END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
                  (<a> href: "#make-specialized-array-from-data" "make-specialized-array-from-data")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
@@ -467,7 +469,7 @@ We provide three procedures that return useful permutations.")
         (format-lambda-list '(permutation? object))
         (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a permutation, and "(<code> '#f)" otherwise.")
         (format-lambda-list '(index-rotate n k))
-        (<p> "Assumes that "(<var>'n)" is a positive exact integer and that "(<var>'k)" is an exact integer between 0 (inclusive) and "(<var>'n)" (exclusive).   Returns a permutation that rotates "(<var>'n)" indices "(<var>'k)" places to the left:")
+        (<p> "Assumes that "(<var>'n)" is a nonnegative exact integer and that "(<var>'k)" is an exact integer between 0 and "(<var>'n)" (inclusive).   Returns a permutation that rotates "(<var>'n)" indices "(<var>'k)" places to the left:")
         (<pre>(<code>
 "(define (index-rotate n k)
   (let ((identity-permutation (iota n)))
@@ -510,7 +512,7 @@ $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
         (<h3> "Procedures")
         (format-lambda-list '(make-interval arg1 #!optional arg2))
         (<p> "Create a new interval. "(<code> (<var>"arg1"))" and "(<code> (<var>"arg2"))" (if given) are vectors (of the same length) of exact integers.")
-        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))" must be nonnegative, and they are taken as the "(<code>(<var>"upper-bounds"))" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
+        (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))", if any, must be nonnegative, and they are taken as the "(<code>(<var>"upper-bounds"))" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
         (<p> "If "(<code> (<var>"arg2"))" is given, then "(<code> (<var>"arg1"))" is taken to be "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"arg2"))" is taken to be "(<code> (<var>"upper-bounds"))", which must satisfy")
         (<pre>
          (<code>"(<= (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
@@ -640,9 +642,9 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
 
 
         (format-lambda-list '(interval-for-each f interval))
-        (<p> "This procedure assumes that "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'f))" is a procedure whose domain includes elements of "(<code>(<var> 'interval))".  It is an error to call
-"(<code> 'interval-for-each)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'f))" do not satisfy these conditions.")
+        (<p> "This procedure assumes that "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'f))" is a procedure whose domain includes elements of "(<code>(<var> 'interval))".  It is an error to call "(<code> 'interval-for-each)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'f))" do not satisfy these conditions.")
         (<p>  (<code> 'interval-for-each)" calls "(<code>(<var> 'f))" with each multi-index of "(<code>(<var> 'interval))" as arguments, all in lexicographical order.")
+        (<p> "In particular, if "(<code>(<var>'interval))" is zero-dimensional, "(<code>(<var>'f))" is called as a thunk; if the interval is empty, then "(<code>(<var>'f))" is never called.")
 
         (format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
         (<p> "If "(<code>(<var> 'interval))" is an interval with
@@ -918,6 +920,28 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 (a_ 12345 6789)  => 0.
 (a_ 0 0) => 1."))
 
+(<p> "Example: If an array "(<code>'A)" is empty, e.g., "(<code>"(make-array (make-interval '#(0 0)) getter setter)")", then it is an error to call "(<code>'getter)" or "(<code>'setter)".  Still, such arrays can usefully exist to simplify limit cases of some algorithms.")
+
+(<p> "Example: "(<code> "(define a (make-array (make-interval '#()) (lambda () 42)))")" makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.")
+
+(<p> "Example: We can have the following interactive session, which builds a zero-dimensional mutable array: ")(<code>(<pre>
+"> (define a
+    (let ((contents (box 42)))
+      (make-array
+       (make-interval '#())
+       (lambda ()
+         (unbox contents))
+       (lambda (val)
+         (set-box! contents val)))))
+> (define a_ (array-getter a))
+> (define a! (array-setter a))
+> (a_)
+42
+> (a! 23)
+> (a_)   
+23
+"))
+
 (format-lambda-list '(array? obj))
 (<p> "Returns "(<code> "#t")" if  "(<code>(<var> 'obj))" is an array and "(<code> '#f)" otherwise.")
 
@@ -956,21 +980,23 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 (<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". It is an error to call "(<code> 'array-setter)"
 if "(<code>(<var> 'array))" is not a mutable array.")
 
+(format-lambda-list '(array-empty? a))
+(<p> "Assumes "(<code>(<var>'a))" is an array, and returns "(<code>"(interval-empty? (array-domain "(<var>'a)"))")".  It is an error if the argument is not an array.")
+
 
 (format-lambda-list '(make-specialized-array interval
-                                             #\[ storage-class "generic-storage-class" #\]
                                              #\[ initial-value "(storage-class-default " storage-class")" #\]
+                                             #\[ storage-class "generic-storage-class" #\]
                                              #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "Constructs a mutable specialized array from its arguments.")
-(<p> (<code>(<var>'interval))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'initial-value))" must be a value that can be manipulated by "(<code>(<var>'storage-class))"; if it is not given it defaults to "(<code>"(storage-class-default "(<var>'storage-class)")")". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
+(<p> (<code>(<var>'interval))" must be given an interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'initial-value))" must be a value that can be manipulated by "(<code>(<var>'storage-class))"; if it is not given it defaults to "(<code>"(storage-class-default "(<var>'storage-class)")")". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
 
 (<p>"The body of the result is constructed as ")
 (<pre>
  (<code>
 "  ((storage-class-maker "(<var>'storage-class)")
    (interval-volume "(<var>'interval)")
-   "(<var>'initial-value)")
-  "))
+   "(<var>'initial-value)")"))
 (<p> "The indexer of the resulting array is constructed as the lexicographical mapping of "(<code>(<var>'interval))" onto the interval "(<code> "[0,(interval-volume "(<var>'interval)"))")".")
 
 (<p> "If "(<code>(<var>'safe))" is "(<code>'#t)", then the arguments of the getter and setter (including the value to be stored) of the resulting array are  checked for correctness.")
@@ -980,8 +1006,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 "  (lambda multi-index
     ((storage-class-getter "(<var>'storage-class)")
      (array-body "(<var>'array)")
-     (apply (array-indexer "(<var>'array)") multi-index)))
-  "))
+     (apply (array-indexer "(<var>'array)") multi-index)))"))
 (<p> " and "(<code>"(array-setter "(<var>'array)")")" is defined as ")
 (<pre>
  (<code>
@@ -989,16 +1014,14 @@ if "(<code>(<var> 'array))" is not a mutable array.")
     ((storage-class-setter "(<var>'storage-class)")
      (array-body "(<var>'array)")
      (apply (array-indexer "(<var>'array)") multi-index)
-     val))
-  "
+     val))"
      ))
 (<p> "It is an error if the arguments of "(<code>'make-specialized-array)" do not satisfy these conditions.")
 (<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(make-specialized-array (make-interval '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
 (<pre>
  (<code>
 "  (define (make-u16-array interval)
-    (make-specialized-array interval u16-storage-class 0 #f))
-"))
+    (make-specialized-array interval u16-storage-class 0 #f))"))
 (<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(3 3)))")".")
 
 (format-lambda-list '(make-specialized-array-from-data data
@@ -1154,7 +1177,7 @@ indexer:       (lambda multi-index
      (<code>(<var> 'array))
      " is an array whose domain is an interval  $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$, and "
      (<code>(<var> 'inner-dimension))
-     " is an exact integer strictly between $0$ and $d$, then "(<code>'array-curry)" returns an immutable array with domain "
+     " is an exact integer between $0$ and $d$ (inclusive), then "(<code>'array-curry)" returns an immutable array with domain "
      "$[l_0,u_0)\\times\\cdots\\times[l_{d-\\text{inner-dimension}-1},u_{d-\\text{inner-dimension}-1})$"
      ", each of whose entries is in itself an array with domain $[l_{d-\\text{inner-dimension}},u_{d-\\text{inner-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
 (<p> "For example, if "(<code>'A)" and "(<code> 'B)" are defined by ")
@@ -1182,7 +1205,7 @@ of whose elements is itself an (immutable) array and ")
 (<p> "The subarrays are immutable, mutable, or specialized according to whether the array argument is immutable, mutable, or specialized.")
 (<p> "More precisely, if ")
 (<pre>
- (<code> "0 < "(<var> 'inner-dimension)" < (interval-dimension (array-domain "(<var> 'array)"))"))
+ (<code> "0 <= "(<var> 'inner-dimension)" <= (interval-dimension (array-domain "(<var> 'array)"))"))
 (<p> "then "(<code> 'array-curry)" returns a result as follows.")
 (<p> "If the input array is specialized, then array-curry returns")
 (<pre>
@@ -1256,6 +1279,43 @@ of whose elements is itself an (immutable) array and ")
 (define curried-a_ (array-getter curried-a))
 ((array-getter (curried-a_ 3)) 4)
                     => (3 4)"))
+
+(<p> "Example: NumPy has the operation "(<a> href: "https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html" "numpy.squeeze")", which can eliminate, or \"squeeze\" out, all axes of an array with length 1.  It can be implemented using "(<code>'partition)" from SRFI 1 by")
+(<pre>(<code>
+"(define (array-squeeze a)
+  (call-with-values
+      (lambda ()
+        (let ((interval (array-domain a)))
+          (partition (lambda (k)
+                       (eqv? (interval-width interval k) 1))
+                     (iota (array-dimension a)))))
+    (lambda (ones rest)
+      (car (array->list
+            (array-curry                           ;; this array has exactly one element
+             (array-permute
+              a (list->vector (append ones rest))) ;; put all length-one axes at beginning
+             (length rest)))))))
+
+(array->list* (array-squeeze (make-array (make-interval '#(1 2 1 2)) list)))
+=> 
+(((0 0 0 0) (0 0 0 1))
+ ((0 1 0 0) (0 1 0 1)))
+
+(array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args))))))
+=>
+\"1234\"
+(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args)))))) 
+=>
+0
+
+(array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args))))))
+=>
+(\"1234\" \"2234\")
+(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args)))))) 
+=>
+1"))
+
+
 
 
 
@@ -2260,7 +2320,7 @@ translate: ")
  (<dt> (<code> "(array-rank A)"))
  (<dd> (<code> "(array-dimension A)"))
  (<dt> (<code> "(make-array prototype k1 ...)"))
- (<dd> (<code> "(make-specialized-array (make-interval (vector k1 ...)) storage-class)")".")
+ (<dd> (<code> "(make-specialized-array (make-interval (vector k1 ...)))")".")
  (<dt> (<code> "(make-shared-array A mapper k1 ...)"))
  (<dd> (<code> "(specialized-array-share A (make-interval (vector k1 ...)) mapper)"))
  (<dt> (<code> "(array-in-bounds? A index1 ...)"))
