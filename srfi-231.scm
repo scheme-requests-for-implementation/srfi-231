@@ -1298,8 +1298,10 @@ of whose elements is itself an (immutable) array and ")
 
 (array->list* (array-squeeze (make-array (make-interval '#(1 2 1 2)) list)))
 => 
-(((0 0 0 0) (0 0 0 1))
- ((0 1 0 0) (0 1 0 1)))
+(((0 0 0 0)
+  (0 0 0 1))
+ ((0 1 0 0)
+  (0 1 0 1)))
 
 (array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args))))))
 =>
@@ -1634,7 +1636,7 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
      " applies "(<code>'array-outer-product)" to curried arrays, so we apply "(<code>"array-copy")" to the arguments before passage to "(<code>'array-outer-product)".")
 
 (format-lambda-list '(array-inner-product A f g B))
-(<p> "Assumes that "(<code>(<var>'f))" and "(<code>(<var>'g))" are procedures of two arguments and "(<code>(<var>'A))" and "(<code>(<var>'B))" are arrays, with the upper and lower bounds of the last axis of "(<code>(<var>'A))" the same as those of the first axis of "(<code>(<var>'B))". Computes the equivalent of")
+(<p> "Assumes that "(<code>(<var>'f))" and "(<code>(<var>'g))" are procedures of two arguments and "(<code>(<var>'A))" and "(<code>(<var>'B))" are arrays of dimension at least one, with the upper and lower bounds of the last axis of "(<code>(<var>'A))" the same as those of the first axis of "(<code>(<var>'B))". Computes the equivalent of")
 (<pre>(<code>"(define (array-inner-product "(<var>"A f g B")")
   (array-outer-product
    (lambda ("(<var>"a b")")
@@ -2115,15 +2117,15 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                           (list*->array 2 '((15 16 17))))))) ;; to match this array
 => error"))
 
-(format-lambda-list '(array-ref A i0 #\. i-tail))
-(<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
-(<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>"i0 i-tail")")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not an array,or if the number of arguments specified is not the correct number for "(<code>"(array-getter "(<var>'A)")")", or if "(<code>"(cons "(<var> "i0 i-tail")")")" is not in the domain of "(<code>(<var>'A))".")
+(format-lambda-list '(array-ref A #\. i-tail))
+(<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>(<var>'i-tail))" is an exact integer.")
+(<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>'i-tail)")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not an array,  if the number of arguments specified is not the correct number for "(<code>"(array-getter "(<var>'A)")")", or if "(<code>(<var>'i-tail))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
 
-(format-lambda-list '(array-set! A v i0 #\. i-tail))
-(<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that every element of "(<code>"(cons "(<var> "i0 i-tail")")")" is an exact integer.")
-(<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v i0 i-tail")")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for "(<code>"(array-setter "(<var>'A)")")", or if "(<code>"(cons "(<var> "i0 i-tail")")")" is not in the domain of "(<code>(<var>'A))".")
+(format-lambda-list '(array-set! A v #\. i-tail))
+(<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that every element of "(<code>(<var>'i-tail))" is an exact integer.")
+(<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v i-tail")")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for "(<code>"(array-setter "(<var>'A)")")", or if "(<code>(<var>'i-tail))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
 
 (<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
 
@@ -3206,7 +3208,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 
 
 
-(<p> (<b> "Inner products. ")"Our "(<code>'array-inner-product)" procedure differs from that found in APL in several ways: The arguments "(<code>(<var>'A))" and "(<code>(<var>'B))" must each have two or more dimensions, and the result is always an array, never a scalar.")
+(<p> (<b> "Inner products. ")"Our "(<code>'array-inner-product)" procedure differs from that found in APL in a number of ways, including that the result is always an array, never a scalar.")
 (<p> "We take some examples from the "(<a> href: "https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf" "APLX Language Reference")":")
 (<pre>
  (<code>
@@ -3233,16 +3235,13 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 ;;; 58      10      19      52
 ;;; 18      6       9       12
 
-(define X   ;; a \"row vector\"
-  (list->array (make-interval '#(1 4)) '(1 3 5 7)))
+(define X (list*->array 1 '(1 3 5 7)))
 
-(define Y   ;; a \"column vector\"
-  (list->array (make-interval '#(4 1)) '(2 3 6 7)))
+(define Y (list*->array 1 '(2 3 6 7)))
 
-(array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
-
-;;; Displays
-;;; 2
+(array->list* (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
+=>
+2
 "))
 (<h2> "Acknowledgments")
 (<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, and Jens Axel Søgaard for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")

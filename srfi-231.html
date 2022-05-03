@@ -926,8 +926,10 @@ indexer:       (lambda multi-index
 
 (array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 1 2)) list)))
 =&gt; 
-(((0 0 0 0) (0 0 0 1))
- ((0 1 0 0) (0 1 0 1)))
+(((0 0 0 0)
+  (0 0 0 1))
+ ((0 1 0 0)
+  (0 1 0 1)))
 
 (array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
@@ -1192,7 +1194,7 @@ indexer:       (lambda multi-index
     <p><b>Note: </b>You can see from the above definition that if <code><var>C</var></code> is <code>(array-outer-product <var>op</var> <var>A</var> <var>B</var>)</code>, then each call to <code>(array-getter <var>C</var>)</code> will call <code><var>op</var></code> as well as <code>(array-getter <var>A</var>)</code> and <code>(array-getter <var>B</var>)</code>.  This implies that if all elements of <code><var>C</var></code> are eventually accessed, then <code>(array-getter <var>A</var>)</code> will be called <code>(array-volume <var>B</var>)</code> times; similarly <code>(array-getter <var>B</var>)</code> will be called <code>(array-volume <var>A</var>)</code> times. </p>
     <p>This implies that if <code>(array-getter <var>A</var>)</code> is expensive to compute (for example, if it's returning an array, as does <code>array-curry</code>) then the elements of <code><var>A</var></code> should be precomputed if necessary and stored in a specialized array, typically using <code>array-copy</code>, before that specialized array is passed as an argument to <code>array-outer-product</code>.  In the examples below, the code for Gaussian elimination applies <code>array-outer-product</code> to shared specialized arrays, which are of course themselves specialized arrays; the code for <code>array-inner-product</code> applies <code>array-outer-product</code> to curried arrays, so we apply <code>array-copy</code> to the arguments before passage to <code>array-outer-product</code>.</p>
     <p><b>Procedure: </b><code><a id="array-inner-product">array-inner-product</a> <var>A</var> <var>f</var> <var>g</var> <var>B</var></code></p>
-    <p>Assumes that <code><var>f</var></code> and <code><var>g</var></code> are procedures of two arguments and <code><var>A</var></code> and <code><var>B</var></code> are arrays, with the upper and lower bounds of the last axis of <code><var>A</var></code> the same as those of the first axis of <code><var>B</var></code>. Computes the equivalent of</p>
+    <p>Assumes that <code><var>f</var></code> and <code><var>g</var></code> are procedures of two arguments and <code><var>A</var></code> and <code><var>B</var></code> are arrays of dimension at least one, with the upper and lower bounds of the last axis of <code><var>A</var></code> the same as those of the first axis of <code><var>B</var></code>. Computes the equivalent of</p>
     <pre><code>(define (array-inner-product <var>A f g B</var>)
   (array-outer-product
    (lambda (<var>a b</var>)
@@ -1593,14 +1595,14 @@ indexer:       (lambda multi-index
                           (list*-&gt;array 2 '((14)))
                           (list*-&gt;array 2 '((15 16 17))))))) ;; to match this array
 =&gt; error</code></pre>
-    <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> <var>i0</var> . <var>i-tail</var></code></p>
-    <p>Assumes that <code><var>A</var></code> is an array, and every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
-    <p>Returns <code>(apply (array-getter <var>A</var>) <var>i0 i-tail</var>)</code>.</p>
-    <p>It is an error if <code><var>A</var></code> is not an array,or if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>, or if <code>(cons <var>i0 i-tail</var>)</code> is not in the domain of <code><var>A</var></code>.</p>
-    <p><b>Procedure: </b><code><a id="array-set!">array-set!</a> <var>A</var> <var>v</var> <var>i0</var> . <var>i-tail</var></code></p>
-    <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that every element of <code>(cons <var>i0 i-tail</var>)</code> is an exact integer.</p>
-    <p>Returns <code>(apply (array-setter <var>A</var>) <var>v i0 i-tail</var>)</code>.</p>
-    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>, or if <code>(cons <var>i0 i-tail</var>)</code> is not in the domain of <code><var>A</var></code>.</p>
+    <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> . <var>i-tail</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is an array, and every element of <code><var>i-tail</var></code> is an exact integer.</p>
+    <p>Returns <code>(apply (array-getter <var>A</var>) <var>i-tail</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not an array,  if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>, or if <code><var>i-tail</var></code> is not in the domain of <code><var>A</var></code>, so, in particular, if <code><var>A</var></code> is empty.</p>
+    <p><b>Procedure: </b><code><a id="array-set!">array-set!</a> <var>A</var> <var>v</var> . <var>i-tail</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that every element of <code><var>i-tail</var></code> is an exact integer.</p>
+    <p>Returns <code>(apply (array-setter <var>A</var>) <var>v i-tail</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>, or if <code><var>i-tail</var></code> is not in the domain of <code><var>A</var></code>, so, in particular, if <code><var>A</var></code> is empty.</p>
     <p><b>Note: </b>In the sample implementation, because <code>array-ref</code> and <code>array-set!</code> take a variable number of arguments and they must check that <code><var>A</var></code> is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which <code>1D-Haar-loop</code> is coded below, can take up to three times as long runtime.</p>
     <p><b>Note: </b>In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.</p>
     <p><b>Procedure: </b><code><a id="specialized-array-reshape">specialized-array-reshape</a> <var>array</var> <var>new-domain</var> [ <var>copy-on-failure?</var> #f ]</code></p>
@@ -2626,7 +2628,7 @@ Reconstructed image:
  (0 0 0 0 0 0 0 0 0 0)
  (0 0 0 0 0 0 0 0 0 0)
  (0 0 0 0 0 0 0 0 0 0))</code></pre>
-    <p><b>Inner products. </b>Our <code>array-inner-product</code> procedure differs from that found in APL in several ways: The arguments <code><var>A</var></code> and <code><var>B</var></code> must each have two or more dimensions, and the result is always an array, never a scalar.</p>
+    <p><b>Inner products. </b>Our <code>array-inner-product</code> procedure differs from that found in APL in a number of ways, including that the result is always an array, never a scalar.</p>
     <p>We take some examples from the <a href="https://www.dyalog.com/uploads/aplx/APLXLangRef.pdf">APLX Language Reference</a>:</p>
     <pre><code>;; Examples from
 ;; http://microapl.com/apl_help/ch_020_020_880.htm
@@ -2651,16 +2653,13 @@ Reconstructed image:
 ;;; 58      10      19      52
 ;;; 18      6       9       12
 
-(define X   ;; a &quot;row vector&quot;
-  (list-&gt;array (make-interval '#(1 4)) '(1 3 5 7)))
+(define X (list*-&gt;array 1 '(1 3 5 7)))
 
-(define Y   ;; a &quot;column vector&quot;
-  (list-&gt;array (make-interval '#(4 1)) '(2 3 6 7)))
+(define Y (list*-&gt;array 1 '(2 3 6 7)))
 
-(array-display (inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
-
-;;; Displays
-;;; 2
+(array-&gt;list* (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
+=&gt;
+2
 </code></pre>
     <h2>Acknowledgments</h2>
     <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, and Jens Axel S&#248;gaard for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.</p>
