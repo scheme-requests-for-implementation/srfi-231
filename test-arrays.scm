@@ -80,14 +80,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define failed-tests 0)
 (set! failed-tests failed-tests)
 
+;;; The next macros are not hygienic, so don't call any variable
+;;; "continuation" ...
+
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
           (result (call-with-current-continuation
-                   (lambda (c)
+                   (lambda (continuation)
                      (with-exception-catcher
                       (lambda (args)
                         (cond ((error-exception? args)
-                               (c (error-exception-message args)))
+                               (continuation (error-exception-message args)))
                               ;; I don't expect any of these, but it sure makes debugging easier
                               ((unbound-global-exception? args)
                                (unbound-global-exception-variable args))
@@ -824,16 +827,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "array result tests")
 
+(define (myarray= array1 array2 #!optional (compare equal?))
+  (and (interval= (array-domain array1)
+                  (array-domain array2))
+       (array-every compare array1 array2)))
+
 (let ((getter (lambda args 1.)))
-  (test (make-array (make-interval '#(3) '#(4)) getter)
-        (make-%%array (make-interval '#(3) '#(4))
-                           getter
-                           #f
-                           #f
-                           #f
-                           #f
-                           #f
-                           %%order-unknown)))
+  (test (myarray= (make-array (make-interval '#(3) '#(4)) getter)
+                   (make-%%array (make-interval '#(3) '#(4))
+                                 getter
+                                 #f
+                                 #f
+                                 #f
+                                 #f
+                                 #f
+                                 %%order-unknown))
+        #t))
 
 (pp "array-domain and array-getter error tests")
 
@@ -846,13 +855,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 (pp "array?, array-domain, and array-getter result tests")
 
 (let* ((getter (lambda args 1.))
-       (array    (make-array (make-interval '#(3) '#(4)) getter)))
+       (domain (make-interval '#(3) '#(4)))
+       (array  (make-array domain getter)))
   (test (array? #f)
         #f)
   (test (array? array)
         #t)
   (test (array-domain array)
-        (make-interval '#(3) '#(4)))
+        domain)
   (test (array-getter array)
         getter))
 
@@ -969,11 +979,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                   new-domain->old-domain-coefficients)))))
 
 (next-test-random-source-state!)
-
-(define (myarray= array1 array2 #!optional (compare equal?))
-  (and (interval= (array-domain array1)
-                  (array-domain array2))
-       (array-every compare array1 array2)))
 
 (pp "array body, indexer, storage-class, and safe? error tests")
 
@@ -2304,6 +2309,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-foldl list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
       "array-foldl: Not all arrays have the same domain: ")
 
+(test (array-foldl cons '() (make-array (make-interval '#()) (lambda () 42)))
+      '(() . 42))
+
+(test (array-foldr cons 42 (make-array (make-interval '#(0)) error))
+      42)
+
 (test (array-foldr 1 1 1)
       "array-foldr: The first argument is not a procedure: ")
 
@@ -2315,6 +2326,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (array-foldr list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
       "array-foldr: Not all arrays have the same domain: ")
+
+(test (array-foldr cons '() (make-array (make-interval '#()) (lambda () 42)))
+      '(42))
+
+(test (array-foldr cons 42 (make-array (make-interval '#(0)) error))
+      42)
 
 (pp "array-for-each error tests")
 
@@ -2863,9 +2880,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                                           (vector-ref multi-index-vector i)
                                                                           1))
                                                                     (vector-ref multi-index-vector i))))))))))
-      (if (not (myarray= b c))
-          (pp (list "piffle"
-                    a b c))))))
+      (test (myarray= b c)
+            #t))))
 
 (next-test-random-source-state!)
 
@@ -4113,6 +4129,13 @@ OTHER DEALINGS IN THE SOFTWARE.
   (test (array-outer-product append test-array 'a)
         "array-outer-product: The third argument is not an array: "))
 
+(let* ((A (make-array (make-interval '#(0 10)) list))
+       (B (make-array (make-interval '#(10 0)) list))
+       (A*B (array-outer-product cons A B)))
+  (test ((array-getter A*B) 0 0 0 0) ;; outside of domain
+        "array-getter: Array domain is empty: "))
+
+
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((arrays
@@ -4156,6 +4179,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-ref A-ref 4 5)
       0)
 
+(do ((d 0 (+ d 1)))
+    ((= d 6))
+  (let ((A (make-specialized-array (make-interval (make-vector d 1)) 42)))
+    (test (apply array-ref A (make-list d 0))
+          42)
+    (test (apply array-ref 2 (make-list d 0))
+          (if (zero? d)
+              "array-ref: The argument is not an array: "
+              "array-ref: The first argument is not an array: "))))
+
+(test (array-ref (make-specialized-array (make-interval '#(0 0)) 42) 0 0)
+      "array-getter: Array domain is empty: ")
+
+(test (array-set! (make-specialized-array (make-interval '#(0 0)) 42) 42 0 0)
+      "array-setter: Array domain is empty: ")
+
 (define B-set!
   (array-copy
    (make-array (make-interval '#(10 10))
@@ -4180,6 +4219,16 @@ OTHER DEALINGS IN THE SOFTWARE.
 (array-set! B-set! 1 1 2)
 (array-set! B-set! 0 2 2)
 (array-display B-set!)
+
+(do ((d 0 (+ d 1)))
+    ((= d 6))
+  (let ((A (make-specialized-array (make-interval (make-vector d 1)) 10)))
+    (apply array-set! A 42 (make-list d 0))
+    (test (apply array-ref A (make-list d 0))
+          42)
+    (test (apply array-set! 2 42 (make-list d 0))
+          "array-set!: The first argument is not a mutable array: ")))
+
 
 (pp "specialized-array-reshape tests")
 
@@ -4973,6 +5022,8 @@ that computes the componentwise products when we need them, the times are
    '(6 2 3 4
      7 0 1 8)))
 
+(pp (array->list* (array-inner-product TABLE1 + * TABLE2)))
+
 (array-display (array-inner-product TABLE1 + * TABLE2))
 
 ;;; Displays
@@ -4980,13 +5031,11 @@ that computes the componentwise products when we need them, the times are
 ;;; 58 10 19 52
 ;;; 18 6 9 12
 
-(define X   ;; a "row vector"
-  (list->array (make-interval '#(1 4)) '(1 3 5 7)))
+(define X (list*->array 1 '(1 3 5 7)))
 
-(define Y   ;; a "column vector"
-  (list->array (make-interval '#(4 1)) '(2 3 6 7)))
+(define Y (list*->array 1 '(2 3 6 7)))
 
-(array-display (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
+(pp (array->list* (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y)))
 
 ;;; Displays
 ;;; 2
@@ -5088,7 +5137,7 @@ that computes the componentwise products when we need them, the times are
                  (array-curry C 1)))
 
 
-(pp "array-inner-product tests")
+(pp "cursory array-inner-product tests")
 
 (test (array-inner-product 'a 'a 'a 'a)
       "array-inner-product: The first argument is not an array: ")
@@ -5107,6 +5156,24 @@ that computes the componentwise products when we need them, the times are
 
 (test (array-inner-product (make-array (make-interval '#(10 1)) list) list list (make-array (make-interval '#(10 1)) list))
       "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")
+
+
+(test (array-inner-product (make-array (make-interval '#(1 10)) list)
+                           list list
+                           (make-array (make-interval '#(0 10)) list))
+      "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")
+
+
+(test (array-inner-product (make-array (make-interval '#()) list)
+                           list list
+                           (make-array (make-interval '#(10 0)) list))
+      "array-inner-product: The first argument has dimension zero: ")
+
+(test (array-inner-product (make-array (make-interval '#(10 0)) list)
+                           list list
+                           (make-array (make-interval '#()) list))
+      "array-inner-product: The fourth argument has dimension zero: ")
+
 
 (pp "array-append tests")
 
@@ -5413,6 +5480,28 @@ that computes the componentwise products when we need them, the times are
        (array-stack 1 (list (make-array (make-interval '#(10)) list))))
       generic-storage-class)
 
+;;; zero-dimensional and empty arrays
+
+(let ()
+
+  (define arrays (map (lambda (ignore) (array-copy (make-array (make-interval '#()) (lambda () (random-integer 10))))) (iota 4)))
+
+  (define b  (array-stack 0 arrays))
+
+  (test (map array-ref arrays)
+        (array->list b)))
+
+(let* ((arrays (map (lambda (ignore) (array-copy (make-array (make-interval '#(0)) error))) (iota 4)))
+       (b (array-stack 0 arrays))
+       (c (array-stack 1 arrays)))
+
+  (test (interval-upper-bounds->vector (array-domain b))
+        '#(4 0))
+
+  (test (interval-upper-bounds->vector (array-domain c))
+        '#(0 4)))
+
+
 ;;; FIXME: Need to test the values of other optional arguments to array-append
 
 (define (myarray-stack k . arrays)
@@ -5437,10 +5526,10 @@ that computes the componentwise products when we need them, the times are
                    (append (take args k)
                            (drop args (+ k 1))))))))
 
-(do ((d 1 (fx+ d 1)))
+(do ((d 0 (fx+ d 1)))
     ((= d 6))
   (let* ((uppers-list
-          (iota d 2))
+          (iota d))
          (domain
           (make-interval (list->vector uppers-list))))
     (do ((i 0 (fx+ i 1)))
@@ -5456,8 +5545,6 @@ that computes the componentwise products when we need them, the times are
                    (iota (random 1 5))))
              (k
               (random (+ d 1))))
-        (myarray= (array-stack k arrays)
-                  (apply myarray-stack k arrays))
         (test (myarray= (array-stack k arrays)
                         (apply myarray-stack k arrays))
               #t)))))

@@ -289,6 +289,21 @@ OTHER DEALINGS IN THE SOFTWARE.
             (%%finish-interval (list->vector (drop lowers left-dimension))
                                (list->vector (drop uppers left-dimension))))))
 
+(define (interval-volume interval)
+  (cond ((not (interval? interval))
+         (error "interval-volume: The argument is not an interval: " interval))
+        (else
+         (%%interval-volume interval))))
+
+(define (%%interval-empty? interval)
+  (eqv? (%%interval-volume interval) 0))
+
+(define (interval-empty? interval)
+  (cond ((not (interval? interval))
+         (error "interval-empty?: The argument is not an interval: " interval))
+        (else
+         (%%interval-empty? interval))))
+
 (define (permutation? permutation)
   (and (vector? permutation)
        (let* ((n (vector-length permutation))
@@ -528,21 +543,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                   ((fx< i 0) result))))
         (%%interval-%%volume-set! interval volume)
         volume)))
-
-(define (interval-volume interval)
-  (cond ((not (interval? interval))
-         (error "interval-volume: The argument is not an interval: " interval))
-        (else
-         (%%interval-volume interval))))
-
-(define (%%interval-empty? interval)
-  (eqv? (%%interval-volume interval) 0))
-
-(define (interval-empty? interval)
-  (cond ((not (interval? interval))
-         (error "interval-empty?: The argument is not an interval: " interval))
-        (else
-         (%%interval-empty? interval))))
 
 (define (%%interval= interval1 interval2)
   ;; This can be used a fair amount, so we open-code it
@@ -916,7 +916,9 @@ OTHER DEALINGS IN THE SOFTWARE.
            (error "make-array: The second argument is not a procedure: " domain getter))
           (else
            (make-%%array domain
-                         getter
+                         (if (%%interval-empty? domain)
+                             (lambda args (error "array-getter: Array domain is empty: " args))
+                             getter)
                          #f              ; no setter
                          #f              ; storage-class
                          #f              ; body
@@ -933,8 +935,12 @@ OTHER DEALINGS IN THE SOFTWARE.
            (error "make-array: The third argument is not a procedure: " domain getter setter))
           (else
            (make-%%array domain
-                         getter
-                         setter
+                         (if (%%interval-empty? domain)
+                             (lambda args (error "array-getter: Array domain is empty: " args))
+                             getter)
+                         (if (%%interval-empty? domain)
+                             (lambda args (error "array-setter: Array domain is empty: " args))
+                             setter)
                          #f              ; storage-class
                          #f              ; body
                          #f              ; indexer
@@ -1757,7 +1763,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     (let ((getter
            (cond ((%%interval-empty? domain)
-                  (lambda args (apply error "array-getter: Domain has no elements: " domain args)))
+                  (lambda args (apply error "array-getter: Array domain is empty: " domain args)))
                  (safe?
                   (case (%%interval-dimension domain)
                     ((0)  (lambda ()
@@ -1816,7 +1822,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           (setter
            (and mutable?
                 (cond ((%%interval-empty? domain)
-                       (lambda args (apply error "array-setter: Domain has no elements: " domain args)))
+                       (lambda args (apply error "array-setter: Array domain is empty: " domain args)))
                       (safe?
                        (case (%%interval-dimension domain)
                          ((0)  (lambda (value)
@@ -3498,16 +3504,13 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%immutable-array-sample array scales))))
 
 (define (%%array-outer-product combiner A B)
-  (let* ((D_A (%%array-domain A))
-         (D_B (%%array-domain B))
-         (A_ (%%array-getter A))
-         (B_ (%%array-getter B))
-         (dim_A
-          (%%interval-dimension D_A))
-         (dim_B
-          (%%interval-dimension D_B))
-         (result-domain
-          (%%interval-cartesian-product (list D_A D_B)))
+  (let* ((D_A            (%%array-domain A))
+         (D_B            (%%array-domain B))
+         (A_             (%%array-getter A))
+         (B_             (%%array-getter B))
+         (dim_A          (%%interval-dimension D_A))
+         (dim_B          (%%interval-dimension D_B))
+         (result-domain  (%%interval-cartesian-product (list D_A D_B)))
          (result-getter
           (case dim_A
             ((0)
@@ -4315,11 +4318,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          destination)))
 
 (define (%%array-inner-product A f g B)
-  (%%array-outer-product
+  (array-outer-product
    (lambda (a b)
-     (%%array-reduce f (array-map g a b)))
-   (array-copy (%%array-curry A 1))
-   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
+     (array-reduce f (array-map g a b)))
+   (array-copy (array-curry A 1))
+   (array-copy (array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
 
 (define (array-inner-product A f g B)
   (cond ((not (array? A))
@@ -4331,9 +4334,9 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (array? B))
          (error "array-inner-product: The fourth argument is not an array: " A f g B))
         ((not (fx< 0 (%%array-dimension A)))
-         (error "array-inner-product: The dimension of the first argument is zero: " A f g B))
+         (error "array-inner-product: The first argument has dimension zero: " A f g B))
         ((not (fx< 0 (%%array-dimension B)))
-         (error "array-inner-product: The dimension of the fourth argument is zero: " A f g B))
+         (error "array-inner-product: The fourth argument has dimension zero: " A f g B))
         ((let* ((A-dim (%%array-dimension A))
                 (A-dom (%%array-domain A))
                 (B-dom (%%array-domain B)))
@@ -4615,6 +4618,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define array-ref
   (case-lambda
+   ((A)
+    (if (not (array? A))
+        (error "array-ref: The argument is not an array: " A)
+        ((%%array-getter A))))
    ((A i0)
     (if (not (array? A))
         (error "array-ref: The first argument is not an array: " A i0)
@@ -4638,6 +4645,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define array-set!
   (case-lambda
+   ((A v)
+    (if (not (mutable-array? A))
+        (error "array-set!: The first argument is not a mutable array: " A v)
+        ((%%array-setter A) v)))
    ((A v i0)
     (if (not (mutable-array? A))
         (error "array-set!: The first argument is not a mutable array: " A v i0)
