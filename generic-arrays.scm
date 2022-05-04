@@ -3707,6 +3707,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                    right-interval
                    ;; The new indexer computed using the general, nonspecialized new-domain->old-domain function,
                    ;; applied specifically to the first multi-index in the left-interval.
+                   ;; If any of the arrays are empty then the indexers could be nonsense, but
+                   ;; %%compute-array-elements-in-order? special-cases empty intervals.
                    (%%compose-indexers (%%array-indexer array)
                                        right-interval
                                        (lambda right-multi-index
@@ -4098,69 +4100,72 @@ OTHER DEALINGS IN THE SOFTWARE.
                            id
                            (%%array-domain array)))))
 
-(define (%%array-reduce sum A)
-  (case (%%array-dimension A)
-    ((0) ((%%array-getter A)))
-    ((1) (let ((box '())
-               (A_ (%%array-getter A)))
-           (%%interval-for-each
-            (lambda (i)
-              (if (null? box)
-                  (set! box (list (A_ i)))
-                  (set-car! box (sum (car box)
-                                     (A_ i)))))
-            (%%array-domain A))
-           (car box)))
-    ((2) (let ((box '())
-               (A_ (%%array-getter A)))
-           (%%interval-for-each
-            (lambda (i j)
-              (if (null? box)
-                  (set! box (list (A_ i j)))
-                  (set-car! box (sum (car box)
-                                     (A_ i j)))))
-            (%%array-domain A))
-           (car box)))
-    ((3) (let ((box '())
-               (A_ (%%array-getter A)))
-           (%%interval-for-each
-            (lambda (i j k)
-              (if (null? box)
-                  (set! box (list (A_ i j k)))
-                  (set-car! box (sum (car box)
-                                     (A_ i j k)))))
-            (%%array-domain A))
-           (car box)))
-    ((4) (let ((box '())
-               (A_ (%%array-getter A)))
-           (%%interval-for-each
-            (lambda (i j k l)
-              (if (null? box)
-                  (set! box (list (A_ i j k l)))
-                  (set-car! box (sum (car box)
-                                     (A_ i j k l)))))
-            (%%array-domain A))
-           (car box)))
-    (else (let ((box '())
-                (A_ (%%array-getter A)))
-            (%%interval-for-each
-             (lambda args
-               (if (null? box)
-                   (set! box (list (apply A_ args)))
-                   (set-car! box (sum (car box)
-                                      (apply A_ args)))))
-             (%%array-domain A))
-            (car box)))))
+(define (%%array-reduce sum A message)
+  ;; The issue here is that, given an empty interval, %%interval-for-each will
+  ;; happily not do anything, so then (car box), with box='()  will throw an error.
+  ;; So we check for empty array first.
+  (if (%%array-empty? A)
+      (error (string-append message "Attempting to reduce over an empty array: ") sum A)
+      (case (%%array-dimension A)
+        ((0) ((%%array-getter A)))
+        ((1) (let ((box '())
+                   (A_ (%%array-getter A)))
+               (%%interval-for-each
+                (lambda (i)
+                  (if (null? box)
+                      (set! box (list (A_ i)))
+                      (set-car! box (sum (car box)
+                                         (A_ i)))))
+                (%%array-domain A))
+               (car box)))
+        ((2) (let ((box '())
+                   (A_ (%%array-getter A)))
+               (%%interval-for-each
+                (lambda (i j)
+                  (if (null? box)
+                      (set! box (list (A_ i j)))
+                      (set-car! box (sum (car box)
+                                         (A_ i j)))))
+                (%%array-domain A))
+               (car box)))
+        ((3) (let ((box '())
+                   (A_ (%%array-getter A)))
+               (%%interval-for-each
+                (lambda (i j k)
+                  (if (null? box)
+                      (set! box (list (A_ i j k)))
+                      (set-car! box (sum (car box)
+                                         (A_ i j k)))))
+                (%%array-domain A))
+               (car box)))
+        ((4) (let ((box '())
+                   (A_ (%%array-getter A)))
+               (%%interval-for-each
+                (lambda (i j k l)
+                  (if (null? box)
+                      (set! box (list (A_ i j k l)))
+                      (set-car! box (sum (car box)
+                                         (A_ i j k l)))))
+                (%%array-domain A))
+               (car box)))
+        (else (let ((box '())
+                    (A_ (%%array-getter A)))
+                (%%interval-for-each
+                 (lambda args
+                   (if (null? box)
+                       (set! box (list (apply A_ args)))
+                       (set-car! box (sum (car box)
+                                          (apply A_ args)))))
+                 (%%array-domain A))
+                (car box))))))
 
 (define (array-reduce sum A)
   (cond ((not (array? A))
          (error "array-reduce: The second argument is not an array: " sum A))
         ((not (procedure? sum))
          (error "array-reduce: The first argument is not a procedure: " sum A))
-        ((%%array-empty? A)
-         (error "array-reduce: The second argument is an empty array: " sum A))
         (else
-         (%%array-reduce sum A))))
+         (%%array-reduce sum A "array-reduce: "))))
 
 (define (%%array->list array)
   (array-foldr cons '() array))
@@ -4318,11 +4323,15 @@ OTHER DEALINGS IN THE SOFTWARE.
          destination)))
 
 (define (%%array-inner-product A f g B)
-  (array-outer-product
+  ;; Copy the curried arrays for efficiency.
+  ;; If any of the curried arrays are empty, that's OK,
+  ;; If the elements of the curried arrays are empty, then
+  ;; the error check in %%array-reduce will catch it.
+  (%%array-outer-product
    (lambda (a b)
-     (array-reduce f (array-map g a b)))
-   (array-copy (array-curry A 1))
-   (array-copy (array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
+     (%%array-reduce f (array-map g a b) "array-inner-product: "))
+   (array-copy (%%array-curry A 1))
+   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
 
 (define (array-inner-product A f g B)
   (cond ((not (array? A))
