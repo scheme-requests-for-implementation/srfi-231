@@ -2531,7 +2531,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       "array-reduce: The first argument is not a procedure: ")
 
 (test (array-reduce + (make-array (make-interval '#(0)) error))
-      "array-reduce: The second argument is an empty array: ")
+      "array-reduce: Attempting to reduce over an empty array: ")
 
 (test (array-reduce (lambda (a b) error) (make-array (make-interval '#()) (lambda () 42)))
       42)
@@ -5173,6 +5173,19 @@ that computes the componentwise products when we need them, the times are
                            list list
                            (make-array (make-interval '#()) list))
       "array-inner-product: The fourth argument has dimension zero: ")
+
+(let* ((A (make-array (make-interval '#(0 4)) list))
+       (B (make-array (make-interval '#(4 0)) list))
+       (C (array-inner-product A list list B))) ;; should be no error, you can take outer product of empty arrays
+  (test (array-ref C 0 0)
+        "array-getter: Array domain is empty: "))
+
+
+(let* ((A (make-array (make-interval '#(4 0)) list))
+       (B (make-array (make-interval '#(0 4)) list))
+       (C (array-inner-product A list list B))) ;; should be no error
+  (test (array-ref C 0 0)
+        "array-inner-product: Attempting to reduce over an empty array: "))
 
 
 (pp "array-append tests")

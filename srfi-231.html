@@ -141,11 +141,11 @@
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
     <h2>Issues</h2>
     <ul>
-      <li>Should eager comprehensions in the style of <a href="https://srfi.schemers.org/srfi-42/">SRFI 42</a> be added to this SRFI, as <a href="https://srfi-email.schemers.org/srfi-179/msg/18428002/">suggested</a> by Jens Axel S&#248;gaard?  My opinion is yes, but I would need major help in designing and implementing such things.</li>
       <li>Could <a href="#array-elements-in-order?"><code>array-elements-in-order?</code></a> have a better name or description?</li>
     </ul>
     <h2>Notes</h2>
     <ul>
+      <li><b>Empty and zero-dimensional arrays: </b>The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme <code>box</code>.  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.</li>
       <li><b>Relationship to <a href="https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
       <li><b>Indexers. </b>The argument <code><var>new-domain-&gt;old-domain</var></code> to <code>specialized-array-share</code> is, conceptually, the getter of a multi-valued array.</li>
       <li><b>Source of procedure names. </b>The procedure <code>array-curry</code> gets its name from the
@@ -430,7 +430,7 @@
       lower bounds $\ell_0+L_0,\dots,\ell_{d-1}+L_{d-1}$ and
       upper bounds $u_0+U_0,\dots,u_{d-1}+U_{d-1}$, as long as this is a
       valid interval.  It is an error if the arguments do not satisfy these conditions.</p>
-    <p>Examples:</p>
+    <p><b>Examples:</b></p>
     <pre><code>(interval=
  (interval-dilate (make-interval '#(100 100))
                   '#(1 1) '#(1 1))
@@ -601,14 +601,14 @@
     </blockquote>
     <p>Then <code>make-array</code> builds a mutable array with domain <code><var>interval</var></code>, getter <code><var>getter</var></code>, and
       setter <code><var>setter</var></code>.  It is an error to call <code>make-array</code> if its arguments do not satisfy these conditions.</p>
-    <p>Example: </p>
+    <p><b>Example: </b></p>
     <pre><code>  (define a (make-array (make-interval '#(1 1) '#(11 11))
                         (lambda (i j)
                           (if (= i j)
                               1
                               0))))</code></pre>
     <p>defines an array for which <code>(array-getter a)</code> returns 1 when i=j and 0 otherwise.</p>
-    <p>Example: </p>
+    <p><b>Example: </b></p>
     <pre><code>(define a   ;; a sparse array
   (let ((domain
          (make-interval '#(1000000 1000000)))
@@ -640,9 +640,9 @@
 (a! 1.0 0 0) =&gt; undefined
 (a_ 12345 6789)  =&gt; 0.
 (a_ 0 0) =&gt; 1.</code></pre>
-    <p>Example: If an array <code>A</code> is empty, e.g., <code>(make-array (make-interval '#(0 0)) getter setter)</code>, then it is an error to call <code>getter</code> or <code>setter</code>.  Still, such arrays can usefully exist to simplify limit cases of some algorithms.</p>
-    <p>Example: <code>(define a (make-array (make-interval '#()) (lambda () 42)))</code> makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.</p>
-    <p>Example: We can have the following interactive session, which builds a zero-dimensional mutable array: </p><code>
+    <p><b>Example: </b> If an array <code>A</code> is empty, e.g., <code>(make-array (make-interval '#(0 0)) getter setter)</code>, then it is an error to call <code>getter</code> or <code>setter</code>.  Still, such arrays can usefully exist to simplify limit cases of some algorithms.</p>
+    <p><b>Example: </b><code>(define a (make-array (make-interval '#()) (lambda () 42)))</code> makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.</p>
+    <p><b>Example: </b>We can have the following interactive session, which builds a zero-dimensional mutable array: </p><code>
     <pre>&gt; (define a
     (let ((contents (box 42)))
       (make-array
@@ -656,7 +656,7 @@
 &gt; (a_)
 42
 &gt; (a! 23)
-&gt; (a_)   
+&gt; (a_)
 23
 </pre></code>
     <p><b>Procedure: </b><code><a id="array?">array?</a> <var>obj</var></code></p>
@@ -667,7 +667,7 @@
     <pre><code>(make-array <var>interval</var> <var>getter</var> [<var>setter</var>])</code></pre>
     <p>(with or without the optional <code><var>setter</var></code> argument) then <code>array-domain</code> returns <code><var>interval</var></code> and <code>array-getter</code> returns  <code><var>getter</var></code>.
       It is an error to call <code>array-domain</code> or <code>array-getter</code> if <code><var>array</var></code> is not an array.</p>
-    <p>Example: </p>
+    <p><b>Example: </b></p>
     <pre><code>(define a (make-array (make-interval '#(1 1) '#(11 11))
                       (lambda (i j)
                         (if (= i j)
@@ -710,7 +710,7 @@
      (apply (array-indexer <var>array</var>) multi-index)
      val))</code></pre>
     <p>It is an error if the arguments of <code>make-specialized-array</code> do not satisfy these conditions.</p>
-    <p><b>Examples. </b>A simple array that can hold any type of element can be defined with <code>(make-specialized-array (make-interval '#(3 3)))</code>.  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define </p>
+    <p><b>Examples: </b> A simple array that can hold any type of element can be defined with <code>(make-specialized-array (make-interval '#(3 3)))</code>.  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define </p>
     <pre><code>  (define (make-u16-array interval)
     (make-specialized-array interval u16-storage-class 0 #f))</code></pre>
     <p>and then simply call, e.g., <code>(make-u16-array (make-interval '#(3 3)))</code>.</p>
@@ -900,7 +900,7 @@ indexer:       (lambda multi-index
     <p>If <code><var>array</var></code> is a specialized array, the subarrays of the result inherit their safety and mutability from <code><var>array</var></code>.</p>
     <p><b>Note: </b>Let's denote by <code><var>B</var></code> the result of <code>(array-curry <var>A</var> <var>k</var>)</code>. While the result of calling <code>(array-getter <var>B</var>)</code> is an immutable, mutable, or specialized array according to whether <code><var>A</var></code> itself is immutable, mutable, or specialized, <code><var>B</var></code> is always an immutable array, where <code>(array-getter <var>B</var>)</code>, which returns an array, is computed anew for each call.  If <code>(array-getter <var>B</var>)</code> will be called multiple times with the same arguments, it may be useful to store these results in a specialized array for fast repeated access.</p>
     <p>Please see the note in the discussion of <a href="#array-tile">array-tile</a>.</p>
-    <p>Example:</p>
+    <p><b>Example:</b></p>
     <pre><code>(define a (make-array (make-interval '#(10 10))
                       list))
 (define a_ (array-getter a))
@@ -909,7 +909,7 @@ indexer:       (lambda multi-index
 (define curried-a_ (array-getter curried-a))
 ((array-getter (curried-a_ 3)) 4)
                     =&gt; (3 4)</code></pre>
-    <p>Example: NumPy has the operation <a href="https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html">numpy.squeeze</a>, which can eliminate, or &quot;squeeze&quot; out, all axes of an array with length 1.  It can be implemented using <code>partition</code> from SRFI 1 by</p>
+    <p><b>Example: </b>NumPy has the operation <a href="https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html">numpy.squeeze</a>, which can eliminate, or &quot;squeeze&quot; out, all axes of an array with length 1.  It can be implemented using <code>partition</code> from SRFI 1 by</p>
     <pre><code>(define (array-squeeze a)
   (call-with-values
       (lambda ()
@@ -925,7 +925,7 @@ indexer:       (lambda multi-index
              (length rest)))))))
 
 (array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 1 2)) list)))
-=&gt; 
+=&gt;
 (((0 0 0 0)
   (0 0 0 1))
  ((0 1 0 0)
@@ -934,14 +934,14 @@ indexer:       (lambda multi-index
 (array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 &quot;1234&quot;
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number-&gt;string args)))))) 
+(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 0
 
 (array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 (&quot;1234&quot; &quot;2234&quot;)
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number-&gt;string args)))))) 
+(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 1</code></pre>
     <p><b>Procedure: </b><code><a id="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
@@ -1254,26 +1254,37 @@ indexer:       (lambda multi-index
                    (cons <var>array</var>
                          <var>arrays</var>)))))</code></pre>
     <p>It is an error to call <code>array-for-each</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a id="array-foldl">array-foldl</a> <var>op</var> <var>id</var> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-foldl">array-foldl</a> <var>op</var> <var>id</var> <var>array</var> . <var>arrays</var></code></p>
     <p>This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
-    <pre><code>(define (foldl <var>op</var> <var>id</var> <var>l</var>)
-  (if (null? <var>l</var>)
-      <var>id</var>
-      (foldl <var>op</var> (<var>op</var> <var>id</var> (car <var>l</var>)) (cdr <var>l</var>))))
-</code></pre>
-    <p>Then conceptually <code>(array-foldl <var>op</var> <var>id</var> <var>array</var>)</code> returns </p>
-    <pre><code>(foldl <var>op</var> <var>id</var> (array-&gt;list <var>array</var>))</code></pre>
-    <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>op</var></code> is not a procedure of two variables.</p>
-    <p><b>Procedure: </b><code><a id="array-foldr">array-foldr</a> <var>op</var> <var>id</var> <var>array</var></code></p>
+    <pre><code>(define (foldl op id  . lsts)
+  (if (null? (car lsts))
+      id
+      (apply foldl op (apply op id (map car lsts)) (map cdr lsts))))</code></pre>
+    <p>Then conceptually <code>(array-foldl op id array . arrays)</code> returns </p>
+    <pre><code>(apply foldl op id array (map array-&gt;list (cons array arrays)))</code></pre>
+    <p>It is an error if <code>(cons <var>array arrays</var>)</code> is not a list of arrays with the same domains, or if <code><var>op</var></code> is not a procedure.</p>
+    <p><b>Note: </b> One can fold over empty arrays, which returns <code><var>id</var></code>, but it is an error to call <code>array-reduce</code> on an empty array, because <code>array-reduce</code> must evaluate at least one element of the argument array.</p>
+    <p><b>Example: </b> One can define an APL-style <code>array-depth</code> by:</p>
+    <pre><code>(define (array-depth a)
+  (if (array? a)
+      (+ 1 (array-foldl max 0 (array-map array-depth a)))
+      0))</code></pre>
+    <p>Here non-arrays have depth 0, and each level of array &quot;nesting&quot; increases the depth by 1.</p>
+    <p><b>Example: </b> One can define <code>(array-foldl-on op id array dims)</code>, which does not fold over the entire array, but computes:</p>
+    <pre><code>(define (array-foldl-on op id array dims)
+  (array-map (lambda (a)
+               (array-foldl op id a))
+             (array-curry a dims)))</code></pre>
+    <p>which folds over only the <code>dims</code> rightmost dimensions and returns an array of results.  (Note that this works even if <code>dims</code> is <code>(array-dimension array)</code>, in which case the result is a zero-dimensional array containing the left fold of the entire array.)</p>
+    <p><b>Procedure: </b><code><a id="array-foldr">array-foldr</a> <var>op</var> <var>id</var> <var>array</var> . <var>arrays</var></code></p>
     <p>This procedure is analogous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
-    <pre><code>(define (foldr <var>op</var> <var>id</var> <var>l</var>)
-  (if (null? <var>l</var>)
-      <var>id</var>
-      (<var>op</var> (car <var>l</var>) (foldr <var>op</var> <var>id</var> (cdr <var>l</var>))))
-</code></pre>
-    <p>Then conceptually <code>(array-foldr <var>op</var> <var>id</var> <var>array</var>)</code> returns </p>
-    <pre><code>(foldr <var>op</var> <var>id</var> (array-&gt;list <var>array</var>))</code></pre>
-    <p>It is an error if <code><var>array</var></code> is not an array, or if <code><var>op</var></code> is not a procedure of two variables.</p>
+    <pre><code>(define (foldr op id . lsts)
+  (if (null? (car lsts))
+      id
+      (apply fold op (apply op (append (map car lsts) (list id))) (map cdr lsts))))</code></pre>
+    <p>Then conceptually <code>(array-foldr op id array . arrays)</code> returns </p>
+    <pre><code>(apply foldr op id array (map array-&gt;list (cons array arrays)))</code></pre>
+    <p>It is an error if <code>(cons <var>array arrays</var>)</code> is not a list of arrays with the same domain, or if <code><var>op</var></code> is not a procedure.</p>
     <p><b>Note: </b>Both <code>array-foldl</code> and <code>array-foldr</code> are implemented using tail-recursive algorithms in the sample implementation.</p>
     <p><b>Note: </b>If <code><var>op</var></code> is associative with two-sided identity <code><var>id</var></code>, then <code>array-foldl</code> and <code>array-foldr</code> return the same results, but see:</p>
     <pre><code>(define a (make-array (make-interval '#(10)) (lambda (i) i)))

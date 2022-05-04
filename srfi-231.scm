@@ -317,13 +317,13 @@ they may have hash tables or databases behind an implementation, one may read th
 
         (<h2> "Issues")
         (<ul>
-         (<li> "Should eager comprehensions in the style of "(<a> href: "https://srfi.schemers.org/srfi-42/" "SRFI 42")" be added to this SRFI, as "(<a> href: "https://srfi-email.schemers.org/srfi-179/msg/18428002/" "suggested")" by Jens Axel Søgaard?  My opinion is yes, but I would need major help in designing and implementing such things.")
          (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
          )
 
 
         (<h2> "Notes")
         (<ul>
+         (<li> (<b> "Empty and zero-dimensional arrays: ")"The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme "(<code>'box)".  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.")
          (<li> (<b> "Relationship to "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
                "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
          (<li> (<b> "Indexers. ")"The argument "(<code>(<var> "new-domain->old-domain"))" to "(<code> 'specialized-array-share)" is, conceptually, the getter of a multi-valued array.")
@@ -656,7 +656,7 @@ upper bounds $u_0,\\dots,u_{d-1}$, and "
 lower bounds $\\ell_0+L_0,\\dots,\\ell_{d-1}+L_{d-1}$ and
 upper bounds $u_0+U_0,\\dots,u_{d-1}+U_{d-1}$, as long as this is a
 valid interval.  It is an error if the arguments do not satisfy these conditions.")
-        (<p> "Examples:")
+        (<p> (<b> "Examples:"))
 (<pre>(<code>"(interval=
  (interval-dilate (make-interval '#(100 100))
                   '#(1 1) '#(1 1))
@@ -875,7 +875,7 @@ do not satisfy these conditions.")
 setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)" if its arguments do not satisfy these conditions.")
 
 
-(<p> "Example: ")
+(<p> (<b> "Example: "))
 (<pre>
  (<code>
 "  (define a (make-array (make-interval '#(1 1) '#(11 11))
@@ -885,7 +885,7 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
                               0))))"))
 (<p> "defines an array for which "(<code> "(array-getter a)")" returns 1 when i=j and 0 otherwise.")
 
-(<p> "Example: ")
+(<p> (<b> "Example: "))
 (<pre>
  (<code>
 "(define a   ;; a sparse array
@@ -920,11 +920,11 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 (a_ 12345 6789)  => 0.
 (a_ 0 0) => 1."))
 
-(<p> "Example: If an array "(<code>'A)" is empty, e.g., "(<code>"(make-array (make-interval '#(0 0)) getter setter)")", then it is an error to call "(<code>'getter)" or "(<code>'setter)".  Still, such arrays can usefully exist to simplify limit cases of some algorithms.")
+(<p> (<b> "Example: ")" If an array "(<code>'A)" is empty, e.g., "(<code>"(make-array (make-interval '#(0 0)) getter setter)")", then it is an error to call "(<code>'getter)" or "(<code>'setter)".  Still, such arrays can usefully exist to simplify limit cases of some algorithms.")
 
-(<p> "Example: "(<code> "(define a (make-array (make-interval '#()) (lambda () 42)))")" makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.")
+(<p> (<b> "Example: ")(<code> "(define a (make-array (make-interval '#()) (lambda () 42)))")" makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.")
 
-(<p> "Example: We can have the following interactive session, which builds a zero-dimensional mutable array: ")(<code>(<pre>
+(<p> (<b> "Example: ")"We can have the following interactive session, which builds a zero-dimensional mutable array: ")(<code>(<pre>
 "> (define a
     (let ((contents (box 42)))
       (make-array
@@ -938,7 +938,7 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 > (a_)
 42
 > (a! 23)
-> (a_)   
+> (a_)
 23
 "))
 
@@ -953,7 +953,7 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 (<p> "(with or without the optional "(<code>(<var> 'setter))" argument) then "(<code> 'array-domain)" returns "(<code>(<var> 'interval))
      " and "(<code> 'array-getter)" returns  "(<code>(<var> 'getter))".
 It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "(<code>(<var> 'array))" is not an array.")
-(<p> "Example: ")
+(<p> (<b> "Example: "))
 (<pre>
  (<code>
 "(define a (make-array (make-interval '#(1 1) '#(11 11))
@@ -1017,7 +1017,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
      val))"
      ))
 (<p> "It is an error if the arguments of "(<code>'make-specialized-array)" do not satisfy these conditions.")
-(<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(make-specialized-array (make-interval '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
+(<p> (<b> "Examples: ")" A simple array that can hold any type of element can be defined with "(<code>"(make-specialized-array (make-interval '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
 (<pre>
  (<code>
 "  (define (make-u16-array interval)
@@ -1268,7 +1268,7 @@ of whose elements is itself an (immutable) array and ")
      " is an immutable, mutable, or specialized array according to whether "(<code>(<var>'A))" itself is immutable, mutable, or specialized, "(<code>(<var>'B))" is always an immutable array, where "(<code>"(array-getter "(<var>'B)")")", which returns an array, is computed anew for each call.  If "(<code>"(array-getter "(<var>'B)")")" will be called multiple times with the same arguments, it may be useful to store these results in a specialized array for fast repeated access.")
 (<p> "Please see the note in the discussion of "(<a> href: "#array-tile" "array-tile")".")
 
-(<p>"Example:")
+(<p>(<b>"Example:"))
 (<pre>
  (<code>
 "(define a (make-array (make-interval '#(10 10))
@@ -1280,7 +1280,7 @@ of whose elements is itself an (immutable) array and ")
 ((array-getter (curried-a_ 3)) 4)
                     => (3 4)"))
 
-(<p> "Example: NumPy has the operation "(<a> href: "https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html" "numpy.squeeze")", which can eliminate, or \"squeeze\" out, all axes of an array with length 1.  It can be implemented using "(<code>'partition)" from SRFI 1 by")
+(<p> (<b> "Example: ")"NumPy has the operation "(<a> href: "https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html" "numpy.squeeze")", which can eliminate, or \"squeeze\" out, all axes of an array with length 1.  It can be implemented using "(<code>'partition)" from SRFI 1 by")
 (<pre>(<code>
 "(define (array-squeeze a)
   (call-with-values
@@ -1297,7 +1297,7 @@ of whose elements is itself an (immutable) array and ")
              (length rest)))))))
 
 (array->list* (array-squeeze (make-array (make-interval '#(1 2 1 2)) list)))
-=> 
+=>
 (((0 0 0 0)
   (0 0 0 1))
  ((0 1 0 0)
@@ -1306,14 +1306,14 @@ of whose elements is itself an (immutable) array and ")
 (array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args))))))
 =>
 \"1234\"
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args)))))) 
+(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args))))))
 =>
 0
 
 (array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args))))))
 =>
 (\"1234\" \"2234\")
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args)))))) 
+(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args))))))
 =>
 1"))
 
@@ -1716,33 +1716,50 @@ calls")
                          "(<var> 'arrays)")))))"))
 (<p> "It is an error to call "(<code> 'array-for-each)" if its arguments do not satisfy these conditions.")
 
-(format-lambda-list '(array-foldl op id array))
+(format-lambda-list '(array-foldl op id array #\. arrays))
 (<p> "This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
 (<pre>(<code>
-"(define (foldl "(<var>'op)" "(<var>'id)" " (<var>'l)")
-  (if (null? "(<var>'l)")
-      "(<var>'id)"
-      (foldl "(<var>'op)" ("(<var>'op)" " (<var>'id)" (car "(<var>'l)")) (cdr "(<var>'l)"))))
-"))
-(<p> "Then conceptually "(<code>"(array-foldl "(<var>'op)" " (<var>'id)" "(<var> 'array)")")" returns ")
+"(define (foldl op id  . lsts)
+  (if (null? (car lsts))
+      id
+      (apply foldl op (apply op id (map car lsts)) (map cdr lsts))))"))
+(<p> "Then conceptually "(<code>"(array-foldl op id array . arrays)")" returns ")
 (<pre>
  (<code>
-"(foldl "(<var>'op)" " (<var>'id)" (array->list "(<var> 'array)"))"))
-(<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure of two variables.")
+"(apply foldl op id array (map array->list (cons array arrays)))"))
+(<p> "It is an error if "(<code>"(cons "(<var> "array arrays")")")" is not a list of arrays with the same domains, or if "(<code>(<var>'op))" is not a procedure.")
 
-(format-lambda-list '(array-foldr op id array))
+(<p>(<b>"Note: ")" One can fold over empty arrays, which returns "(<code>(<var>'id))", but it is an error to call "(<code>'array-reduce)" on an empty array, because "(<code>'array-reduce)" must evaluate at least one element of the argument array.")
+
+(<p>(<b>"Example: ")" One can define an APL-style "(<code>'array-depth)" by:")
+(<pre>(<code>
+"(define (array-depth a)
+  (if (array? a)
+      (+ 1 (array-foldl max 0 (array-map array-depth a)))
+      0))"))
+(<p> "Here non-arrays have depth 0, and each level of array \"nesting\" increases the depth by 1.")
+
+(<p>(<b>"Example: ")" One can define "(<code>"(array-foldl-on op id array dims)")", which does not fold over the entire array, but computes:")
+(<pre>(<code>
+"(define (array-foldl-on op id array dims)
+  (array-map (lambda (a)
+               (array-foldl op id a))
+             (array-curry a dims)))"))
+(<p> "which folds over only the "(<code>'dims)" rightmost dimensions and returns an array of results.  (Note that this works even if "
+     (<code>'dims)" is "(<code>"(array-dimension array)")", in which case the result is a zero-dimensional array containing the left fold of the entire array.)")
+
+(format-lambda-list '(array-foldr op id array #\. arrays))
 (<p> "This procedure is analogous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
 (<pre>(<code>
-"(define (foldr "(<var>'op)" "(<var>'id)" " (<var>'l)")
-  (if (null? "(<var>'l)")
-      "(<var>'id)"
-      ("(<var>'op)" (car "(<var>'l)") (foldr "(<var>'op)" "(<var>'id)" (cdr "(<var>'l)"))))
-"))
-(<p> "Then conceptually "(<code>"(array-foldr "(<var>'op)" " (<var>'id)" "(<var> 'array)")")" returns ")
+"(define (foldr op id . lsts)
+  (if (null? (car lsts))
+      id
+      (apply fold op (apply op (append (map car lsts) (list id))) (map cdr lsts))))"))
+(<p> "Then conceptually "(<code>"(array-foldr op id array . arrays)")" returns ")
 (<pre>
  (<code>
-"(foldr "(<var>'op)" " (<var>'id)" (array->list "(<var> 'array)"))"))
-(<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'op))" is not a procedure of two variables.")
+"(apply foldr op id array (map array->list (cons array arrays)))"))
+(<p> "It is an error if "(<code>"(cons "(<var> "array arrays")")")" is not a list of arrays with the same domain, or if "(<code>(<var>'op))" is not a procedure.")
 
 (<p> (<b>"Note: ")"Both "(<code>'array-foldl)" and "(<code>'array-foldr)" are implemented using tail-recursive algorithms in the sample implementation.")
 
