@@ -917,7 +917,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           (else
            (make-%%array domain
                          (if (%%interval-empty? domain)
-                             (lambda args (error "array-getter: Array domain is empty: " args))
+                             (lambda args (apply error "array-getter: Array domain is empty: " domain args))
                              getter)
                          #f              ; no setter
                          #f              ; storage-class
@@ -936,10 +936,10 @@ OTHER DEALINGS IN THE SOFTWARE.
           (else
            (make-%%array domain
                          (if (%%interval-empty? domain)
-                             (lambda args (error "array-getter: Array domain is empty: " args))
+                             (lambda args (apply error "array-getter: Array domain is empty: " domain args))
                              getter)
                          (if (%%interval-empty? domain)
-                             (lambda args (error "array-setter: Array domain is empty: " args))
+                             (lambda args (apply error "array-setter: Array domain is empty: " domain args))
                              setter)
                          #f              ; storage-class
                          #f              ; body
