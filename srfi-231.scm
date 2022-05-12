@@ -504,9 +504,9 @@ where the "(<i>"lower bounds")"
 $l_0,\\ldots,l_{d-1}$
 and the "(<i>"upper bounds")"
 $u_0,\\ldots,u_{d-1}$
-are exact integers.  The positive integer $d$ is the "(<i>"dimension")"
-of the interval.  It is required that
-$l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
+are exact integers.  The nonnegative integer $d$ is the "(<i>"dimension")"
+of the interval.")
+        (<p> "If $l_k=u_k$ for some $k$ then the interval is "(<i>'empty)"; if $d=0$ then the interval is "(<i>'zero-dimensional)".  So rather than mathematical objects, it is perhaps better to think of intervals as pairs of vectors $L$ and $U$ for which $L_k\\leq U_k$; $L$ or $U$ could be empty (hence $d=0$).")
         (<p> "Intervals are a data type distinct from other Scheme data types.")
 
         (<h3> "Procedures")
@@ -1349,11 +1349,11 @@ of whose elements is itself an (immutable) array and ")
 (<p> "If "(<code>(<var>'array))" is a specialized array, the resulting array inherits its mutability and safety from "(<code>(<var>'array))".")
 
 (format-lambda-list '(array-tile A S))
-(<p> "Decomposes  the array "(<code>(<var>'A))" into subarrays, or "(<i>'tiles)", specified by "(<i>'cuts)" perpendicular to the coordinate axes of "(<code>(<var>'A))", which are specified by the elements second argument, "(<code>(<var>'S))", and returns an array $T$ whose elements are those tiles.  If the $k$th component of "(<code>(<var>'S))" is a positive exact integer $s$, then the cuts perpendicular to the $k$th coordinate axis are evenly spaced, beginning at the lower bound in the $k$th axis, $l_k$, cutting "(<code>(<var>'A))" into slices of uniform width, except possibly for the last slice.  If the $k$ component of "(<code>(<var>'S))" is a vector $C$ of positive exact integers that sum to "(<code>"(interval-width (array-domain "(<var>'A)") k)")", then the cuts in the $k$th direction create slices with widths $C_0, C_1, \\ldots$, beginning at the lower bound $l_k$. These subarrays completely \"tile\" "(<code>(<var>'A))", in the sense that every entry in "(<code>(<var>'A))" is an entry of precisely one entry of the result $T$.")
+(<p> "Decomposes  the array "(<code>(<var>'A))" into subarrays, or "(<i>'tiles)", specified by "(<i>'cuts)" perpendicular to the coordinate axes of "(<code>(<var>'A))", which are specified by the elements second argument, "(<code>(<var>'S))", and returns an array $T$ whose elements are those tiles.  If the $k$th component of "(<code>(<var>'S))" is a positive exact integer $s$, then the cuts perpendicular to the $k$th coordinate axis are evenly spaced, beginning at the lower bound in the $k$th axis, $l_k$, cutting "(<code>(<var>'A))" into slices of uniform width, except possibly for the last slice.  If the $k$ component of "(<code>(<var>'S))" is a vector $C$ of nonnegative exact integers that sum to "(<code>"(interval-width (array-domain "(<var>'A)") k)")", then the cuts in the $k$th direction create slices with widths $C_0, C_1, \\ldots$, beginning at the lower bound $l_k$. These subarrays completely \"tile\" "(<code>(<var>'A))", in the sense that every entry in "(<code>(<var>'A))" is an entry of precisely one entry of the result $T$.")
 
 (<p> "More formally, if the domain of "(<code>(<var>'A))" is the interval $[l_0,u_0)\\times\\cdots\\times [l_{d-1},u_{d-1})$, then $T$ is an immutable array with all lower bounds zero.  We specify the lower and upper bounds of the array contained in each element of $T$, which is extracted from "(<code>(<var>'A))" in the sense of "(<code>'array-extract)",  as follows.")
 (<p> "If the $k$th component of "(<code>(<var>'S))" is an exact positive integer $s$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of "(<code>(<var>'A))" with $k$th lower and upper bounds given by $l_k+j_k\\times s$ and $\\min(l_k+(j_k+1)s, u_k)$, respectively. (The \"minimum\" operator is necessary if $u_k-l_k$ is not divisible by $s$.)")
-(<p> "If, on the other hand, the $k$ component of "(<code>(<var>'S))" is a vector of positive exact integers $C$ whose components sum to $u_k-l_k$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of "(<code>(<var>'A))" with $k$th lower and upper bounds given by
+(<p> "If, on the other hand, the $k$ component of "(<code>(<var>'S))" is a vector of nonnegative exact integers $C$ whose components sum to $u_k-l_k$, then the elements of $T$ with $k$th coordinates $j_k$ are subarrays of "(<code>(<var>'A))" with $k$th lower and upper bounds given by
 $$
 l_k+\\sum_{i<j_k} C_i\\quad\\text{ and }\\quad l_k+\\sum_{i\\leq j_k} C_i,\\quad\\text{respectively.}
 $$
@@ -1864,7 +1864,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
 
 (format-lambda-list '(list*->array d nested-list #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
-(<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "Assumes that "(<code>(<var>'d))" is a nonnegative exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
 "(define (check-nested-list dimension nested-data)
@@ -1930,7 +1930,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 
 (format-lambda-list '(vector*->array d nested-vector #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
-(<p> "Assumes that "(<code>(<var>'d))" is a positive exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "Assumes that "(<code>(<var>'d))" is a nonnegative exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
 "(define (check-nested-vector dimension nested-data)
