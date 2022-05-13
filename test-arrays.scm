@@ -681,7 +681,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (if use-bignum-intervals
                      (random (- (expt 2 90)) (expt 2 90))
                      (random -10 10)))
-               (vector->list (make-vector (random min max)))))
+               (iota (random min max))))
          (upper
           (map (lambda (x)
                  (+ (random 0 8) x))
@@ -3601,15 +3601,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) 'a)
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(a a))
-      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
+      "array-tile: Element 0 of the second argument is neither a vector nor an exact integer: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(-1 1))
-      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
+      "array-tile: Element 0 of the vector second argument is a negative integer: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 -1 2)))
-      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
+      "array-tile: Element 0 of the vector second argument is not a vector of nonnegative exact integers that sum to width 0 of the domain of the first argument: ")
 (test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 0 2)))
-      "array-tile: Element 0 of the vector second argument is neither an exact positive integer nor a vector of exact nonnegative integers that sum to width 0 of the domain of the array first argument: ")
+      "array-tile: Element 0 of the vector second argument is not a vector of nonnegative exact integers that sum to width 0 of the domain of the first argument: ")
 
 (do ((d 1 (fx+ d 1)))
      ((fx= d 6))
@@ -5439,6 +5439,49 @@ that computes the componentwise products when we need them, the times are
                                     '(0 1 3 5 8 9)))))
       #t)
 
+(do ((i 0 (+ i 1)))
+    ((= i random-tests))
+  (let* ((domain
+          (random-interval 1 6))  ;; you can't append zero-dimensional arrays
+         (dimension
+          (interval-dimension domain))
+         (A
+          (array-copy (make-array domain (lambda args (random 10)))))
+         (domain-widths
+          (interval-widths domain))
+         (cutting-axis
+          (random dimension))
+         (tiling-argument
+          (vector-map (lambda (k)
+                        (let ((kth-width (interval-width domain k)))
+                          (if (fx= k cutting-axis)
+                              (if (zero? kth-width)
+                                  (make-vector (random 1 4) 0)
+                                  (let loop ((result '())
+                                             (sum 0))
+                                    (if (fx< sum kth-width)
+                                        (let ((slice-width (random (+ 1 kth-width))))
+                                          (loop (cons slice-width result)
+                                                (+ slice-width sum)))
+                                        (vector-permute (list->vector (cons (- (car result) (- sum kth-width))
+                                                                            (cdr result)))
+                                                        (random-permutation (length result))))))
+                              (if (zero? kth-width)
+                                  '#(0)
+                                  kth-width))))
+                      (list->vector (iota dimension))))
+         (arrays
+          (array->list (array-tile A tiling-argument)))
+         (A-reconstructed
+          (array-append cutting-axis arrays)))
+    (test (myarray= (array-translate A (vector-map -
+                                                   (interval-lower-bounds->vector (array-domain A-reconstructed))
+                                                   (interval-lower-bounds->vector (array-domain A))))
+                    A-reconstructed)
+          #t)))
+
+(next-test-random-source-state!)
+
 (pp "array-stack tests")
 
 (test (array-stack 1 'a)
@@ -5784,6 +5827,43 @@ that computes the componentwise products when we need them, the times are
                                     (list->vector
                                      (map (lambda (ignore) (random 1 5))
                                           (iota dims))))))
+          #t)))
+
+(next-test-random-source-state!)
+
+;;; Let's do something similar now with possibly empty arrays and subarrays.
+
+(do ((i 0 (+ i 1)))
+    ((= i random-tests))
+  (let* ((domain
+          (random-interval))
+         (domain-widths
+          (interval-widths domain))
+         (tiling-argument
+          (vector-map (lambda (width)
+                        (if (zero? width)                  ;; width of kth axis is 0
+                            (make-vector (random 1 3) 0)
+                            (if (even? (random 2))
+                                (let loop ((result '())    ;; accumulate a list of nonnegative integers that (eventually) sum to no less than width
+                                           (sum 0))
+                                  (if (<= width sum)
+                                      (vector-permute (list->vector (cons (- (car result)    ;; adjust last entry so the sum is width
+                                                                             (- sum width))
+                                                                          (cdr result)))
+                                                      (random-permutation (length result)))  ;; randomly permute vector of cuts
+                                      (let ((new-width (random (+ width 1))))
+                                        (loop (cons new-width result)
+                                              (+ new-width sum)))))
+                                (random 1 (+ width 3)))))               ;; a positive scalar
+                      domain-widths))
+         (A
+          (array-copy (make-array domain (lambda args (random 10)))))
+         (A-tiled
+          (array-tile A tiling-argument))
+         (A-blocked
+          (array-block A-tiled)))
+    (test (myarray= (array-translate A (vector-map - (interval-lower-bounds->vector (array-domain A)))) ;; array-block returns an array based at the origin
+                    A-blocked)
           #t)))
 
 (next-test-random-source-state!)
