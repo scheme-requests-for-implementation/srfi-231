@@ -3601,15 +3601,18 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) 'a)
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(a a))
-      "array-tile: Element 0 of the second argument is neither a vector nor an exact integer: ")
+      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(-1 1))
-      "array-tile: Element 0 of the vector second argument is a negative integer: ")
+      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 -1 2)))
-      "array-tile: Element 0 of the vector second argument is not a vector of nonnegative exact integers that sum to width 0 of the domain of the first argument: ")
+      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
 (test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 0 2)))
-      "array-tile: Element 0 of the vector second argument is not a vector of nonnegative exact integers that sum to width 0 of the domain of the first argument: ")
+      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
+
+(test (array-tile (make-array (make-interval '#(0)) list) '#(2))
+      "array-tile: Axis 0 of the domain of the first argument has width 0, but element 0 of the second argument is not a nonempty vector of exact zeros: ")
 
 (do ((d 1 (fx+ d 1)))
      ((fx= d 6))
@@ -4309,6 +4312,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1)) (make-interval '#(4)))
       "specialized-array-reshape: Requested reshaping is impossible: ")
+
+(test (array? (specialized-array-reshape (make-specialized-array (make-interval '#(1 2 0 4)))
+                                         (make-interval '#(2 0 4))))
+      #t)
 
 (pp "Test code from the SRFI document")
 
@@ -5682,7 +5689,7 @@ that computes the componentwise products when we need them, the times are
 
 (test (array-block (vector*->array 1 (vector (vector*->array 1 '#(1 1))
                                              (vector*->array 2 '#(#(1 2) #(3 4))))))
-      "array-block: Not all elements of the first argument (an array) have the same dimension: ")
+      "array-block: Not all elements of the first argument (an array) have the same dimension as the first argument itself: ")
 
 (test (array-block (list*->array
                     2
@@ -5696,6 +5703,12 @@ that computes the componentwise products when we need them, the times are
                                 (list*->array 2 '((14)))
                                 (list*->array 2 '((15 16 17)))))))
       "array-block: Cannot stack array elements of the first argument into result array: ")
+
+(test (array? (array-block (list*->array
+                            1
+                            (list (make-array (make-interval '#(0)) list)
+                                  (make-array (make-interval '#(0)) list)))))
+      #t)
 
 (let* ((A (list*->array
            2
