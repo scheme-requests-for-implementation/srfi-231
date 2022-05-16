@@ -3012,43 +3012,29 @@ OTHER DEALINGS IN THE SOFTWARE.
            (let slice-widths-check ((k 0))
              (if (fx< k A-dim)
                  (let ((S_k (vector-ref slice-widths k)))
-                   (cond ((exact-integer? S_k)
-                          (cond ((not (positive? S_k))
-                                 (error (string-append "array-tile: Element "
-                                                       (number->string k)
-                                                       " of the vector second argument is a negative integer: ")
-                                        A slice-widths))
-                                ((zero? (%%interval-width domain k))
-                                 (error (string-append "array-tile: Element "
-                                                       (number->string k)
-                                                       " of the vector second argument is a positive integer, but the width of the domain of the first argument in that direction is zero: ")
-                                        A slice-widths))
-                                (else
-                                 (slice-widths-check (fx+ k 1)))))
-                         ((vector? S_k)
-                          (cond ((not (fx< 0 (vector-length S_k)))
-                                 (error (string-append "array-tile: Element "
-                                                       (number->string k)
-                                                       " of the vector second argument is an empty vector: ")
-                                        A slice-widths))
-                                ((not (and (%%vector-every (lambda (x)
-                                                             (and (exact-integer? x)
-                                                                  (not (negative? x))))
-                                                           S_k)
-                                           (= (%%vector-foldl + 0 S_k) (%%interval-width domain k))))
-                                 (error (string-append "array-tile: Element "
-                                                       (number->string k)
-                                                       " of the vector second argument is not a vector of nonnegative exact integers that sum to width "
-                                                       (number->string k)
-                                                       " of the domain of the first argument: ")
-                                        A slice-widths))
-                                (else
-                                 (slice-widths-check (fx+ k 1)))))
-                         (else
-                          (error (string-append "array-tile: Element "
-                                                (number->string k)
-                                                " of the second argument is neither a vector nor an exact integer: ")
-                                 A slice-widths))))
+                   (if (eqv? (%%interval-width domain k) 0)
+                       (if (and (vector? S_k)
+                                (not (fx= (vector-length S_k) 0))
+                                (%%vector-every (lambda (x) (eqv? x 0)) S_k))
+                           (slice-widths-check (fx+ k 1))
+                           (error (string-append "array-tile: Axis "
+                                                 (number->string k)
+                                                 " of the domain of the first argument has width 0, but element "
+                                                 (number->string k)
+                                                 " of the second argument is not a nonempty vector of exact zeros: ")
+                                  A slice-widths))
+                       (if (or (and (exact-integer? S_k)
+                                    (positive? S_k))
+                               (and (vector? S_k)
+                                    (%%vector-every (lambda (x) (and (exact-integer? x) (not (negative? x)))) S_k)
+                                    (= (%%vector-foldl + 0 S_k) (%%interval-width domain k))))
+                           (slice-widths-check (fx+ k 1))
+                           (error (string-append "array-tile: Axis "
+                                                 (number->string k)
+                                                 " of the domain of the first argument has nonzero width, but element "
+                                                 (number->string k)
+                                                 " of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
+                                  A slice-widths))))
                  (let ((offsets (make-vector A-dim)))
                    (do ((k 0 (fx+ k 1)))
                        ((fx= k A-dim))
@@ -4561,7 +4547,7 @@ OTHER DEALINGS IN THE SOFTWARE.
            (cond ((not (%%array-every array? A '()))
                   (error "array-block: Not all elements of the first argument (an array) are arrays: " A-arg))
                  ((not (%%array-every (lambda (a) (fx= (%%array-dimension a) A_dim)) A '()))
-                  (error "array-block: Not all elements of the first argument (an array) have the same dimension: " A-arg))
+                  (error "array-block: Not all elements of the first argument (an array) have the same dimension as the first argument itself: " A-arg))
                  ((not (%%vector-every
                         (lambda (k)       ;; the direction
                           (let ((slices   ;; the slices in that direction
@@ -4569,13 +4555,11 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                 (fx- A_dim 1))))
                             (array-every
                              (lambda (slice)
-                               (let ((slice-kth-width
-                                      (%%interval-width (%%array-domain (apply (%%array-getter slice) corner-index)) k)))
-                                 (array-every
-                                  (lambda (a)  ;; within slice
-                                    (fx= (%%interval-width (%%array-domain a) k)
-                                         slice-kth-width))
-                                  slice)))
+                               (let ((kth-width-of-arrays-in-slice
+                                      (map (lambda (a)
+                                             (%%interval-width (%%array-domain a) k))
+                                           (%%array->list slice))))
+                                 (apply = kth-width-of-arrays-in-slice)))
                              slices)))
                         ks))
                   (error "array-block: Cannot stack array elements of the first argument into result array: " A-arg))
