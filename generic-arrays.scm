@@ -1748,10 +1748,10 @@ OTHER DEALINGS IN THE SOFTWARE.
       `(cond ,@(map (lambda (name prefix)
                       `((eq? storage-class ,(symbol-append name '-storage-class))
                         ,(replace (symbol-append 'storage-class original-suffix)
-                                  (symbol-append prefix 'vector replacement-suffix)
+                                  (symbol-append prefix         replacement-suffix)
                                   expr)))
-                    '(generic s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
-                    '(""      s8 u8 s16 u16 s32 u32 s64 u64 f32 f64))
+                    '(generic s8       u8       s16       u16       s32       u32       s64       u64       f32       f64       char)
+                    '(vector  s8vector u8vector s16vector u16vector s32vector u32vector s64vector u64vector f32vector f64vector string))
              (else
               ,expr)))
 
@@ -2323,8 +2323,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   (if (specialized-array? destination)
       (if (%%array-elements-in-order? destination)
-          ;; Now we do not assume that the domains are the same
-          ;; maybe we can do a block copy
+          ;; Maybe we can do a block copy
           (if (and (specialized-array? source)
                    (eq? (%%array-storage-class destination)
                         (%%array-storage-class source))
@@ -2332,31 +2331,29 @@ OTHER DEALINGS IN THE SOFTWARE.
                    (storage-class-copier (%%array-storage-class destination))
                    (%%array-elements-in-order? source))
               ;; do a block copy
-              (let* ((source-indexer
-                      (%%array-indexer source))
-                     (destination-indexer
-                      (%%array-indexer destination))
-                     (copier
-                      (storage-class-copier (%%array-storage-class source)))
-                     (initial-destination-index
-                      (%%interval-lower-bounds->list (%%array-domain destination)))
-                     (destination-start
-                      (apply destination-indexer initial-destination-index))
-                     (initial-source-index
-                      (%%interval-lower-bounds->list (%%array-domain source)))
-                     (source-start
-                      (apply source-indexer initial-source-index))
-                     (source-end
-                      (fx+ source-start (%%interval-volume (%%array-domain source)))))
+              (begin
                 (if (not (%%interval-empty? (%%array-domain source)))
-                    ;; If arrays are empty, then indexers might be meaningless, so
-                    ;; destination/source-start might be meaningless, so don't
-                    ;; call copier.
-                    (copier (%%array-body destination)
-                            destination-start
-                            (%%array-body source)
-                            source-start
-                            source-end))
+                    (let* ((source-indexer
+                            (%%array-indexer source))
+                           (destination-indexer
+                            (%%array-indexer destination))
+                           (copier
+                            (storage-class-copier (%%array-storage-class source)))
+                           (initial-destination-index
+                            (%%interval-lower-bounds->list (%%array-domain destination)))
+                           (destination-start
+                            (apply destination-indexer initial-destination-index))
+                           (initial-source-index
+                            (%%interval-lower-bounds->list (%%array-domain source)))
+                           (source-start
+                            (apply source-indexer initial-source-index))
+                           (source-end
+                            (fx+ source-start (%%interval-volume (%%array-domain source)))))
+                      (copier (%%array-body destination)
+                              destination-start
+                              (%%array-body source)
+                              source-start
+                              source-end)))
                 "Block copy")
               ;;  we can step through the elements of destination in order.
               (let* ((domain
@@ -3538,8 +3535,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (lambda (i2 j2 k2 l2)
                   (combiner (A_) (B_ i2 j2 k2 l2))))
                (else
-                (lambda args
-                  (combiner (A_) (apply B_ args))))))
+                (lambda rest
+                  (combiner (A_) (apply B_ rest))))))
             ((1)
              (case dim_B
                ((0)
@@ -4440,8 +4437,8 @@ OTHER DEALINGS IN THE SOFTWARE.
   (cond ((not (and (list? arrays)
                    (not (null? arrays))
                    (%%every array? arrays)
-                   (apply = (map %%array-dimension arrays))))
-         (error "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: " k arrays))
+                   (%%every (lambda (a) (= (%%array-dimension a) (%%array-dimension (car arrays)))) (cdr arrays))))
+         (error "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: " k arrays))
         ((not (and (fixnum? k)
                    (fx< -1 k (%%array-dimension (car arrays)))))
          (error "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:"
@@ -4462,9 +4459,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                   (%%interval-upper-bound d            i)))))
                                     (iota (%%interval-dimension first-domain))))
                          (cdr (map %%array-domain arrays)))))
-         (error (string-append "array-append: Expecting arrays with the same upper and lower bounds (except for index "
+         (error (string-append "array-append: Expecting as the second argument arrays with the same upper and lower bounds (except for index "
                                (number->string k)
-                               " as the second argument: ")
+                               "): ")
                 k arrays))
         (else
          (call-with-values
@@ -4559,7 +4556,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       (map (lambda (a)
                                              (%%interval-width (%%array-domain a) k))
                                            (%%array->list slice))))
-                                 (apply = kth-width-of-arrays-in-slice)))
+                                 (or (null? kth-width-of-arrays-in-slice)
+                                     (%%every (lambda (w) (= (car kth-width-of-arrays-in-slice) w)) (cdr kth-width-of-arrays-in-slice)))))
                              slices)))
                         ks))
                   (error "array-block: Cannot stack array elements of the first argument into result array: " A-arg))
