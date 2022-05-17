@@ -5198,19 +5198,19 @@ that computes the componentwise products when we need them, the times are
 (pp "array-append tests")
 
 (test (array-append 1 'a)
-      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
+      "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
 (test (array-append 1 '())
-      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
+      "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
 (test (array-append 1 '(a))
-      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
+      "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
 (test (array-append 1 (list (make-array (make-interval '#(1)) list) (make-array (make-interval '#(2 2)) list)))
-      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
+      "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
 (test (array-append 1 (list (make-array (make-interval '#(2 2)) list) 'a))
-      "array-append: Expecting a nonnull list of arrays with the same dimension as the second argument: ")
+      "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
 (test (array-append 'a (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
       "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
@@ -5242,7 +5242,7 @@ that computes the componentwise products when we need them, the times are
 (test (array-append 0
                     (list (make-array (make-interval '#(2 4)) list)
                           (make-array (make-interval '#(3 5)) list)))
-      "array-append: Expecting arrays with the same upper and lower bounds (except for index 0 as the second argument: ")
+      "array-append: Expecting as the second argument arrays with the same upper and lower bounds (except for index 0): ")
 
 (test (array-append 0
                     (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 1)) list))
