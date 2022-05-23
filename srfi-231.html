@@ -724,6 +724,18 @@
     <p>This routine assumes that <code><var>mutable?</var></code> and <code><var>safe?</var></code>, if given, are booleans, and that <code><var>storage-class</var></code>, if given, is a storage class.  <code><var>data</var></code> must be an object for which <code>((storage-class-data? <var>storage-class</var>) <var>data</var>)</code> returns <code>#t</code>.</p>
     <p>This routine constructs a new one-dimensional array with storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, safety <code><var>safe?</var></code>, body <code>((storage-class-data-&gt;body <var>storage-class</var>) <var>data</var>)</code>, with domain <code>(make-interval (vector <var>N</var>))</code>, where <code><var>N</var></code> is the greatest number of elements one can fit into <code><var>data</var></code>, and indexer <code>(lambda (i) i)</code>.</p>
     <p>It is an error if the arguments do not satisfy these conditions, or if <code><var>mutable?</var></code> is true and <code><var>data</var></code> is not mutable.</p>
+    <p><b>Discussion:</b> Correct transformations on specialized arrays <i>require</i> that the array's indexer, which maps the domain of the array to exact integers that index elements of the one-dimensional body of the array, be <i>affine</i>.  The procedure <code>make-specialized-array-from-data</code> provides a structured way to turn externally-provided data into an array with a known, very simple, one-dimensional affine indexer.  With this start, the programmer can apply array transforms (e.g., <code>array-extract</code>, <code>specialized-array-reshape</code>, etc.) to massage the data into the shape needed.</p>
+    <p>For example, to build a zero-dimensional array that stores its single element in a pre-existing vector, one could use the code:</p>
+    <pre><code>(pretty-print
+ (array-&gt;list*
+  (specialized-array-reshape           ;; Reshape to a zero-dimensional array
+   (array-extract                      ;; Restrict to the first element
+    (make-specialized-array-from-data  ;; The basic one-dimensional array
+     (vector 'foo 'bar 'baz))
+    (make-interval '#(1)))
+   (make-interval '#()))))</code></pre>
+    <p>prints simply</p>
+    <pre><code>foo</code></pre>
     <p><b>Example: </b>In the sample implementation, if you want to construct a $3\times3$ array with storage class <code>u1-storage-class</code> from a length-one <code>u16vector</code> named <code><var>board</var></code> then one could write</p>
     <pre><code>(let* ((board (u16vector #b111100110111))
        (A (specialized-array-reshape
@@ -1553,6 +1565,32 @@ indexer:       (lambda multi-index
                   (cdr subdividers)))))))</code></pre>
     <p>Any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
+    <p><b>Example:</b> Given a two-dimensional array $a$ interpreted as a spreadsheet, with the rows and columns indexed starting at 0, one might want to make a new array with row $k$ moved to be the top row.  Then one could do:</p>
+    <pre><code>(let* ((a (make-array (make-interval '#(4 6)) list))
+       (k 2)
+       (m (interval-upper-bound (array-domain a) 0))
+       (n (interval-upper-bound (array-domain a) 1)))
+  (pretty-print
+   (array-&gt;list* a))
+  (newline)
+  (pretty-print
+   (array-&gt;list*
+    (array-append
+     0
+     (list (array-extract a (make-interval (vector k 0) (vector (+ k 1) n)))
+           (array-extract a (make-interval (vector k n)))
+           (array-extract a (make-interval (vector (+ k 1) 0) (vector m n))))))))</code></pre>
+    <p>This prints:</p>
+    <pre><code>(((0 0) (0 1) (0 2) (0 3) (0 4) (0 5))
+ ((1 0) (1 1) (1 2) (1 3) (1 4) (1 5))
+ ((2 0) (2 1) (2 2) (2 3) (2 4) (2 5))
+ ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))
+
+(((2 0) (2 1) (2 2) (2 3) (2 4) (2 5))
+ ((0 0) (0 1) (0 2) (0 3) (0 4) (0 5))
+ ((1 0) (1 1) (1 2) (1 3) (1 4) (1 5))
+ ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))</code></pre>
+    <p>Because this SRFI supports empty arrays, the same code works when $k=0$ (when the second extracted array is empty) or $k=m-1$ (when the third extracted array is empty).</p>
     <p><b>Procedure: </b><code><a id="array-block">array-block</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>A</var></code> is nonempty array of arrays, all of which have the same dimension as <code><var>A</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together, in the configuration given by their indices in <code><var>A</var></code>.  We can always do this when <code>(array-dimension <var>A</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>A</var></code> are zero, we require: </p>

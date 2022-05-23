@@ -1061,6 +1061,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (make-specialized-array-from-data 'a)
       "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
 
+(pretty-print
+ (array->list*
+  (specialized-array-reshape           ;; Reshape to a zero-dimensional array
+   (array-extract                      ;; Restrict to the first element
+    (make-specialized-array-from-data  ;; The basic one-dimensional array
+     (vector 'foo 'bar 'baz))
+    (make-interval '#(1)))
+   (make-interval '#()))))
+
 (let* ((board (u16vector #b111100110111))
        (A (specialized-array-reshape
            (array-extract
@@ -5486,6 +5495,22 @@ that computes the componentwise products when we need them, the times are
                                                    (interval-lower-bounds->vector (array-domain A))))
                     A-reconstructed)
           #t)))
+
+(let* ((a (make-array (make-interval '#(4 6)) list))
+       (k 2)
+       (m (interval-upper-bound (array-domain a) 0))
+       (n (interval-upper-bound (array-domain a) 1)))
+  (pretty-print
+   (array->list* a))
+  (newline)
+  (pretty-print
+   (array->list*
+    (array-append
+     0
+     (list (array-extract a (make-interval (vector k 0) (vector (+ k 1) n)))
+           (array-extract a (make-interval (vector k n)))
+           (array-extract a (make-interval (vector (+ k 1) 0) (vector m n))))))))
+
 
 (next-test-random-source-state!)
 

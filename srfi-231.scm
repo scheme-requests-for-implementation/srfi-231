@@ -1039,6 +1039,19 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (<p> "This routine constructs a new one-dimensional array with storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", safety "(<code>(<var>'safe?))", body "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")", with domain "(<code>"(make-interval (vector "(<var>'N)"))")", where "(<code>(<var>'N))" is the greatest number of elements one can fit into "(<code>(<var>'data))", and indexer "(<code>"(lambda (i) i)")".")
 (<p> "It is an error if the arguments do not satisfy these conditions, or if "(<code>(<var>'mutable?))" is true and "(<code>(<var>'data))" is not mutable.")
 
+(<p>(<b>"Discussion:")" Correct transformations on specialized arrays "(<i>'require)" that the array's indexer, which maps the domain of the array to exact integers that index elements of the one-dimensional body of the array, be "(<i>'affine)".  The procedure "(<code>'make-specialized-array-from-data)" provides a structured way to turn externally-provided data into an array with a known, very simple, one-dimensional affine indexer.  With this start, the programmer can apply array transforms (e.g., "(<code>'array-extract)", "(<code>'specialized-array-reshape)", etc.) to massage the data into the shape needed.")
+(<p>"For example, to build a zero-dimensional array that stores its single element in a pre-existing vector, one could use the code:")
+(<pre>(<code>"(pretty-print
+ (array->list*
+  (specialized-array-reshape           ;; Reshape to a zero-dimensional array
+   (array-extract                      ;; Restrict to the first element
+    (make-specialized-array-from-data  ;; The basic one-dimensional array
+     (vector 'foo 'bar 'baz))
+    (make-interval '#(1)))
+   (make-interval '#()))))"))
+(<p> "prints simply")
+(<pre>(<code>'foo))
+
 (<p> (<b> "Example: ")"In the sample implementation, if you want to construct a $3\\times3$ array with storage class "(<code>'u1-storage-class)" from a length-one "(<code>'u16vector)" named "(<code>(<var>'board))" then one could write")
 (<pre>(<code>
 "(let* ((board (u16vector #b111100110111))
@@ -2079,6 +2092,34 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                   (cdr subdividers)))))))"))
 (<p> "Any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
+(<p>(<b>"Example:")" Given a two-dimensional array $a$ interpreted as a spreadsheet, with the rows and columns indexed starting at 0, one might want to make a new array with row $k$ moved to be the top row.  Then one could do:")
+(<pre>(<code>
+"(let* ((a (make-array (make-interval '#(4 6)) list))
+       (k 2)
+       (m (interval-upper-bound (array-domain a) 0))
+       (n (interval-upper-bound (array-domain a) 1)))
+  (pretty-print
+   (array->list* a))
+  (newline)
+  (pretty-print
+   (array->list*
+    (array-append
+     0
+     (list (array-extract a (make-interval (vector k 0) (vector (+ k 1) n)))
+           (array-extract a (make-interval (vector k n)))
+           (array-extract a (make-interval (vector (+ k 1) 0) (vector m n))))))))"))
+(<p> "This prints:")
+(<pre>(<code>"(((0 0) (0 1) (0 2) (0 3) (0 4) (0 5))
+ ((1 0) (1 1) (1 2) (1 3) (1 4) (1 5))
+ ((2 0) (2 1) (2 2) (2 3) (2 4) (2 5))
+ ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))
+
+(((2 0) (2 1) (2 2) (2 3) (2 4) (2 5))
+ ((0 0) (0 1) (0 2) (0 3) (0 4) (0 5))
+ ((1 0) (1 1) (1 2) (1 3) (1 4) (1 5))
+ ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))"))
+(<p> "Because this SRFI supports empty arrays, the same code works when $k=0$ (when the second extracted array is empty) or $k=m-1$ (when the third extracted array is empty).")
+
 
 (format-lambda-list '(array-block A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
