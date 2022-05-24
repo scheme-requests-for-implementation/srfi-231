@@ -80,7 +80,7 @@ MathJax.Hub.Config({
          (<li> "Draft #5 published: 2022-03-16")
          (<li> "Draft #6 published: 2022-03-17")
          (<li> "Draft #7 published: 2022-04-25")
-         (<li> "Draft #8 published: 2022-04-25")
+         (<li> "Draft #8 published: 2022-05-23")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -124,7 +124,7 @@ MathJax.Hub.Config({
                (<a> href: "#interval-empty?" (<code>'interval-empty?))", "
                (<a> href: "#storage-class-data?" (<code>'storage-class-data?))", "
                (<a> href: "#storage-class-data-rarrow-body" (<code>'storage-class-data->body))", "
-               (<a> href: "#array-empty?" (<code>'array-empty))", "
+               (<a> href: "#array-empty?" (<code>'array-empty?))", "
                (<a> href: "#make-specialized-array-from-data" (<code>'make-specialized-array-from-data))", "
                (<a> href: "#vector-rarrow-array" (<code>'vector->array))", "
                (<a> href: "#array-rarrow-vector" (<code>'array->vector))", "
@@ -414,7 +414,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-dimension" "array-dimension")END
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
-                 (<a> href: "#array-empty?" "array-empty")END
+                 (<a> href: "#array-empty?" "array-empty?")END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
                  (<a> href: "#make-specialized-array-from-data" "make-specialized-array-from-data")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
@@ -2123,7 +2123,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 
 (format-lambda-list '(array-block A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is a nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together, in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
 (<pre>(<code>"(every
  (lambda (k)                                        ;; for each coordinate direction
