@@ -56,7 +56,7 @@
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li><code>char-storage-class</code> is provided.</li>
-      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
+      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -229,7 +229,7 @@
         <a href="#array-dimension">array-dimension</a>,
         <a href="#mutable-array?">mutable-array?</a>,
         <a href="#array-setter">array-setter</a>,
-        <a href="#array-empty?">array-empty</a>,
+        <a href="#array-empty?">array-empty?</a>,
         <a href="#make-specialized-array">make-specialized-array</a>,
         <a href="#make-specialized-array-from-data">make-specialized-array-from-data</a>,
         <a href="#specialized-array?">specialized-array?</a>,
@@ -644,8 +644,8 @@
 (a_ 0 0) =&gt; 1.</code></pre>
     <p><b>Example: </b> If an array <code>A</code> is empty, e.g., <code>(make-array (make-interval '#(0 0)) getter setter)</code>, then it is an error to call <code>getter</code> or <code>setter</code>.  Still, such arrays can usefully exist to simplify limit cases of some algorithms.</p>
     <p><b>Example: </b><code>(define a (make-array (make-interval '#()) (lambda () 42)))</code> makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.</p>
-    <p><b>Example: </b>We can have the following interactive session, which builds a zero-dimensional mutable array: </p><pre>
-    <code>&gt; (define a
+    <p><b>Example: </b>We can have the following interactive session, which builds a zero-dimensional mutable array: </p>
+    <pre><code>&gt; (define a
     (let ((contents (box 42)))
       (make-array
        (make-interval '#())
@@ -1593,7 +1593,7 @@ indexer:       (lambda multi-index
  ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))</code></pre>
     <p>Because this SRFI supports empty arrays, the same code works when $k=0$ (when the second extracted array is empty) or $k=m-1$ (when the third extracted array is empty).</p>
     <p><b>Procedure: </b><code><a id="array-block">array-block</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>A</var></code> is nonempty array of arrays, all of which have the same dimension as <code><var>A</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>A</var></code> is a nonempty array of arrays, all of which have the same dimension as <code><var>A</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together, in the configuration given by their indices in <code><var>A</var></code>.  We can always do this when <code>(array-dimension <var>A</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>A</var></code> are zero, we require: </p>
     <pre><code>(every
  (lambda (k)                                        ;; for each coordinate direction
