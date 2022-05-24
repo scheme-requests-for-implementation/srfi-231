@@ -1,4 +1,4 @@
-* SRFI 231: Nonempty Intervals and Generalized Arrays (Updated^2)
+* SRFI 231: Intervals and Generalized Arrays (Updated^2)
 
 ** by Bradley J. Lucier
 
@@ -6,7 +6,7 @@
 
 keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]], [[https://srfi.schemers.org/?keywords=numbers][Numbers]]
 
-This repository hosts [[https://srfi.schemers.org/srfi-231/][SRFI 231]]: Nonempty Intervals and Generalized Arrays (Updated^2), a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+This repository hosts [[https://srfi.schemers.org/srfi-231/][SRFI 231]]: Intervals and Generalized Arrays (Updated^2), a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
 
 This SRFI is in /draft/ status.
 

@@ -27,6 +27,7 @@
       <li>Draft #5 published: 2022-03-16</li>
       <li>Draft #6 published: 2022-03-17</li>
       <li>Draft #7 published: 2022-04-25</li>
+      <li>Draft #8 published: 2022-05-23</li>
       <li>Bradley Lucier's <a href="https://github.com/gambiteer/srfi-231">personal Git repo for this SRFI</a> for reference while the SRFI is in <em>draft</em> status.</li>
     </ul>
     <h2>Abstract</h2>
@@ -643,8 +644,8 @@
 (a_ 0 0) =&gt; 1.</code></pre>
     <p><b>Example: </b> If an array <code>A</code> is empty, e.g., <code>(make-array (make-interval '#(0 0)) getter setter)</code>, then it is an error to call <code>getter</code> or <code>setter</code>.  Still, such arrays can usefully exist to simplify limit cases of some algorithms.</p>
     <p><b>Example: </b><code>(define a (make-array (make-interval '#()) (lambda () 42)))</code> makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.</p>
-    <p><b>Example: </b>We can have the following interactive session, which builds a zero-dimensional mutable array: </p><code>
-    <pre>&gt; (define a
+    <p><b>Example: </b>We can have the following interactive session, which builds a zero-dimensional mutable array: </p><pre>
+    <code>&gt; (define a
     (let ((contents (box 42)))
       (make-array
        (make-interval '#())
@@ -659,7 +660,7 @@
 &gt; (a! 23)
 &gt; (a_)
 23
-</pre></code>
+</code></pre>
     <p><b>Procedure: </b><code><a id="array?">array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if  <code><var>obj</var></code> is an array and <code>#f</code> otherwise.</p>
     <p><b>Procedure: </b><code><a id="array-domain">array-domain</a> <var>array</var></code></p>

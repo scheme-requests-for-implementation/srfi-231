@@ -80,6 +80,7 @@ MathJax.Hub.Config({
          (<li> "Draft #5 published: 2022-03-16")
          (<li> "Draft #6 published: 2022-03-17")
          (<li> "Draft #7 published: 2022-04-25")
+         (<li> "Draft #8 published: 2022-04-25")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -925,7 +926,7 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 
 (<p> (<b> "Example: ")(<code> "(define a (make-array (make-interval '#()) (lambda () 42)))")" makes an array with a zero-dimensional domain whose getter takes no arguments and always returns 42.")
 
-(<p> (<b> "Example: ")"We can have the following interactive session, which builds a zero-dimensional mutable array: ")(<code>(<pre>
+(<p> (<b> "Example: ")"We can have the following interactive session, which builds a zero-dimensional mutable array: ")(<pre>(<code>
 "> (define a
     (let ((contents (box 42)))
       (make-array
