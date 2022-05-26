@@ -1000,33 +1000,33 @@ OTHER DEALINGS IN THE SOFTWARE.
       "make-specialized-array: The first argument is not an interval: ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) 'a 1)
-      "make-specialized-array: The third argument is not a storage-class: ")
+      "make-specialized-array: The second argument is not a storage-class: ")
 
-(test (make-specialized-array (make-interval '#(0) '#(10)) 'a u16-storage-class)
-      "make-specialized-array: The second argument cannot be manipulated by the third (a storage class): ")
+(test (make-specialized-array (make-interval '#(0) '#(10)) u16-storage-class 'a)
+      "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): ")
 
 
-(test (make-specialized-array (make-interval '#(0) '#(10)) 'a generic-storage-class 'a)
+(test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a 'a)
       "make-specialized-array: The fourth argument is not a boolean: ")
 
 ;;; let's test a few more
 
-(test (array-every (lambda (x) (eqv? x 42)) (make-specialized-array (make-interval '#(10)) 42 u8-storage-class))
+(test (array-every (lambda (x) (eqv? x 42)) (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
       #t)
 
-(test (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class))
+(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42))
       (specialized-array-default-safe?))
 
-(test (parameterize ((specialized-array-default-safe? #t)) (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class)))
+(test (parameterize ((specialized-array-default-safe? #t)) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
       #t)
 
-(test (parameterize ((specialized-array-default-safe? #f)) (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class)))
+(test (parameterize ((specialized-array-default-safe? #f)) (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42)))
       #f)
 
-(test (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class  #t))
+(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42  #t))
       #t)
 
-(test (array-safe? (make-specialized-array (make-interval '#(10)) 42 u8-storage-class #f))
+(test (array-safe? (make-specialized-array (make-interval '#(10)) u8-storage-class 42 #f))
       #f)
 
 (pp "make-specialized-array-from-data error tests")
@@ -1420,7 +1420,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let ((array
          (make-specialized-array (random-interval)
-                                 0
                                  u1-storage-class)))
     (test (array-elements-in-order? array)
           #t)))
@@ -1433,7 +1432,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval 2 5)
-                                  0
                                   u1-storage-class))
          (curried
           (array-curry base (random 1 (array-dimension base)))))
@@ -1476,7 +1474,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval 0 6)
-                                  0
                                   u1-storage-class))
          (extracted
           (array-extract base (random-subinterval (array-domain base)))))
@@ -1491,7 +1488,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval)
-                                  0
                                   u1-storage-class))
          (domain
           (array-domain base))
@@ -1541,7 +1537,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-interval)
-                                  0
                                   u1-storage-class))
          (domain
           (array-domain base))
@@ -1592,7 +1587,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= i random-tests))
   (let* ((base
           (make-specialized-array (random-nonnegative-interval 1 6)
-                                  0
                                    u1-storage-class))
          (scales
           (random-positive-vector (array-dimension base) 4))
@@ -1619,7 +1613,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((array
-          (make-specialized-array (random-nonnegative-interval) 0 u8-storage-class))
+          (make-specialized-array (random-nonnegative-interval) u8-storage-class))
          (ignore  ;; compute and cache the results
           (array-elements-in-order? array))
          (sampled-array
@@ -1641,7 +1635,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
   (let* ((array
-          (make-specialized-array (random-nonnegative-interval 2 4) 0 u8-storage-class))
+          (make-specialized-array (random-nonnegative-interval 2 4) u8-storage-class))
          (d-1
           (- (array-dimension array) 1))
          (ignore
@@ -1720,7 +1714,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                storage-class))
              (specialized-destination
               (make-specialized-array domain
-                                      (storage-class-default storage-class)
                                       storage-class))
              (source
               (make-array domain
@@ -1806,7 +1799,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                           source-storage-class))
              (destination
               (make-specialized-array domain
-                                      (storage-class-default destination-storage-class)
                                       destination-storage-class))
              (destination
               (if (zero? (random 2))
@@ -2813,7 +2805,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                1)
       "specialized-array-share: The third argument is not a procedure: ")
 
-(test (specialized-array-share (make-specialized-array (make-interval '#(0 0)) 2)
+(test (specialized-array-share (make-specialized-array (make-interval '#(0 0)))
                                (make-interval '#(1))
                                (lambda (i) (values i i)))
       "specialized-array-share: The second argument (a domain) has more elements than the domain of the first argument (an array): ")
@@ -3885,12 +3877,11 @@ OTHER DEALINGS IN THE SOFTWARE.
     ((= d 6))
   (let* ((unsafe-specialized-destination
           (make-specialized-array (make-interval (make-vector d 10))
-                                  0
                                   u1-storage-class))
          (safe-specialized-destination
           (make-specialized-array (make-interval (make-vector d 10))
-                                  0
                                   u1-storage-class
+                                  0
                                   #t))
          (mutable-destination
           (make-array (array-domain safe-specialized-destination)
@@ -4193,7 +4184,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (do ((d 0 (+ d 1)))
     ((= d 6))
-  (let ((A (make-specialized-array (make-interval (make-vector d 1)) 42)))
+  (let ((A (make-specialized-array (make-interval (make-vector d 1)) generic-storage-class 42)))
     (test (apply array-ref A (make-list d 0))
           42)
     (test (apply array-ref 2 (make-list d 0))
@@ -4201,10 +4192,10 @@ OTHER DEALINGS IN THE SOFTWARE.
               "array-ref: The argument is not an array: "
               "array-ref: The first argument is not an array: "))))
 
-(test (array-ref (make-specialized-array (make-interval '#(0 0)) 42) 0 0)
+(test (array-ref (make-specialized-array (make-interval '#(0 0)) generic-storage-class 42) 0 0)
       "array-getter: Array domain is empty: ")
 
-(test (array-set! (make-specialized-array (make-interval '#(0 0)) 42) 42 0 0)
+(test (array-set! (make-specialized-array (make-interval '#(0 0)) generic-storage-class 42) 42 0 0)
       "array-setter: Array domain is empty: ")
 
 (define B-set!
@@ -4234,7 +4225,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (do ((d 0 (+ d 1)))
     ((= d 6))
-  (let ((A (make-specialized-array (make-interval (make-vector d 1)) 10)))
+  (let ((A (make-specialized-array (make-interval (make-vector d 1)) generic-storage-class 10)))
     (apply array-set! A 42 (make-list d 0))
     (test (apply array-ref A (make-list d 0))
           42)
