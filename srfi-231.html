@@ -691,7 +691,7 @@
       if <code><var>array</var></code> is not a mutable array.</p>
     <p><b>Procedure: </b><code><a id="array-empty?">array-empty?</a> <var>a</var></code></p>
     <p>Assumes <code><var>a</var></code> is an array, and returns <code>(interval-empty? (array-domain <var>a</var>))</code>.  It is an error if the argument is not an array.</p>
-    <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>initial-value</var> (storage-class-default  <var>storage-class</var> ) ] [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>initial-value</var> (storage-class-default  <var>storage-class</var> ) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Constructs a mutable specialized array from its arguments.</p>
     <p><code><var>interval</var></code> must be given an interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>initial-value</var></code> must be a value that can be manipulated by <code><var>storage-class</var></code>; if it is not given it defaults to <code>(storage-class-default <var>storage-class</var>)</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>
     <p>The body of the result is constructed as </p>

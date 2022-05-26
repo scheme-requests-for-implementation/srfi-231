@@ -907,6 +907,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define %%order-unknown 1) ;; can be any nonboolean
 
+(define (%%empty-getter domain)
+  (lambda args (apply error "array-getter: Array domain is empty: " domain args)))
+
+(define (%%empty-setter domain)
+  (lambda args (apply error "array-setter: Array domain is empty: " domain args)))
+
 (define make-array
   (case-lambda
    ((domain getter)
@@ -917,7 +923,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           (else
            (make-%%array domain
                          (if (%%interval-empty? domain)
-                             (lambda args (apply error "array-getter: Array domain is empty: " domain args))
+                             (%%empty-getter domain)
                              getter)
                          #f              ; no setter
                          #f              ; storage-class
@@ -936,10 +942,10 @@ OTHER DEALINGS IN THE SOFTWARE.
           (else
            (make-%%array domain
                          (if (%%interval-empty? domain)
-                             (lambda args (apply error "array-getter: Array domain is empty: " domain args))
+                             (%%empty-getter domain)
                              getter)
                          (if (%%interval-empty? domain)
-                             (lambda args (apply error "array-setter: Array domain is empty: " domain args))
+                             (%%empty-setter domain)
                              setter)
                          #f              ; storage-class
                          #f              ; body
@@ -1763,7 +1769,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     (let ((getter
            (cond ((%%interval-empty? domain)
-                  (lambda args (apply error "array-getter: Array domain is empty: " domain args)))
+                  (%%empty-getter domain))
                  (safe?
                   (case (%%interval-dimension domain)
                     ((0)  (lambda ()
@@ -1822,7 +1828,7 @@ OTHER DEALINGS IN THE SOFTWARE.
           (setter
            (and mutable?
                 (cond ((%%interval-empty? domain)
-                       (lambda args (apply error "array-setter: Array domain is empty: " domain args)))
+                       (%%empty-setter domain))
                       (safe?
                        (case (%%interval-dimension domain)
                          ((0)  (lambda (value)
@@ -1945,8 +1951,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (%%indexer-generic 0 (%%interval-lower-bounds->list interval) increments))))))
 
 (define (%%make-specialized-array interval
-                                  initial-value
                                   storage-class
+                                  initial-value
                                   ;; must be mutable
                                   safe?)
   (let* ((body    ((storage-class-maker storage-class)
@@ -2074,9 +2080,9 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%list*->array dimension nested-data storage-class mutable? safe? "list*->array: "))))
 
- (define (%%vector*->array dimension nested-vector storage-class mutable? safe? message)
+(define (%%vector*->array dimension nested-vector storage-class mutable? safe? message)
 
-   (define (check-nested-vector dimension nested-data)
+  (define (check-nested-vector dimension nested-data)
     (or (eqv? dimension 0)  ;; anything goes in dimension 0
         (and (vector? nested-data)
              (let ((len (vector-length nested-data)))
@@ -2101,33 +2107,33 @@ OTHER DEALINGS IN THE SOFTWARE.
     (case dimension
       ((0)
        (%!array-copy (make-array (make-interval '#()) (lambda () nested-data))
-                        storage-class
-                        mutable?
-                        safe?
-                        message))
-       ((1)
-        (let ((generic-array
-               (%%make-specialized-array-from-data nested-data generic-storage-class mutable? safe?))) ;; data is always a generic-vector
-          (%!array-copy generic-array
-                        storage-class
-                        mutable?
-                        safe?
-                        message)))
-       (else
-        (if (eqv? (vector-length nested-data) 0)
-            (%!array-copy (make-array (make-interval (make-vector dimension 0)) error)
+                     storage-class
+                     mutable?
+                     safe?
+                     message))
+      ((1)
+       (let ((generic-array
+              (%%make-specialized-array-from-data nested-data generic-storage-class mutable? safe?))) ;; data is always a generic-vector
+         (%!array-copy generic-array
+                       storage-class
+                       mutable?
+                       safe?
+                       message)))
+      (else
+       (if (eqv? (vector-length nested-data) 0)
+           (%!array-copy (make-array (make-interval (make-vector dimension 0)) error)
+                         storage-class
+                         mutable?
+                         safe?
+                         message)
+           (%%array-stack 0             ;; the new dimension is always the first
+                          (map (lambda (l)
+                                 (nested-vector->array (fx- dimension 1) l))
+                               (vector->list nested-data))
                           storage-class
                           mutable?
                           safe?
-                          message)
-            (%%array-stack 0             ;; the new dimension is always the first
-                           (map (lambda (l)
-                                  (nested-vector->array (fx- dimension 1) l))
-                                (vector->list nested-data))
-                           storage-class
-                           mutable?
-                           safe?
-                           message)))))
+                          message)))))
 
   (if (check-nested-vector dimension nested-vector)
       (nested-vector->array dimension nested-vector)
@@ -2153,56 +2159,65 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define make-specialized-array
   (let ()
-    (define (one-arg interval initial-value storage-class safe?)
+    (define (one-arg interval storage-class initial-value safe?)
       (cond ((not (interval? interval))
              (error "make-specialized-array: The first argument is not an interval: "
                     interval))
             (else
              (%%make-specialized-array interval
-                                       initial-value
                                        storage-class
+                                       initial-value
                                        safe?))))
-    (define (three-args interval initial-value storage-class safe?)
+    (define (two-args interval storage-class initial-value safe?)
       (cond ((not (storage-class? storage-class))
-             (error "make-specialized-array: The third argument is not a storage-class: "
-                    interval initial-value storage-class))
-            ((not ((storage-class-checker storage-class) initial-value))
-             (error "make-specialized-array: The second argument cannot be manipulated by the third (a storage class): "
-                    interval initial-value storage-class))
+             (error "make-specialized-array: The second argument is not a storage-class: "
+                    interval storage-class))
             (else
              (one-arg interval
-                      initial-value
                       storage-class
+                      (storage-class-default storage-class)
                       safe?))))
-    (define (four-args interval initial-value storage-class safe?)
+    (define (three-args interval storage-class initial-value safe?)
+      (cond ((not (storage-class? storage-class))
+             (error "make-specialized-array: The second argument is not a storage-class: "
+                    interval storage-class initial-value))
+            ((not ((storage-class-checker storage-class) initial-value))
+             (error "make-specialized-array: The third argument cannot be manipulated by the second (a storage class): "
+                    interval storage-class initial-value))
+            (else
+             (one-arg interval           ;; calls one-arg directly, not two-args
+                      storage-class
+                      initial-value
+                      safe?))))
+    (define (four-args interval storage-class initial-value safe?)
       (cond ((not (boolean? safe?))
              (error "make-specialized-array: The fourth argument is not a boolean: "
-                    interval initial-value storage-class safe?))
+                    interval storage-class initial-value safe?))
             (else
              (three-args interval
-                         initial-value
                          storage-class
+                         initial-value
                          safe?))))
     (case-lambda
      ((interval)
       (one-arg interval
+               generic-storage-class
                (storage-class-default generic-storage-class)
-               generic-storage-class
                (specialized-array-default-safe?)))
-     ((interval initial-value)
-      (one-arg interval
-               initial-value
-               generic-storage-class
-               (specialized-array-default-safe?)))
-     ((interval initial-value storage-class)
+     ((interval storage-class)
+      (two-args interval
+                storage-class
+                'ignore
+                (specialized-array-default-safe?)))
+     ((interval storage-class initial-value)
       (three-args interval
-                  initial-value
                   storage-class
+                  initial-value
                   (specialized-array-default-safe?)))
-     ((interval initial-value storage-class safe?)
+     ((interval storage-class initial-value safe?)
       (four-args interval
-                 initial-value
                  storage-class
+                 initial-value
                  safe?)))))
 
 (define %%storage-class-compatibility-alist
@@ -2643,8 +2658,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                       safe?
                       message)
   (let ((result (%%make-specialized-array (%%array-domain array)
-                                          (storage-class-default result-storage-class)
                                           result-storage-class
+                                          (storage-class-default result-storage-class)
                                           safe?)))
     (%%move-array-elements result array message)
     (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
@@ -2957,8 +2972,12 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; new indexer, getter, and setter.
 
   (make-%%array new-domain
-                (%%array-getter array)
-                (%%array-setter array)
+                (if (%%interval-empty? new-domain)
+                    (%%empty-getter new-domain)
+                    (%%array-getter array))
+                (if (%%interval-empty? new-domain)
+                    (%%empty-setter new-domain)
+                    (%%array-setter array))
                 (%%array-storage-class array)
                 (%%array-body array)
                 (%%array-indexer array)
@@ -2989,10 +3008,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (array-tile A slice-widths)
 
   (define (%%vector-foldl op id v)
-  (let ((n (vector-length v)))
-    (do ((i 0 (fx+ i 1))
-         (id id (op id (vector-ref v i))))
-        ((fx= i n) id))))
+    (let ((n (vector-length v)))
+      (do ((i 0 (fx+ i 1))
+           (id id (op id (vector-ref v i))))
+          ((fx= i n) id))))
 
   (cond ((not (array? A))
          (error "array-tile: The first argument is not an array: " A slice-widths))
@@ -3086,7 +3105,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (if (not (and ,@(map (lambda (arg) `(exact-integer? ,arg)) args)
                                                        (,(symbol-append '%%interval-contains-multi-index?- k) result-domain ,@args)))
                                              (error "array-tile: Index to result array is not valid: " ,@args)
-                                             (array-extract
+                                             (%%array-extract
                                               A
                                               (%%finish-interval (vector ,@(map (lambda (index slice-index)
                                                                                   `(vector-ref (vector-ref offsets ,index) ,slice-index))
@@ -4208,8 +4227,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (storage-class-setter   result-storage-class))
          (result
           (%%make-specialized-array interval
-                                    (storage-class-default result-storage-class)
                                     result-storage-class
+                                    (storage-class-default result-storage-class)
                                     safe?))
          (body
           (%%array-body result))
@@ -4296,10 +4315,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ((1) (%%array->list a))
                  (else
                   (%%array->list
-                    (array-map a->l (%%array-curry a (fx- dim 1))))))))
+                   (array-map a->l (%%array-curry a (fx- dim 1))))))))
            (a->l array)))))
 
- (define (array->vector* array)
+(define (array->vector* array)
   (cond ((not (array? array))
          (error "array->vector*: The argument is not an array: " array))
         (else
@@ -4311,7 +4330,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ((1) (%%array->vector a))
                  (else
                   (%%array->vector
-                    (array-map a->v (%%array-curry a (fx- dim 1))))))))
+                   (array-map a->v (%%array-curry a (fx- dim 1))))))))
            (a->v array)))))
 
 (define (array-assign! destination source)
@@ -4388,8 +4407,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (fx+ 1 domain-dimension))
          (result-array
           (%%make-specialized-array result-domain
-                                    (storage-class-default storage-class)
                                     storage-class
+                                    (storage-class-default storage-class)
                                     safe?))
          (permuted-and-curried-result
           (%%array-curry (%%array-permute result-array (%%index-first result-dimension k))
@@ -4491,8 +4510,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                         (vector-set! lowers k 0)
                         (vector-set! uppers k kth-size)
                         (make-interval lowers uppers))  ;; copies lowers and uppers
-                      (storage-class-default storage-class)
                       storage-class
+                      (storage-class-default storage-class)
                       safe?))
                     (translation
                      ;; a vector we'll use to align each argument
@@ -4590,8 +4609,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                             (vector-map (lambda (v)
                                           (vector-ref v (fx- (vector-length v) 1)))
                                         slice-offsets))
-                           (storage-class-default storage-class)
                            storage-class
+                           (storage-class-default storage-class)
                            safe?)))
                     ;; We copy the elements from each input array block to the corresponding block
                     ;; in the result array.

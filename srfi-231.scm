@@ -987,8 +987,8 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 
 
 (format-lambda-list '(make-specialized-array interval
-                                             #\[ initial-value "(storage-class-default " storage-class")" #\]
                                              #\[ storage-class "generic-storage-class" #\]
+                                             #\[ initial-value "(storage-class-default " storage-class")" #\]
                                              #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "Constructs a mutable specialized array from its arguments.")
 (<p> (<code>(<var>'interval))" must be given an interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'initial-value))" must be a value that can be manipulated by "(<code>(<var>'storage-class))"; if it is not given it defaults to "(<code>"(storage-class-default "(<var>'storage-class)")")". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
