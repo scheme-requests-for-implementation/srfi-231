@@ -1011,6 +1011,16 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-setter obj))))
 
+(define (%%array-freeze! A)
+  (%%array-setter-set! A #f)
+  A)
+
+(define (array-freeze! A)
+  (cond ((not (array? A))
+         (error "array-freeze!: The argument is not an array: " A))
+        (else
+         (%%array-freeze! A))))
+
 ;;;
 ;;; A storage-class contains functions and objects to manipulate the
 ;;; backing store of a specialized-array.
@@ -2663,8 +2673,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                           safe?)))
     (%%move-array-elements result array message)
     (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
-        (%%array-setter-set! result #f))
-    result))
+        (%%array-freeze! result)
+        result)))
 
 (define array-copy
   (let ()
@@ -4238,10 +4248,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                (local l))
       (if (or (fx= i n) (null? local))
           (if (and (fx= i n) (null? local))
-              (begin
-                (if (not mutable?)
-                    (%%array-setter-set! result #f))
-                result)
+              (if (not mutable?)
+                    (%%array-freeze! result)
+                    result)
               (error (string-append message "The volume of the first argument does not equal the length of the second: ") l interval))
           (let ((item (car local)))
             (if (checker item)
@@ -4420,8 +4429,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (list->array (make-interval (vector number-of-arrays))
                                  arrays))
     (if (not mutable?)
-        (%%array-setter-set! result-array #f))
-    result-array))
+        (%%array-freeze! result-array)
+        result-array)))
 
 (define (array-stack k
                      arrays
@@ -4521,10 +4530,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                           (subdividers axis-subdividers))
                  (if (null? arrays)
                      ;; we've assigned every array to the appropriate subarray of result
-                     (begin
-                       (if (not mutable?)
-                           (%%array-setter-set! result #f))
-                       result)
+                     (if (not mutable?)
+                         (%%array-freeze! result)
+                         result)
                      (let ((array (car arrays)))
                        (vector-set! lowers k (car subdividers))
                        (vector-set! uppers k (cadr subdividers))
@@ -4574,8 +4582,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                                 "array-decurry: "))
                                        curried-result A)
                        (if (not mutable?)
-                           (%%array-setter-set! result #f))
-                       result))))))))
+                           (%%array-freeze! result)
+                           result)))))))))
 
 (define (array-block A-arg
                      #!optional
@@ -4676,8 +4684,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                 "array-block: ")))
                      A_D)
                     (if (not mutable?)
-                        (%%array-setter-set! result #f))
-                    result)))))))
+                        (%%array-freeze! result)
+                        result))))))))
 
 ;;; Because array-ref and array-set! have variable number of arguments, and
 ;;; they have to check on every call that the first argument is an array,

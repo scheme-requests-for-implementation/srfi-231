@@ -57,7 +57,7 @@
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li><code>char-storage-class</code> is provided.</li>
-      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
+      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, <a href="#array-freeze!"><code>array-freeze!</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -231,6 +231,7 @@
         <a href="#array-dimension">array-dimension</a>,
         <a href="#mutable-array?">mutable-array?</a>,
         <a href="#array-setter">array-setter</a>,
+        <a href="#array-freeze!">array-freeze!</a>,
         <a href="#array-empty?">array-empty?</a>,
         <a href="#make-specialized-array">make-specialized-array</a>,
         <a href="#make-specialized-array-from-data">make-specialized-array-from-data</a>,
@@ -692,6 +693,9 @@
     <pre><code>(make-array <var>interval</var> <var>getter</var> <var>setter</var>)</code></pre>
     <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
       if <code><var>array</var></code> is not a mutable array.</p>
+    <p><b>Procedure: </b><code><a id="array-freeze!">array-freeze!</a> <var>A</var></code></p>
+    <p>Modifies the array <code><var>A</var></code> so it is not mutable.  Returns the modified argument.</p>
+    <p>It is an error if <code><var>A</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a id="array-empty?">array-empty?</a> <var>a</var></code></p>
     <p>Assumes <code><var>a</var></code> is an array, and returns <code>(interval-empty? (array-domain <var>a</var>))</code>.  It is an error if the argument is not an array.</p>
     <p><b>Procedure: </b><code><a id="make-specialized-array">make-specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>initial-value</var> (storage-class-default  <var>storage-class</var> ) ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
@@ -733,21 +737,20 @@
     <pre><code>(pretty-print
  (array-&gt;list*
   (specialized-array-reshape           ;; Reshape to a zero-dimensional array
-   (array-extract                      ;; Restrict to the first element
-    (make-specialized-array-from-data  ;; The basic one-dimensional array
-     (vector 'foo 'bar 'baz))
-    (make-interval '#(1)))
+   (make-specialized-array-from-data   ;; The basic one-dimensional array
+    (vector 'foo))
    (make-interval '#()))))</code></pre>
     <p>prints simply</p>
     <pre><code>foo</code></pre>
     <p><b>Example: </b>In the sample implementation, if you want to construct a $3\times3$ array with storage class <code>u1-storage-class</code> from a length-one <code>u16vector</code> named <code><var>board</var></code> then one could write</p>
     <pre><code>(let* ((board (u16vector #b111100110111))
-       (A (specialized-array-reshape
-           (array-extract
-            (make-specialized-array-from-data board u1-storage-class)
+       (A (specialized-array-reshape           ;; Reshape to a 3x3 array
+           (array-extract                      ;; Only the first 9 elements
+            (make-specialized-array-from-data  ;; The basic one-dimensional array
+             board u1-storage-class)
             (make-interval '#(9)))
            (make-interval '#(3 3))))
-       (B (list-&gt;array (make-interval '#(3 3))
+       (B (list-&gt;array (make-interval '#(3 3)) ;; Another array with same elements
                        '(1 1 1
                          0 1 1
                          0 0 1)
@@ -1418,6 +1421,7 @@ indexer:       (lambda multi-index
     <p>Assumes that <code><var>A</var></code> is an array, and returns a newly allocated nested list <code><var>nested-list</var></code>.  If <code><var>A</var></code> is nonempty and has positive dimension and we denote the getter of <code><var>A</var></code> by <code>A_</code>, then <code><var>nested-list</var></code> and <code>A_</code> satisfy</p>
     <pre><code>(A_ i_0 ... i_d-2 i_d-1)
 =&gt; (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)</code></pre>
+    <p>Each element of <code><var>A</var></code> is accessed once.</p>
     <p>If <code><var>A</var></code> is zero dimensional, then <code>array-&gt;list*</code> returns <code>((array-getter <var>A</var>))</code>.  If the argument is an empty array, then the nested lists of the result match the first nonzero dimensions (if any).  For example:</p>
     <pre><code>(array-&gt;list* (make-array (make-interval '#()) (lambda () 2))) =&gt; 2 ;; no list
 (array-&gt;list* (make-array (make-interval '#(0)) error)) =&gt; '()
@@ -1466,6 +1470,7 @@ indexer:       (lambda multi-index
     <pre><code>(A_ i_0 ... i_d-2 i_d-1)
 =&gt; (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)</code></pre>
     <p>If <code><var>A</var></code> is empty or zero dimensional, then see the examples for <code>array-&gt;list*</code>.:</p>
+    <p>Each element of <code><var>A</var></code> is accessed once.</p>
     <p>It is an error if <code><var>A</var></code> is not an array.</p>
     <p><b>Procedure: </b><code><a id="array-assign!">array-assign!</a> <var>destination</var> <var>source</var></code></p>
     <p>Assumes that <code><var>destination</var></code> is a mutable array and <code><var>source</var></code> is an array with the same domain, and that the elements of <code><var>source</var></code> can be stored into <code><var>destination</var></code>.</p>
@@ -1490,6 +1495,7 @@ indexer:       (lambda multi-index
                        (drop <var>indices</var> (+ <var>k</var> 1)))))))))</code></pre>
     <p>In other words we &quot;stack&quot; the argument arrays along a new <code><var>k</var></code>'th axis, the lower bound of which is set to 0.</p>
     <p>Any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>Each element of any of the <code><var>arrays</var></code> is accessed once.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Example: </b>Let's say we have a spreadsheet <code><var>A</var></code> and we want to make a new spreadsheet <code><var>B</var></code> with the same rows but with the data from only columns 1, 2, 5, and 8.  Using the routine <code>array-display</code> we define below, code to do this can look like:</p>
     <pre><code>(let* ((A
@@ -1517,18 +1523,25 @@ indexer:       (lambda multi-index
     <pre><code>(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
     <p><b>Procedure: </b><code><a id="array-decurry">array-decurry</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>A</var></code> is a nonempty array of arrays; the elements of <code><var>A</var></code> are assumed to all have the same (possibly empty) domain. Also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
-    <p><code>array-decurry</code> evaluates each array element of <code><var>A</var></code> once, and evaluates each element of <code>A</code>'s array elements once.  <code>array-decurry</code> returns a specialized array containing the elements of <code><var>A</var></code>'s array elements that is equivalent to: </p>
-    <pre><code>(let ((A_dim (array-dimension A))
-      (A_    (array-getter A))
-      (A_D   (array-domain A)))
-  (array-copy (make-array (interval-cartesian-product
-                           A_D
-                           (array-domain (apply A_ (interval-lower-bounds-&gt;list A_D))))
-                          (lambda args
-                            (apply array-ref (apply A_ (take A_dim args)) (drop A_dim args))))
-              storage-class
-              mutable?
-              safe?))</code></pre>
+    <p><code>array-decurry</code> evaluates each array element of <code><var>A</var></code> once, and evaluates each element of <code>A</code>'s array elements once.  <code>array-decurry</code> returns a specialized array containing the elements of <code><var>A</var></code>'s array elements; ignoring optional arguments, the result  is equivalent to: </p>
+    <pre><code>(let* ((A
+        (array-copy A))      ;; evaluate all elements of A once
+       (A_dim
+        (array-dimension A))
+       (A_
+        (array-getter A))
+       (A_D
+        (array-domain A))
+       (element-domain
+        (array-domain (apply A_ (interval-lower-bounds-&gt;list A_D))))
+       (result-domain
+        (interval-cartesian-product A_D element-domain))
+       (result
+        (make-specialized-array result-domain))
+       (curried-result
+        (array-curry result (interval-dimension element-domain))))
+  (array-for-each array-assign! result-array A)
+  result-array)</code></pre>
     <p>Any missing optional arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of <code><var>A</var></code>'s array elements.</p>
     <p><b>Procedure: </b><code><a id="array-append">array-append</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
@@ -1583,6 +1596,7 @@ indexer:       (lambda multi-index
              (array-translate array translation))
             (loop (cdr arrays)
                   (cdr subdividers)))))))</code></pre>
+    <p>Each element of any of the <code><var>arrays</var></code> is accessed once.</p>
     <p>Any missing optional arguments are assigned <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p><b>Example:</b> Given a two-dimensional array $a$ interpreted as a spreadsheet, with the rows and columns indexed starting at 0, one might want to make a new array with row $k$ moved to be the top row.  Then one could do:</p>
@@ -1634,7 +1648,7 @@ indexer:       (lambda multi-index
            slice)))
       slices)))
  (iota (array-dimension A)))</code></pre>
-    <p>This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>A</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>A</var></code> successively along each coordinate axis of <code><var>A</var></code>, in any order of the axes.</p>
+    <p>This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>A</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>A</var></code> successively along each coordinate axis of <code><var>A</var></code>, in any order of the axes.  Each element of <code><var>A</var></code> is accessed once, and each element of <code><var>A</var></code>'s array elements is accessed once.</p>
     <p>Omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.</p>
     <p><b>Examples: </b></p>

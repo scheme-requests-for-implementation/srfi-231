@@ -136,7 +136,8 @@ MathJax.Hub.Config({
                (<a> href: "#array-inner-product" (<code>'array-inner-product))", "
                (<a> href: "#array-stack" (<code>'array-stack))", "
                (<a> href: "#array-append" (<code>'array-append))", "
-               (<a> href: "#array-block" (<code>'array-block))
+               (<a> href: "#array-block" (<code>'array-block))", "
+               (<a> href: "#array-freeze!" (<code>'array-freeze!))
                ", and "
                (<a> href: "#array-decurry" (<code>'array-decurry))
                ".")
@@ -420,6 +421,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-dimension" "array-dimension")END
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
+                 (<a> href: "#array-freeze!" "array-freeze!")END
                  (<a> href: "#array-empty?" "array-empty?")END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
                  (<a> href: "#make-specialized-array-from-data" "make-specialized-array-from-data")END
@@ -989,6 +991,10 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 (<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". It is an error to call "(<code> 'array-setter)"
 if "(<code>(<var> 'array))" is not a mutable array.")
 
+(format-lambda-list '(array-freeze! A))
+(<p> "Modifies the array "(<code>(<var>'A))" so it is not mutable.  Returns the modified argument.")
+(<p> "It is an error if "(<code>(<var>'A))" is not an array.")
+
 (format-lambda-list '(array-empty? a))
 (<p> "Assumes "(<code>(<var>'a))" is an array, and returns "(<code>"(interval-empty? (array-domain "(<var>'a)"))")".  It is an error if the argument is not an array.")
 
@@ -1049,26 +1055,25 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 
 (<p>(<b>"Discussion:")" Correct transformations on specialized arrays "(<i>'require)" that the array's indexer, which maps the domain of the array to exact integers that index elements of the one-dimensional body of the array, be "(<i>'affine)".  The procedure "(<code>'make-specialized-array-from-data)" provides a structured way to turn externally-provided data into an array with a known, very simple, one-dimensional affine indexer.  With this start, the programmer can apply array transforms (e.g., "(<code>'array-extract)", "(<code>'specialized-array-reshape)", etc.) to massage the data into the shape needed.")
 (<p>"For example, to build a zero-dimensional array that stores its single element in a pre-existing vector, one could use the code:")
-(<pre>(<code>"(pretty-print
+(<pre>(<code>
+"(pretty-print
  (array->list*
   (specialized-array-reshape           ;; Reshape to a zero-dimensional array
-   (array-extract                      ;; Restrict to the first element
-    (make-specialized-array-from-data  ;; The basic one-dimensional array
-     (vector 'foo 'bar 'baz))
-    (make-interval '#(1)))
+   (make-specialized-array-from-data   ;; The basic one-dimensional array
+    (vector 'foo))
    (make-interval '#()))))"))
 (<p> "prints simply")
 (<pre>(<code>'foo))
 
 (<p> (<b> "Example: ")"In the sample implementation, if you want to construct a $3\\times3$ array with storage class "(<code>'u1-storage-class)" from a length-one "(<code>'u16vector)" named "(<code>(<var>'board))" then one could write")
-(<pre>(<code>
-"(let* ((board (u16vector #b111100110111))
-       (A (specialized-array-reshape
-           (array-extract
-            (make-specialized-array-from-data board u1-storage-class)
+(<pre>(<code>"(let* ((board (u16vector #b111100110111))
+       (A (specialized-array-reshape           ;; Reshape to a 3x3 array
+           (array-extract                      ;; Only the first 9 elements
+            (make-specialized-array-from-data  ;; The basic one-dimensional array
+             board u1-storage-class)
             (make-interval '#(9)))
            (make-interval '#(3 3))))
-       (B (list->array (make-interval '#(3 3))
+       (B (list->array (make-interval '#(3 3)) ;; Another array with same elements
                        '(1 1 1
                          0 1 1
                          0 0 1)
@@ -1930,6 +1935,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<pre>(<code>
 "(A_ i_0 ... i_d-2 i_d-1)
 => (list-ref (list-ref (... (list-ref nested-list i_0) ...) i_d-2) i_d-1)"))
+(<p> "Each element of "(<code>(<var>'A))" is accessed once.")
 (<p> "If "(<code>(<var>'A))" is zero dimensional, then "(<code>'array->list*)" returns "(<code>"((array-getter "(<var>'A)"))")".  If the argument is an empty array, then the nested lists of the result match the first nonzero dimensions (if any).  For example:")
 (<pre>(<code>"(array->list* (make-array (make-interval '#()) (lambda () 2))) => 2 ;; no list
 (array->list* (make-array (make-interval '#(0)) error)) => '()
@@ -1991,7 +1997,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 "(A_ i_0 ... i_d-2 i_d-1)
 => (vector-ref (vector-ref (... (vector-ref nested-vector i_0) ...) i_d-2) i_d-1)"))
 (<p> "If "(<code>(<var>'A))" is empty or zero dimensional, then see the examples for "(<code>'array->list*)".:")
-
+(<p> "Each element of "(<code>(<var>'A))" is accessed once.")
 (<p> "It is an error if "(<code>(<var>'A))" is not an array.")
 
 (format-lambda-list '(array-assign! destination source))
@@ -2019,6 +2025,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                        (drop "(<var>'indices)" (+ "(<var>'k)" 1)))))))))"))
 (<p> "In other words we \"stack\" the argument arrays along a new "(<code>(<var>'k))"'th axis, the lower bound of which is set to 0.")
 (<p> "Any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "Each element of any of the "(<code>(<var>'arrays))" is accessed once.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 (<p> (<b> "Example: ")"Let's say we have a spreadsheet "(<code>(<var>'A))" and we want to make a new spreadsheet "(<code>(<var>'B))" with the same rows but with the data from only columns 1, 2, 5, and 8.  Using the routine "(<code>'array-display)" we define below, code to do this can look like:")
 (<pre>(<code>"(let* ((A
@@ -2048,18 +2055,26 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(array-decurry A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "(<code>(<var>'A))" is a nonempty array of arrays; the elements of "(<code>(<var>'A))" are assumed to all have the same (possibly empty) domain. Also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> (<code>'array-decurry)" evaluates each array element of "(<code>(<var>'A))" once, and evaluates each element of "(<code>'A)"'s array elements once.  "(<code>'array-decurry)" returns a specialized array containing the elements of "(<code>(<var>'A))"'s array elements that is equivalent to: ")
-(<pre>(<code>"(let ((A_dim (array-dimension A))
-      (A_    (array-getter A))
-      (A_D   (array-domain A)))
-  (array-copy (make-array (interval-cartesian-product
-                           A_D
-                           (array-domain (apply A_ (interval-lower-bounds->list A_D))))
-                          (lambda args
-                            (apply array-ref (apply A_ (take A_dim args)) (drop A_dim args))))
-              storage-class
-              mutable?
-              safe?))"))
+(<p> (<code>'array-decurry)" evaluates each array element of "(<code>(<var>'A))" once, and evaluates each element of "(<code>'A)"'s array elements once.  "(<code>'array-decurry)" returns a specialized array containing the elements of "(<code>(<var>'A))"'s array elements; ignoring optional arguments, the result  is equivalent to: ")
+(<pre>(<code>
+"(let* ((A
+        (array-copy A))      ;; evaluate all elements of A once
+       (A_dim
+        (array-dimension A))
+       (A_
+        (array-getter A))
+       (A_D
+        (array-domain A))
+       (element-domain
+        (array-domain (apply A_ (interval-lower-bounds->list A_D))))
+       (result-domain
+        (interval-cartesian-product A_D element-domain))
+       (result
+        (make-specialized-array result-domain))
+       (curried-result
+        (array-curry result (interval-dimension element-domain))))
+  (array-for-each array-assign! result-array A)
+  result-array)"))
 (<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of "(<code>(<var>'A))"'s array elements.")
 
@@ -2116,6 +2131,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
              (array-translate array translation))
             (loop (cdr arrays)
                   (cdr subdividers)))))))"))
+(<p> "Each element of any of the "(<code>(<var>'arrays))" is accessed once.")
 (<p> "Any missing optional arguments are assigned "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 (<p>(<b>"Example:")" Given a two-dimensional array $a$ interpreted as a spreadsheet, with the rows and columns indexed starting at 0, one might want to make a new array with row $k$ moved to be the top row.  Then one could do:")
@@ -2170,7 +2186,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
            slice)))
       slices)))
  (iota (array-dimension A)))"))
-(<p> "This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.")
+(<p> "This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.  Each element of "(<code>(<var>'A))" is accessed once, and each element of "(<code>(<var>'A))"'s array elements is accessed once.")
 (<p> "Omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.")
 (<p>(<b> "Examples: "))

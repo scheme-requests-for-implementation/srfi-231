@@ -65,6 +65,7 @@
     array-dimension
     mutable-array?
     array-setter
+    array-freeze!
     specialized-array-default-safe?
     specialized-array-default-mutable?
     array-empty?

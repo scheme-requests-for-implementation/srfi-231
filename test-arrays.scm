@@ -912,6 +912,22 @@ OTHER DEALINGS IN THE SOFTWARE.
       (test (array-domain array)
             domain))))
 
+(pp "array-freeze! tests")
+
+(test (array-freeze! 'a)
+      "array-freeze!: The argument is not an array: ")
+
+(let ((A (make-specialized-array (make-interval '#()))))
+  (test (mutable-array? A)
+        #t)
+  (let ((B (array-freeze! A)))
+    (test (mutable-array? B)
+          #f)
+    (test (eq? A B)
+          #t))
+  (test (mutable-array? A)
+        #f))
+
 (define (myindexer= indexer1 indexer2 interval)
   (array-foldl (lambda (x y) (and x y))
                #t
@@ -2820,13 +2836,24 @@ OTHER DEALINGS IN THE SOFTWARE.
       "array-decurry: Not all elements of the source can be stored in destination: ")
 
 (define (my-array-decurry  A)
-  (let ((A_dim (array-dimension A))
-        (A_    (array-getter A))
-        (A_D   (array-domain A)))
-    (make-array (interval-cartesian-product A_D
-                                            (array-domain (apply A_ (interval-lower-bounds->list A_D))))
-                (lambda args
-                  (apply array-ref (apply A_ (take A_dim args)) (drop A_dim args))))))
+  (let* ((A
+          (array-copy A))      ;; evaluate all elements of A once
+         (A_dim
+          (array-dimension A))
+         (A_
+          (array-getter A))
+         (A_D
+          (array-domain A))
+         (element-domain
+          (array-domain (apply A_ (interval-lower-bounds->list A_D))))
+         (result-domain
+          (interval-cartesian-product A_D (array-domain (apply A_ (interval-lower-bounds->list A_D)))))
+         (result
+          (make-specialized-array result-domain u1-storage-class))
+         (curried-result
+          (array-curry result (interval-dimension element-domain))))
+    (array-for-each array-assign! result-array A)
+    result-array))
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
