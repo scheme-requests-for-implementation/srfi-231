@@ -106,6 +106,7 @@
     array-append
     array-block
     array-stack
+    array-decurry
     specialized-array-reshape
     array-ref
     array-set!

@@ -4537,6 +4537,46 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (loop (cdr arrays)
                              (cdr subdividers)))))))))))
 
+(define (array-decurry A-arg
+                       #!optional
+                       (storage-class generic-storage-class)
+                       (mutable?      (specialized-array-default-mutable?))
+                       (safe?         (specialized-array-default-safe?)))
+  (cond ((not (array? A-arg))
+         (error "array-decurry: The first argument is not an array: " A-arg))
+        ((%%array-empty? A-arg)
+         (error "array-decurry: The first argument is an empty array: " A-arg))
+        ((not (storage-class? storage-class))
+         (error "array-decurry: The second argument is not a storage class: " A-arg storage-class))
+        ((not (boolean? mutable?))
+         (error "array-decurry: The third argument is not a boolean: " A-arg storage-class mutable?))
+        ((not (boolean? safe?))
+         (error "array-decurry: The fourth argument is not a boolean: " A-arg storage-class mutable? safe?))
+        (else
+         (let* ((A   (array-copy A-arg))
+                (A_  (%%array-getter A))
+                (A_D (%%array-domain A)))
+           (if (not (%%array-every array? A '()))
+               (error "array-decurry: Not all elements of the first argument (an array) are arrays: " A-arg)
+               (let* ((first-element (apply A_ (%%interval-lower-bounds->list A_D)))
+                      (first-domain  (%%array-domain first-element)))
+                 (if (not (%%array-every  (lambda (a) (%%interval= (%%array-domain a) first-domain)) A '()))
+                     (error "array-decurry: Not all elements of the first argument (an array) have the domain: " A-arg)
+                     (let* ((result-domain  (%%interval-cartesian-product (list A_D first-domain)))
+                            (result         (%%make-specialized-array result-domain
+                                                                      storage-class
+                                                                      (storage-class-default storage-class)
+                                                                      safe?))
+                            (curried-result (%%array-curry result (%%interval-dimension first-domain))))
+                       (array-for-each (lambda (result argument)
+                                         (%%move-array-elements result
+                                                                argument
+                                                                "array-decurry: "))
+                                       curried-result A)
+                       (if (not mutable?)
+                           (%%array-setter-set! result #f))
+                       result))))))))
+
 (define (array-block A-arg
                      #!optional
                      (storage-class generic-storage-class)

@@ -57,7 +57,7 @@
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li><code>char-storage-class</code> is provided.</li>
-      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, and <a href="#array-block"><code>array-block</code></a>.</li>
+      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -89,8 +89,9 @@
       <li><a href="#array-copy"><code>array-copy</code></a>: Evaluates the argument array at all valid indices and stores those values into a new specialized array.</li>
       <li><a href="#array-assign!"><code>array-assign!</code></a>: Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine <code>array-map</code>, <code>array-outer-product</code>, <code>array-extract</code>, and <code>array-assign!</code> to do one step of the elimination.</li>
       <li><a href="#array-stack"><code>array-stack</code></a>: Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to <code>array-curry</code>.  Returns a specialized array.</li>
+      <li><a href="#array-decurry"><code>array-decurry</code></a>: Takes a &quot;curried&quot; array of arrays, and returns a single array with the same elements.  An inverse to <code>array-curry</code>; a multi-dimensional version of <code>array-stack</code>.</li>
       <li><a href="#array-append"><code>array-append</code></a>: Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.  A partial inverse to <code>array-tile</code>.</li>
-      <li><a href="#array-block"><code>array-block</code></a>: Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to <a href="#array-tile"><code>array-tile</code></a>.</li>
+      <li><a href="#array-block"><code>array-block</code></a>: Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to <a href="#array-tile"><code>array-tile</code></a>; a multi-dimensional version of array-append.</li>
       <li><a href="#array-foldl"><code>array-foldl</code></a>, <a href="#array-foldr"><code>array-foldr</code></a>, <a href="#array-reduce"><code>array-reduce</code></a>, <a href="#array-for-each"><code>array-for-each</code></a>, <a href="#array-any"><code>array-any</code></a>, and <a href="#array-every"><code>array-every</code></a>: Evaluates all elements of an array (for <code>array-every</code> and <code>array-any</code>, as many as needed to know the result), and combines them in certain ways.</li>
     </ul>
     <p>Finally, we have procedures that convert between other data and arrays:</p>
@@ -266,9 +267,10 @@
         <a href="#vector*-rarrow-array">vector*-&gt;array</a>,
         <a href="#array-rarrow-vector*">array-&gt;vector*</a>,
         <a href="#array-assign!">array-assign!</a>,
+        <a href="#array-stack">array-stack</a>,
+        <a href="#array-decurry">array-decurry</a>,
         <a href="#array-append">array-append</a>,
         <a href="#array-block">array-block</a>,
-        <a href="#array-stack">array-stack</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
         <a href="#specialized-array-reshape">specialized-array-reshape</a>.</dd></dl>
@@ -1513,6 +1515,22 @@ indexer:       (lambda multi-index
 (3 1)   (3 2)   (3 5)   (3 8)</code></pre>
     <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one line:</p>
     <pre><code>(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
+    <p><b>Procedure: </b><code><a id="array-decurry">array-decurry</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>A</var></code> is a nonempty array of arrays; the elements of <code><var>A</var></code> are assumed to all have the same (possibly empty) domain. Also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p><code>array-decurry</code> evaluates each array element of <code><var>A</var></code> once, and evaluates each element of <code>A</code>'s array elements once.  <code>array-decurry</code> returns a specialized array containing the elements of <code><var>A</var></code>'s array elements that is equivalent to: </p>
+    <pre><code>(let ((A_dim (array-dimension A))
+      (A_    (array-getter A))
+      (A_D   (array-domain A)))
+  (array-copy (make-array (interval-cartesian-product
+                           A_D
+                           (array-domain (apply A_ (interval-lower-bounds-&gt;list A_D))))
+                          (lambda args
+                            (apply array-ref (apply A_ (take A_dim args)) (drop A_dim args))))
+              storage-class
+              mutable?
+              safe?))</code></pre>
+    <p>Any missing optional arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
+    <p>It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of <code><var>A</var></code>'s array elements.</p>
     <p><b>Procedure: </b><code><a id="array-append">array-append</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>arrays</var></code> is a nonnull list of arrays with domains that differ at most in the <code><var>k</var></code>'th axis,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
     <p>This routine appends, or concatenates, the argument arrays along the <var>k</var>'th axis, with the lower bound of this axis set to 0.</p>

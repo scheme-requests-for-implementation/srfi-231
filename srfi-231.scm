@@ -81,6 +81,7 @@ MathJax.Hub.Config({
          (<li> "Draft #6 published: 2022-03-17")
          (<li> "Draft #7 published: 2022-04-25")
          (<li> "Draft #8 published: 2022-05-23")
+         (<li> "Draft #9 published: 2022-05-26")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -134,8 +135,11 @@ MathJax.Hub.Config({
                (<a> href: "#array-rarrow-vector*" (<code>'array->vector*))", "
                (<a> href: "#array-inner-product" (<code>'array-inner-product))", "
                (<a> href: "#array-stack" (<code>'array-stack))", "
-               (<a> href: "#array-append" (<code>'array-append))", and "
-               (<a> href: "#array-block" (<code>'array-block))".")
+               (<a> href: "#array-append" (<code>'array-append))", "
+               (<a> href: "#array-block" (<code>'array-block))
+               ", and "
+               (<a> href: "#array-decurry" (<code>'array-decurry))
+               ".")
          (<li> "A new set of \"Introductory remarks\" surveys some of the more important procedures in this SRFI.")
          )
 
@@ -183,10 +187,12 @@ MathJax.Hub.Config({
                ": Evaluates the argument array at all valid indices and assigns their values to the elements of an existing array.  In the Gaussian Elimination example below, we combine "(<code>'array-map)", "(<code>'array-outer-product)", "(<code>'array-extract)", and "(<code>'array-assign!)" to do one step of the elimination.")
          (<li> (<a> href:"#array-stack"(<code>'array-stack))
                ": Like taking the individually rendered frames of an animated movie and combining them in time to make a complete video.  Can be considered a partial inverse to "(<code>'array-curry)".  Returns a specialized array.")
+         (<li> (<a> href:"#array-decurry" (<code>'array-decurry))
+               ": Takes a \"curried\" array of arrays, and returns a single array with the same elements.  An inverse to "(<code>'array-curry)"; a multi-dimensional version of "(<code>'array-stack)".")
          (<li> (<a> href:"#array-append"(<code>'array-append))
                ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.  A partial inverse to "(<code>'array-tile)".")
          (<li> (<a> href: "#array-block"(<code>'array-block))
-               ": Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to "(<a> href: "#array-tile" (<code>'array-tile))".")
+               ": Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to "(<a> href: "#array-tile" (<code>'array-tile))"; a multi-dimensional version of array-append.")
          (<li> (<a> href:"#array-foldl"(<code>'array-foldl))", "
                (<a> href:"#array-foldr"(<code>'array-foldr))", "
                (<a> href:"#array-reduce"(<code>'array-reduce))", "
@@ -450,9 +456,10 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#vector*-rarrow-array" "vector*->array") END
                  (<a> href: "#array-rarrow-vector*" "array->vector*") END
                  (<a> href: "#array-assign!" "array-assign!") END
+                 (<a> href: "#array-stack" "array-stack") END
+                 (<a> href: "#array-decurry" "array-decurry") END
                  (<a> href: "#array-append" "array-append") END
                  (<a> href: "#array-block" "array-block") END
-                 (<a> href: "#array-stack" "array-stack") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
                  (<a> href: "#specialized-array-reshape" "specialized-array-reshape")
@@ -2038,6 +2045,24 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p>"In fact, because "(<code>(<var>'A))" is a generalized array, the only elements of "(<code>(<var>'A))" that are generated are the ones that are assigned as elements of "(<code>(<var>'B))". The result could also be computed in one line:")
 (<pre>(<code>
 "(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))"))
+
+(format-lambda-list '(array-decurry A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(<p> "Assumes that "(<code>(<var>'A))" is a nonempty array of arrays; the elements of "(<code>(<var>'A))" are assumed to all have the same (possibly empty) domain. Also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> (<code>'array-decurry)" evaluates each array element of "(<code>(<var>'A))" once, and evaluates each element of "(<code>'A)"'s array elements once.  "(<code>'array-decurry)" returns a specialized array containing the elements of "(<code>(<var>'A))"'s array elements that is equivalent to: ")
+(<pre>(<code>"(let ((A_dim (array-dimension A))
+      (A_    (array-getter A))
+      (A_D   (array-domain A)))
+  (array-copy (make-array (interval-cartesian-product
+                           A_D
+                           (array-domain (apply A_ (interval-lower-bounds->list A_D))))
+                          (lambda args
+                            (apply array-ref (apply A_ (take A_dim args)) (drop A_dim args))))
+              storage-class
+              mutable?
+              safe?))"))
+(<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
+(<p> "It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of "(<code>(<var>'A))"'s array elements.")
+
 
 (format-lambda-list '(array-append k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")

@@ -2790,6 +2790,63 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
+(pp "array-decurry tests")
+
+(test (array-decurry 'a)
+      "array-decurry: The first argument is not an array: ")
+
+(test (array-decurry (make-array (make-interval '#(0)) list))
+      "array-decurry: The first argument is an empty array: ")
+
+(test (array-decurry (make-array (make-interval '#()) list) 'a)
+      "array-decurry: The second argument is not a storage class: ")
+
+(test (array-decurry (make-array (make-interval '#()) list) generic-storage-class 'a)
+      "array-decurry: The third argument is not a boolean: ")
+
+(test (array-decurry (make-array (make-interval '#()) list) generic-storage-class #f 'a)
+      "array-decurry: The fourth argument is not a boolean: ")
+
+(test (array-decurry (make-array (make-interval '#()) list))
+      "array-decurry: Not all elements of the first argument (an array) are arrays: ")
+
+(test (array-decurry (list*->array 1 (list (make-array (make-interval '#()) list)
+                                           (make-array (make-interval '#(1)) list))))
+      "array-decurry: Not all elements of the first argument (an array) have the domain: ")
+
+(test (array-decurry (list*->array 1 (list (make-array (make-interval '#(1)) list)
+                                           (make-array (make-interval '#(1)) list)))
+                     u1-storage-class)
+      "array-decurry: Not all elements of the source can be stored in destination: ")
+
+(define (my-array-decurry  A)
+  (let ((A_dim (array-dimension A))
+        (A_    (array-getter A))
+        (A_D   (array-domain A)))
+    (make-array (interval-cartesian-product A_D
+                                            (array-domain (apply A_ (interval-lower-bounds->list A_D))))
+                (lambda args
+                  (apply array-ref (apply A_ (take A_dim args)) (drop A_dim args))))))
+
+(do ((i 0 (+ i 1)))
+    ((= i random-tests))
+  (let* ((outer-domain
+          (random-nonempty-interval 0 5))
+         (inner-domain
+          (random-interval 0 5))
+         (A
+          (array-copy (make-array (interval-cartesian-product outer-domain inner-domain)
+                                  (lambda args
+                                    (random 2)))
+                      u1-storage-class))
+         (A-curried
+          (array-curry A (interval-dimension inner-domain)))
+         (A-decurried
+          (array-decurry A-curried u1-storage-class)))
+    (test (myarray= A A-decurried)
+          #t)))
+
+(next-test-random-source-state!)
 
 (pp "specialized-array-share error tests")
 
@@ -2819,7 +2876,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (lambda (i)
                                            (- 9 i))))
       #t)
-
 
 (pp "specialized-array-share result tests")
 
