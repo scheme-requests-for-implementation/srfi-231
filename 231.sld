@@ -76,7 +76,7 @@
     array-indexer
     array-body
     array-safe?
-    array-elements-in-order?
+    array-packed?
     specialized-array-share
     array-curry
     array-extract

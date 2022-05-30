@@ -1610,7 +1610,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-empty? obj))))
 
-(define (%%compute-array-elements-in-order? domain indexer)
+(define (%%compute-array-packed? domain indexer)
   (or (%%interval-empty? domain)
       (case (%%interval-dimension domain)
         ((0) #t)
@@ -1718,22 +1718,22 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ;; return a proper boolean instead of the volume of the domain
                  #t))))))
 
-(define (%%array-elements-in-order? array)
+(define (%%array-packed? array)
   (let ((in-order? (%%array-in-order? array)))
     (if (boolean? in-order?)
         in-order?
         (let ((in-order?
-               (%%compute-array-elements-in-order?
+               (%%compute-array-packed?
                 (%%array-domain array)
                 (%%array-indexer array))))
           (%%array-in-order?-set! array in-order?)
           in-order?))))
 
-(define (array-elements-in-order? array)
+(define (array-packed? array)
   (cond ((not (specialized-array? array))
-         (error "array-elements-in-order?: The argument is not a specialized array: " array))
+         (error "array-packed?: The argument is not a specialized array: " array))
         (else
-         (%%array-elements-in-order? array))))
+         (%%array-packed? array))))
 
 
 (define (%%finish-specialized-array domain storage-class body indexer mutable? safe? in-order?)
@@ -2347,14 +2347,14 @@ OTHER DEALINGS IN THE SOFTWARE.
              destination source))
 
   (if (specialized-array? destination)
-      (if (%%array-elements-in-order? destination)
+      (if (%%array-packed? destination)
           ;; Maybe we can do a block copy
           (if (and (specialized-array? source)
                    (eq? (%%array-storage-class destination)
                         (%%array-storage-class source))
                    ;; does a copier for this storage-class exist?
                    (storage-class-copier (%%array-storage-class destination))
-                   (%%array-elements-in-order? source))
+                   (%%array-packed? source))
               ;; do a block copy
               (begin
                 (if (not (%%interval-empty? (%%array-domain source)))
@@ -2942,36 +2942,6 @@ OTHER DEALINGS IN THE SOFTWARE.
               (%%array-getter array)
               (%%array-setter array)))
 
-;;; Elements of extracted arrays of in-order specialized
-;;; arrays are not in order unless
-;;; (1) the differences in the upper and lower bounds of the
-;;;     first dimensions all equal 1 *and*
-;;; (2) the next dimension doesn't matter *and*
-;;; (3) the upper and lower bounds of the latter dimensions
-;;;     of the original and extracted arrays are the same
-;;; Whew!
-
-;;; This takes time to compute, and whether an array is in order is
-;;; not always of interest, so we don't compute it.
-
-(define (%%extracted-array-elements-in-order? base extracted)
-  ;; This version is untested; the version in test-arrays.scm is tested.
-  (let* ((base-domain (%%array-domain base))
-         (extracted-domain (%%array-domain extracted))
-         (dim (%%interval-dimension base-domain)))
-    (let loop-1 ((i 0))
-      (or (fx= i (fx- dim 1))
-          (or (and (fx= 1 (- (interval-upper-bound extracted-domain i)
-                             (interval-lower-bound extracted-domain i)))
-                   (loop-1 (fx+ i 1)))
-              (let loop-2 ((i (fx+ i 1)))
-                (or (fx= i dim)
-                    (and (= (interval-upper-bound extracted-domain i)
-                            (interval-upper-bound base-domain i))
-                         (= (interval-lower-bound extracted-domain i)
-                            (interval-lower-bound base-domain i))
-                         (loop-2 (fx+ i 1))))))))))
-
 (define (%%specialized-array-extract array new-domain)
 
   ;; (%%specialized-array-share array new-domain values)
@@ -2985,9 +2955,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (if (%%interval-empty? new-domain)
                     (%%empty-getter new-domain)
                     (%%array-getter array))
-                (if (%%interval-empty? new-domain)
-                    (%%empty-setter new-domain)
-                    (%%array-setter array))
+                (and (%%array-setter array)   ;; If array has no setter, then don't add one to extracted array
+                     (if (%%interval-empty? new-domain)
+                         (%%empty-setter new-domain)
+                         (%%array-setter array)))
                 (%%array-storage-class array)
                 (%%array-body array)
                 (%%array-indexer array)
@@ -3735,13 +3706,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                   ;; But even if it isn't, the subarrays may be in order, so we
                   ;; compute once whether all the subarrays are in order.
                   ;; We do this without actually instantiating one of the subarrays.
-                  (%%compute-array-elements-in-order?
+                  (%%compute-array-packed?
                    ;; The same domain for all subarrays.
                    right-interval
                    ;; The new indexer computed using the general, nonspecialized new-domain->old-domain function,
                    ;; applied specifically to the first multi-index in the left-interval.
                    ;; If any of the arrays are empty then the indexers could be nonsense, but
-                   ;; %%compute-array-elements-in-order? special-cases empty intervals.
+                   ;; %%compute-array-packed? special-cases empty intervals.
                    (%%compose-indexers (%%array-indexer array)
                                        right-interval
                                        (lambda right-multi-index

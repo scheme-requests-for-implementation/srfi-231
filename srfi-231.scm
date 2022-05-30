@@ -118,6 +118,7 @@ MathJax.Hub.Config({
          (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", and "(<a> href: "#index-last" (<code>'index-last))".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> (<code>'array-tile)" is now more flexible in how you can decompose an array.")
+         (<li> (<code>'array-elements-in-order?)" has been renamed "(<code>'array-packed?)".")
          (<li> (<code>'char-storage-class)" is provided.")
          (<li> "Introduced new procedures "
                (<a> href: "#interval-width" (<code>'interval-width))", "
@@ -323,13 +324,6 @@ they may have hash tables or databases behind an implementation, one may read th
         (<h3> "Notational convention")
         (<p> "If "(<code>(<var>'A))" is an array, then we generally define "(<code>(<var>'A_))" to be "(<code>"(array-getter "(<var>'A)")")" and  "(<code>(<var>'A!))" to be "(<code>"(array-setter "(<var>'A)")")".  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in "(<code>(<var>"!"))", while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the "(<a> href: "#Haar" "Haar transform")" example.")
 
-
-        (<h2> "Issues")
-        (<ul>
-         (<li> "Could "(<a> href: "#array-elements-in-order?" (<code> "array-elements-in-order?"))" have a better name or description?")
-         )
-
-
         (<h2> "Notes")
         (<ul>
          (<li> (<b> "Empty and zero-dimensional arrays: ")"The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme "(<code>'box)".  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.")
@@ -430,7 +424,7 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-indexer" "array-indexer")END
                  (<a> href: "#array-body" "array-body")END
                  (<a> href: "#array-safe?" "array-safe?") END
-                 (<a> href: "#array-elements-in-order?" "array-elements-in-order?") END
+                 (<a> href: "#array-packed?" "array-packed?") END
                  (<a> href: "#specialized-array-share" "specialized-array-share")END
                  (<a> href: "#array-copy" "array-copy")END
                  (<a> href: "#array-curry" "array-curry")END
@@ -1113,7 +1107,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (<p> "Please see "(<a> href: "#make-specialized-array" (<code>'make-specialized-array))" for how "(<code>"(array-body "(<var>'array)")")", etc., are used.")
 (<p> "It is an error to call any of these procedures if "(<code>(<var> 'array))" is not a specialized array.")
 
-(format-lambda-list '(array-elements-in-order? A))
+(format-lambda-list '(array-packed? A))
 (<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))" are stored in "(<code>"(array-body "(<var>'A)")")" with increasing and consecutive indices, and "(<code>'#f)" otherwise.")
 (<p> "It is an error if "(<code>(<var>'A))" is not a specialized array.")
 

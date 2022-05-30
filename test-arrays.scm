@@ -61,11 +61,11 @@ OTHER DEALINGS IN THE SOFTWARE.
     %%vector-permute
     %%vector-permute->list
     %%order-unknown
-    %%compute-array-elements-in-order?
+    %%compute-array-packed?
     %%array-domain
     %%array-indexer
     %%array-getter
-    %%array-elements-in-order?))
+    %%array-packed?))
   )
 
 (declare (standard-bindings)(extended-bindings)(block)(not safe) (mostly-fixnum))
@@ -1416,19 +1416,19 @@ OTHER DEALINGS IN THE SOFTWARE.
     (lambda ()
       (vector-ref storage-classes (random n)))))
 
-(pp "array-elements-in-order? tests")
+(pp "array-packed? tests")
 
 ;; We'll use specialized arrays with u1-storage-class---we never
 ;; use the array contents, just the indexers, and it saves storage.
 
-(test (array-elements-in-order? 1)
-      "array-elements-in-order?: The argument is not a specialized array: ")
+(test (array-packed? 1)
+      "array-packed?: The argument is not a specialized array: ")
 
-(test (array-elements-in-order? (make-array (make-interval '#(1 2)) list))
-      "array-elements-in-order?: The argument is not a specialized array: ")
+(test (array-packed? (make-array (make-interval '#(1 2)) list))
+      "array-packed?: The argument is not a specialized array: ")
 
-(test (array-elements-in-order? (make-array (make-interval '#(1 2)) list list)) ;; not valid setter
-      "array-elements-in-order?: The argument is not a specialized array: ")
+(test (array-packed? (make-array (make-interval '#(1 2)) list list)) ;; not valid setter
+      "array-packed?: The argument is not a specialized array: ")
 
 ;; all these are true, we'll have to see how to screw it up later.
 
@@ -1437,7 +1437,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (let ((array
          (make-specialized-array (random-interval)
                                  u1-storage-class)))
-    (test (array-elements-in-order? array)
+    (test (array-packed? array)
           #t)))
 
 (next-test-random-source-state!)
@@ -1451,7 +1451,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                   u1-storage-class))
          (curried
           (array-curry base (random 1 (array-dimension base)))))
-    (test (array-every array-elements-in-order? curried)
+    (test (array-every array-packed? curried)
           #t)))
 
 (next-test-random-source-state!)
@@ -1467,7 +1467,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;     of the original and extracted arrays are the same
 ;; Whew!
 
-(define (extracted-array-elements-in-order? base extracted)
+(define (extracted-array-packed? base extracted)
   (let ((base-domain (array-domain base))
         (extracted-domain (array-domain extracted))
         (dim (array-dimension base)))
@@ -1493,8 +1493,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                   u1-storage-class))
          (extracted
           (array-extract base (random-subinterval (array-domain base)))))
-    (test (array-elements-in-order? extracted)
-          (extracted-array-elements-in-order? base extracted))))
+    (test (array-packed? extracted)
+          (extracted-array-packed? base extracted))))
 
 (next-test-random-source-state!)
 
@@ -1512,7 +1512,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (make-vector (array-dimension base))))
          (reversed
           (array-reverse base reversed-dimensions)))
-    (test (array-elements-in-order? reversed)
+    (test (array-packed? reversed)
           (or (array-empty? reversed)
               (%%vector-every
                (lambda (lower upper reversed)
@@ -1529,7 +1529,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;; A permuted array has elements in order iff all the dimensions with
 ;; sidelength > 1 are in the same order, or if it's empty.
 
-(define (permuted-array-elements-in-order? array permutation)
+(define (permuted-array-packed? array permutation)
   (let* ((domain
           (array-domain array))
          (axes-and-limits
@@ -1560,8 +1560,8 @@ OTHER DEALINGS IN THE SOFTWARE.
           (random-permutation (array-dimension base)))
          (permuted
           (array-permute base permutation)))
-    (test (array-elements-in-order? permuted)
-          (permuted-array-elements-in-order? base permutation))))
+    (test (array-packed? permuted)
+          (permuted-array-packed? base permutation))))
 
 (next-test-random-source-state!)
 
@@ -1569,7 +1569,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;; dimensions with side-length 1 at the beginning, all the rest
 ;; of the dimensions have sidelengths the same as the original
 
-(define (sampled-array-elements-in-order? base scales)
+(define (sampled-array-packed? base scales)
   (let* ((domain
           (array-domain base))
          (sampled-base
@@ -1608,12 +1608,12 @@ OTHER DEALINGS IN THE SOFTWARE.
           (random-positive-vector (array-dimension base) 4))
          (sampled
           (array-sample base scales)))
-    (test (array-elements-in-order? sampled)
-          (sampled-array-elements-in-order? base scales))))
+    (test (array-packed? sampled)
+          (sampled-array-packed? base scales))))
 
 (next-test-random-source-state!)
 
-;;; Now we need to test the precomputation and caching of array-elements-in-order?
+;;; Now we need to test the precomputation and caching of array-packed?
 ;;; The only places we precompute are
 ;;; 1.  after creating a new specialized array
 ;;; 2.  in %%specialized-array-translate
@@ -1622,8 +1622,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; So we need to check these situations.
 
 (let ((array (array-copy (make-array (make-interval '#(3 5)) list))))
-  (test (and (%%array-elements-in-order? array)
-             (%%compute-array-elements-in-order? (%%array-domain array) (%%array-indexer array)))
+  (test (and (%%array-packed? array)
+             (%%compute-array-packed? (%%array-domain array) (%%array-indexer array)))
         #t))
 
 (do ((i 0 (+ i 1)))
@@ -1631,20 +1631,20 @@ OTHER DEALINGS IN THE SOFTWARE.
   (let* ((array
           (make-specialized-array (random-nonnegative-interval) u8-storage-class))
          (ignore  ;; compute and cache the results
-          (array-elements-in-order? array))
+          (array-packed? array))
          (sampled-array
           (array-sample array (random-sample (array-dimension array))))
          (ignore  ;; compute and cache the results
           ;; possibly not in order
-          (array-elements-in-order? sampled-array))
+          (array-packed? sampled-array))
          (translated-array
           (array-translate array (vector-map (lambda (x) (random 10)) (make-vector (array-dimension array)))))
          (translated-sampled-array
           (array-translate sampled-array (vector-map (lambda (x) (random 10)) (make-vector (array-dimension array))))))
-    (test (%%array-elements-in-order? translated-array)
-          (%%compute-array-elements-in-order? (%%array-domain translated-array) (%%array-indexer translated-array)))
-    (test (%%array-elements-in-order? translated-sampled-array)
-          (%%compute-array-elements-in-order? (%%array-domain translated-sampled-array) (%%array-indexer translated-sampled-array)))))
+    (test (%%array-packed? translated-array)
+          (%%compute-array-packed? (%%array-domain translated-array) (%%array-indexer translated-array)))
+    (test (%%array-packed? translated-sampled-array)
+          (%%compute-array-packed? (%%array-domain translated-sampled-array) (%%array-indexer translated-sampled-array)))))
 
 (next-test-random-source-state!)
 
@@ -1656,30 +1656,30 @@ OTHER DEALINGS IN THE SOFTWARE.
           (- (array-dimension array) 1))
          (ignore
           ;; compute and cache the result, in order
-          (array-elements-in-order? array))
+          (array-packed? array))
          (rotated-array
           (array-permute array (index-rotate (array-dimension array) 1)))
          (ignore  ;; compute and cache the results
           ;; possibly not in order
-          (array-elements-in-order? rotated-array))
+          (array-packed? rotated-array))
          (sampled-array
           (array-sample array (list->vector (cons 2 (make-list d-1 1)))))
          (ignore
           ;; almost definitely not in order,
           ;; but if we curry it with dimension 1 the subarrays are in order.
-          (array-elements-in-order? sampled-array))
+          (array-packed? sampled-array))
          (curried-array
           (array-ref (array-curry array d-1) (interval-lower-bound (array-domain array) 0)))
          (curried-rotated-array
           (array-ref (array-curry rotated-array d-1) (interval-lower-bound (array-domain rotated-array) 0)))
          (curried-sampled-array
           (array-ref (array-curry sampled-array d-1) (interval-lower-bound (array-domain sampled-array) 0))))
-    (test (array-elements-in-order? curried-array)
-          (%%compute-array-elements-in-order? (%%array-domain curried-array) (%%array-indexer curried-array)))
-    (test (array-elements-in-order? curried-rotated-array)
-          (%%compute-array-elements-in-order? (%%array-domain curried-rotated-array) (%%array-indexer curried-rotated-array)))
-    (test (array-elements-in-order? curried-sampled-array)
-          (%%compute-array-elements-in-order? (%%array-domain curried-sampled-array) (%%array-indexer curried-sampled-array)))))
+    (test (array-packed? curried-array)
+          (%%compute-array-packed? (%%array-domain curried-array) (%%array-indexer curried-array)))
+    (test (array-packed? curried-rotated-array)
+          (%%compute-array-packed? (%%array-domain curried-rotated-array) (%%array-indexer curried-rotated-array)))
+    (test (array-packed? curried-sampled-array)
+          (%%compute-array-packed? (%%array-domain curried-sampled-array) (%%array-indexer curried-sampled-array)))))
 
 (next-test-random-source-state!)
 
@@ -1754,7 +1754,7 @@ OTHER DEALINGS IN THE SOFTWARE.
               #t)
         ;; copy to non-adjacent elements of destination, no checking needed
         (test (%%move-array-elements (array-reverse specialized-destination) specialized-source "test: ")
-              (if (array-elements-in-order? (array-reverse specialized-destination))
+              (if (array-packed? (array-reverse specialized-destination))
                   "In order, no checks needed"
                   "Out of order, no checks needed"))
         (test (myarray= specialized-source (array-reverse specialized-destination))
@@ -1825,7 +1825,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (if (array-every destination-checker source)
             (test (let ((%%move-result
                          (%%move-array-elements destination source "test: ")))
-                    (and (equal? (if (array-elements-in-order? destination)
+                    (and (equal? (if (array-packed? destination)
                                      (cond ((and (eq? destination-storage-class source-storage-class)
                                                  (storage-class-copier destination-storage-class))
                                             "Block copy")
@@ -3607,6 +3607,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-extract (make-array (make-interval '#(0 0) '#(1 1)) list)
                      (make-interval '#(0 0) '#(1 3)))
       "array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): ")
+
+(let* ((A (list->array (make-interval '#(10)) (iota 10)  generic-storage-class #f)) ;; not mutable
+       (B (array-extract A (make-interval '#(0)))))   ;; used to tickle a bug
+  (test (mutable-array? A)
+        #f)
+  (test (mutable-array? B)
+        #f))
+
 (do ((i 0 (fx+ i 1)))
     ((fx= i random-tests))
   (let* ((domain (random-interval))

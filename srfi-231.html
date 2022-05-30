@@ -56,6 +56,7 @@
       <li>Procedures that generate useful permutations have been added: <a href="#index-rotate"><code>index-rotate</code></a>, <a href="#index-first"><code>index-first</code></a>, and <a href="#index-last"><code>index-last</code></a>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
+      <li><code>array-elements-in-order?</code> has been renamed <code>array-packed?</code>.</li>
       <li><code>char-storage-class</code> is provided.</li>
       <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, <a href="#array-freeze!"><code>array-freeze!</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
@@ -143,10 +144,6 @@
     <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, <code>array-tile</code>, and <code>array-sample</code>,  and we provide relatively efficient implementations of these procedures for arrays of dimension no greater than four.</p>
     <h3>Notational convention</h3>
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
-    <h2>Issues</h2>
-    <ul>
-      <li>Could <a href="#array-elements-in-order?"><code>array-elements-in-order?</code></a> have a better name or description?</li>
-    </ul>
     <h2>Notes</h2>
     <ul>
       <li><b>Empty and zero-dimensional arrays: </b>The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme <code>box</code>.  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.</li>
@@ -240,7 +237,7 @@
         <a href="#array-indexer">array-indexer</a>,
         <a href="#array-body">array-body</a>,
         <a href="#array-safe?">array-safe?</a>,
-        <a href="#array-elements-in-order?">array-elements-in-order?</a>,
+        <a href="#array-packed?">array-packed?</a>,
         <a href="#specialized-array-share">specialized-array-share</a>,
         <a href="#array-copy">array-copy</a>,
         <a href="#array-curry">array-curry</a>,
@@ -785,7 +782,7 @@
     <p><code>(array-indexer <var>array</var>)</code> is assumed to be a one-to-one, but not necessarily onto,  affine mapping from <code>(array-domain <var>array</var>)</code> into  the indexing domain of <code>(array-body <var>array</var>)</code>.</p>
     <p>Please see <a href="#make-specialized-array"><code>make-specialized-array</code></a> for how <code>(array-body <var>array</var>)</code>, etc., are used.</p>
     <p>It is an error to call any of these procedures if <code><var>array</var></code> is not a specialized array.</p>
-    <p><b>Procedure: </b><code><a id="array-elements-in-order?">array-elements-in-order?</a> <var>A</var></code></p>
+    <p><b>Procedure: </b><code><a id="array-packed?">array-packed?</a> <var>A</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a specialized array, in which case it returns <code>#t</code> if the elements of <code><var>A</var></code> are stored in <code>(array-body <var>A</var>)</code> with increasing and consecutive indices, and <code>#f</code> otherwise.</p>
     <p>It is an error if <code><var>A</var></code> is not a specialized array.</p>
     <p><b>Procedure: </b><code><a id="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
