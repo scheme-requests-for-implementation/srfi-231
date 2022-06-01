@@ -45,7 +45,7 @@
     </ul>
     <p>This SRFI differs from the finalized <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a> in the following ways:</p>
     <ul>
-      <li>Empty and zero-dimensional arrays are incorporated into this SRFI.  It is an error to call the setter or getter of an empty array.  Zero-dimensional arrays specify their sole element wtih an empty multi-index.</li>
+      <li>Empty and zero-dimensional arrays are incorporated into this SRFI.  It is an error to call the setter or getter of an empty array.  Zero-dimensional arrays specify their sole element with an empty multi-index.</li>
       <li><code>specialized-array-default-safe?</code> and <code>specialized-array-default-mutable?</code> are now <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a> parameters.</li>
       <li><code>list-&gt;array</code> is now called as <code>(list-&gt;array interval list ...)</code>; i.e., the order of the first two arguments has been reversed.</li>
       <li><code>array-copy</code> no longer allows changing the domain of the result, use <code>(specialized-array-reshape (array-copy ...) <var>new-domain</var>)</code> instead.</li>
