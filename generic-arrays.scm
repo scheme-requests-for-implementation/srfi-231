@@ -2054,11 +2054,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                       message))
       (else
        (if (null? nested-data)
-           (%!array-copy (make-array (make-interval (make-vector dimension 0)) error)
-                         storage-class
-                         mutable?
-                         safe?
-                         message)
+           (let ((result (%%make-specialized-array (make-interval (make-vector dimension 0))
+                                                   storage-class
+                                                   (storage-class-default storage-class) ;; never used
+                                                   safe?)))
+             (if (not mutable?)
+                 (%%array-freeze! result)
+                 result))
            (%%array-stack 0             ;; the new dimension is always the first
                           (map (lambda (l)
                                  (nested-list->array (fx- dimension 1) l))
@@ -2133,11 +2135,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                        message)))
       (else
        (if (eqv? (vector-length nested-data) 0)
-           (%!array-copy (make-array (make-interval (make-vector dimension 0)) error)
-                         storage-class
-                         mutable?
-                         safe?
-                         message)
+           (let ((result (make-specialized-array (make-interval (make-vector dimension 0))
+                                                 storage-class
+                                                 (storage-class-default storage-class) ;; never used
+                                                 safe?)))
+             (if (not mutable?)
+                 (%%array-freeze! result)
+                 result))
            (%%array-stack 0             ;; the new dimension is always the first
                           (map (lambda (l)
                                  (nested-vector->array (fx- dimension 1) l))
@@ -2397,6 +2401,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (let ((body (%%array-body destination)))
                          (%%interval-for-each
                           (case (%%interval-dimension domain)
+                            ((0)  (let ((index initial-offset))
+                                    (lambda ()
+                                      (vector-set! body index (getter))
+                                      (set! index (fx+ index 1)))))    ;; not necessary
                             ((1)  (let ((index initial-offset))
                                     (lambda (i)
                                       (vector-set! body index (getter i))
@@ -2433,6 +2441,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (body (%%array-body destination)))
                          (%%interval-for-each
                           (case (%%interval-dimension domain)
+                            ((0)  (let ((index initial-offset))
+                                    (lambda ()
+                                      (setter body index (getter))
+                                      (set! index (fx+ index 1))))) ;; not necessary
                             ((1)  (let ((index initial-offset))
                                     (lambda (i)
                                       (setter body index (getter i))
@@ -2465,6 +2477,19 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (storage-class-setter destination-storage-class)))
                          (%%interval-for-each
                           (case (%%interval-dimension domain)
+                            ((0)
+                             (let ((index initial-offset))
+                               (lambda ()
+                                 (let ((item (getter)))
+                                   (if (checker item)
+                                       (begin
+                                         (setter body index item)
+                                         (set! index (fx+ index 1)))  ;; not necessary
+                                       (error
+                                        (string-append
+                                         caller
+                                         "Not all elements of the source can be stored in destination: ")
+                                        destination source item))))))
                             ((1)
                              (let ((index initial-offset))
                                (lambda (i)
@@ -2554,6 +2579,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                    ;; no checks needed
                    (%%interval-for-each
                     (case (%%interval-dimension domain)
+                      ((0) (lambda ()
+                             (setter (getter))))
                       ((1) (lambda (i)
                              (setter (getter i) i)))
                       ((2) (lambda (i j)
@@ -2571,6 +2598,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                    ;; checks needed
                    (%%interval-for-each
                     (case (%%interval-dimension domain)
+                      ((0)
+                       (lambda ()
+                         (let ((item (getter)))
+                           (if (checker item)
+                               (setter item)
+                               (error
+                                (string-append
+                                 caller
+                                 "Not all elements of the source can be stored in destination: ")
+                                destination source item)))))
                       ((1)
                        (lambda (i)
                          (let ((item (getter i)))
@@ -2634,6 +2671,8 @@ OTHER DEALINGS IN THE SOFTWARE.
              (%%array-domain destination)))
         (%%interval-for-each
          (case (%%interval-dimension domain)
+           ((0) (lambda ()
+                  (setter (getter))))
            ((1) (lambda (i)
                   (setter (getter i)
                           i)))
@@ -3085,35 +3124,30 @@ OTHER DEALINGS IN THE SOFTWARE.
                                           (args    (map (lambda (j) (symbol-append 'i_ j)) indices)))
                                      `((,k)
                                        (lambda ,args
-                                         (if (not (and ,@(map (lambda (arg) `(exact-integer? ,arg)) args)
-                                                       (,(symbol-append '%%interval-contains-multi-index?- k) result-domain ,@args)))
-                                             (error "array-tile: Index to result array is not valid: " ,@args)
-                                             (%%array-extract
-                                              A
-                                              (%%finish-interval (vector ,@(map (lambda (index slice-index)
-                                                                                  `(vector-ref (vector-ref offsets ,index) ,slice-index))
-                                                                                indices args))
-                                                                 (vector ,@(map (lambda (index slice-index)
-                                                                                  `(vector-ref (vector-ref offsets ,index) (fx+ ,slice-index 1)))
-                                                                                indices args)))))))))
-                                 '(1 2 3 4))
+                                         (%%array-extract
+                                          A
+                                          (%%finish-interval (vector ,@(map (lambda (index slice-index)
+                                                                              `(vector-ref (vector-ref offsets ,index) ,slice-index))
+                                                                            indices args))
+                                                             (vector ,@(map (lambda (index slice-index)
+                                                                              `(vector-ref (vector-ref offsets ,index) (fx+ ,slice-index 1)))
+                                                                            indices args))))))))
+                                 '(0 1 2 3 4))
                           (else
                            (lambda i
-                             (if (not (and (fx= (length i) A-dim)
-                                           (%%every (lambda (x) (exact-integer? x)) i)
-                                           (%%interval-contains-multi-index?-general result-domain i)))
-                                 (apply error "array-tile: Index to result array is not valid: " i)
-                                 (let* ((i
-                                         (list->vector i))
-                                        (subdomain
-                                         (%%finish-interval (vector-map (lambda (slice-offsets i) (vector-ref slice-offsets i)) offsets i)
-                                                            (vector-map (lambda (slice-offsets i) (vector-ref slice-offsets (fx+ i 1))) offsets i))))
-                                   (%%array-extract A subdomain)))))))
+                             (let* ((i
+                                     (list->vector i))
+                                    (subdomain
+                                     (%%finish-interval (vector-map (lambda (slice-offsets i) (vector-ref slice-offsets i)) offsets i)
+                                                        (vector-map (lambda (slice-offsets i) (vector-ref slice-offsets (fx+ i 1))) offsets i))))
+                               (%%array-extract A subdomain))))))
 
-                     (make-array result-domain (generate-result))))))))))
+                     (%%make-safe-immutable-array result-domain (generate-result) "array-tile: ")))))))))
 
 (define (%%getter-translate getter translation)
   (case (vector-length translation)
+    ((0) (lambda ()
+           (getter)))
     ((1) (lambda (i)
            (getter (- i (vector-ref translation 0)))))
     ((2) (lambda (i j)
@@ -3139,6 +3173,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%setter-translate setter translation)
   (case (vector-length translation)
+    ((0) (lambda (v)
+           (setter v)))
     ((1) (lambda (v i)
            (setter v
                    (- i (vector-ref translation 0)))))
@@ -3202,7 +3238,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   (define (permutations l)
     ;; generates list of all permutations of l
-    (if (null? (cdr l))
+    (if (or (null? l)
+            (null? (cdr l)))
         (list l)
         (apply append (map (lambda (i)
                              (let ((x    (list-ref l i))
@@ -3226,7 +3263,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                               ,`(,name ,@(transform-arguments args)))))
                                         (permutations (take '(0 1 2 3) i))
                                         (permutations args))))))
-                '(1 2 3 4))
+                '(0 1 2 3 4))
          (else
           (let ((n (vector-length permutation))
                 (permutation-inverse (%%permutation-invert permutation)))
@@ -3316,7 +3353,7 @@ OTHER DEALINGS IN THE SOFTWARE.
        (case (vector-length flip?)
          ,@(map (lambda (n)
                   (generate-code-for-fixed-n name transform-arguments n))
-                '(1 2 3 4))
+                '(0 1 2 3 4))
          (else
           (let ((n
                  (vector-length flip?))
@@ -3453,7 +3490,7 @@ OTHER DEALINGS IN THE SOFTWARE.
        (case (vector-length scales)
          ,@(map (lambda (n)
                   (code-for-one-n name transformer n))
-                '(1 2 3 4))
+                '(0 1 2 3 4))
          (else
           (let ((n
                  (vector-length scales))
@@ -3509,7 +3546,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%immutable-array-sample array scales))))
 
-(define (%%array-outer-product combiner A B)
+(define (%%array-outer-product combiner A B message)
   (let* ((D_A            (%%array-domain A))
          (D_B            (%%array-domain B))
          (A_             (%%array-getter A))
@@ -3593,7 +3630,7 @@ OTHER DEALINGS IN THE SOFTWARE.
              (lambda args
                (combiner (apply A_ (take args dim_A))
                          (apply B_ (drop args dim_A))))))))
-    (make-array result-domain result-getter)))
+    (%%make-safe-immutable-array result-domain result-getter message)))
 
 (define (array-outer-product combiner array1 array2)
   (cond ((not (array? array1))
@@ -3603,38 +3640,100 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (procedure? combiner))
          (error "array-outer-product: The first argument is not a procedure: " combiner array1 array2))
         (else
-         (%%array-outer-product combiner array1 array2))))
+         (%%array-outer-product combiner array1 array2 "array-outer-product: "))))
+
+(define (%%make-safe-immutable-array domain getter message)
+  (case (%%interval-dimension domain)
+    ((0) (make-array domain
+                     (lambda ()
+                       (getter))))
+    ((1) (make-array domain
+                     (lambda (i)
+                       (cond ((not (exact-integer? i))
+                              (error (string-append message "multi-index component is not an exact integer: ") i))
+                             ((not (%%interval-contains-multi-index?-1 domain i))
+                              (error (string-append message "domain does not contain multi-index: ") domain i))
+                             (else
+                              (getter i))))))
+    ((2) (make-array domain
+                     (lambda (i j)
+                       (cond ((not (and (exact-integer? i)
+                                        (exact-integer? j)))
+                              (error (string-append message "multi-index component is not an exact integer: ") i j))
+                             ((not (%%interval-contains-multi-index?-2 domain i j))
+                              (error (string-append message "domain does not contain multi-index: ") domain i j))
+                             (else
+                              (getter i j))))))
+    ((3) (make-array domain
+                     (lambda (i j k)
+                       (cond ((not (and (exact-integer? i)
+                                        (exact-integer? j)
+                                        (exact-integer? k)))
+                              (error (string-append message "multi-index component is not an exact integer: ") i j k))
+                             ((not (%%interval-contains-multi-index?-3 domain i j k))
+                              (error (string-append message "domain does not contain multi-index: ") domain i j k))
+                             (else
+                              (getter i j k))))))
+    ((4) (make-array domain
+                     (lambda (i j k l)
+                       (cond ((not (and (exact-integer? i)
+                                        (exact-integer? j)
+                                        (exact-integer? k)
+                                        (exact-integer? l)))
+                              (error (string-append message "multi-index component is not an exact integer: ") i j k l))
+                             ((not (%%interval-contains-multi-index?-4 domain i j k l))
+                              (error (string-append message "domain does not contain multi-index: ") domain i j k l))
+                             (else
+                              (getter i j k l))))))
+    (else (make-array domain
+                      (lambda multi-index
+                        (cond ((not (%%every exact-integer? multi-index))
+                               (apply error (string-append message "multi-index component is not an exact integer: ") multi-index))
+                              ((not (= (length multi-index) (%%interval-dimension domain)))
+                               (apply error (string-append message "multi-index is not the correct dimension: ") domain multi-index))
+                              ((not (%%interval-contains-multi-index?-general domain multi-index))
+                               (apply error (string-append message "domain does not contain multi-index: ") domain multi-index))
+                              (else
+                               (apply getter multi-index))))))))
 
 (define (%%immutable-array-curry array right-dimension)
   (call-with-values
       (lambda () (%%interval-projections (%%array-domain array) right-dimension))
     (lambda (left-interval right-interval)
       (let ((getter (%%array-getter array)))
-        (make-array left-interval
-                    (case (%%interval-dimension left-interval)
-                      ((0)  (lambda () array))
-                      ((1)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i)       (make-array right-interval (lambda ()          (getter i)))))
-                              ((1)  (lambda (i)       (make-array right-interval (lambda (j)         (getter i j)))))
-                              ((2)  (lambda (i)       (make-array right-interval (lambda (j k)       (getter i j k)))))
-                              ((3)  (lambda (i)       (make-array right-interval (lambda (j k l)     (getter i j k l)))))
-                              (else (lambda (i)       (make-array right-interval (lambda multi-index (apply getter i multi-index)))))))
-                      ((2)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i j)     (make-array right-interval (lambda ( )         (getter i j)))))
-                              ((1)  (lambda (i j)     (make-array right-interval (lambda (  k)       (getter i j k)))))
-                              ((2)  (lambda (i j)     (make-array right-interval (lambda (  k l)     (getter i j k l)))))
-                              (else (lambda (i j)     (make-array right-interval (lambda multi-index (apply getter i j multi-index)))))))
-                      ((3)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i j k)   (make-array right-interval (lambda (   )       (getter i j k)))))
-                              ((1)  (lambda (i j k)   (make-array right-interval (lambda (    l)     (getter i j k l)))))
-                              (else (lambda (i j k)   (make-array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
-                      ((4)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i j k l) (make-array right-interval (lambda (     )     (getter i j k l)))))
-                              (else (lambda (i j k l) (make-array right-interval (lambda multi-index (apply getter i j k l multi-index)))))))
-                      (else (lambda left-multi-index
-                              (make-array right-interval
-                                          (lambda right-multi-index
-                                            (apply getter (append left-multi-index right-multi-index))))))))))))
+        (%%make-safe-immutable-array
+         left-interval
+         (case (%%interval-dimension left-interval)
+           ((0)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda ()        (make-array right-interval (lambda ()          (getter)))))
+                   ((1)  (lambda ()        (make-array right-interval (lambda (i)         (getter i)))))
+                   ((2)  (lambda ()        (make-array right-interval (lambda (i j)       (getter i j)))))
+                   ((3)  (lambda ()        (make-array right-interval (lambda (i j k)     (getter i j k)))))
+                   ((4)  (lambda ()        (make-array right-interval (lambda (i j k l)   (getter i j k l)))))
+                   (else (lambda ()        (make-array right-interval (lambda multi-index (apply getter multi-index)))))))
+           ((1)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i)       (make-array right-interval (lambda ()          (getter i)))))
+                   ((1)  (lambda (i)       (make-array right-interval (lambda (j)         (getter i j)))))
+                   ((2)  (lambda (i)       (make-array right-interval (lambda (j k)       (getter i j k)))))
+                   ((3)  (lambda (i)       (make-array right-interval (lambda (j k l)     (getter i j k l)))))
+                   (else (lambda (i)       (make-array right-interval (lambda multi-index (apply getter i multi-index)))))))
+           ((2)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j)     (make-array right-interval (lambda ( )         (getter i j)))))
+                   ((1)  (lambda (i j)     (make-array right-interval (lambda (  k)       (getter i j k)))))
+                   ((2)  (lambda (i j)     (make-array right-interval (lambda (  k l)     (getter i j k l)))))
+                   (else (lambda (i j)     (make-array right-interval (lambda multi-index (apply getter i j multi-index)))))))
+           ((3)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j k)   (make-array right-interval (lambda (   )       (getter i j k)))))
+                   ((1)  (lambda (i j k)   (make-array right-interval (lambda (    l)     (getter i j k l)))))
+                   (else (lambda (i j k)   (make-array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
+           ((4)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j k l) (make-array right-interval (lambda (     )     (getter i j k l)))))
+                   (else (lambda (i j k l) (make-array right-interval (lambda multi-index (apply getter i j k l multi-index)))))))
+           (else (lambda left-multi-index
+                   (make-array right-interval
+                               (lambda right-multi-index
+                                 (apply getter (append left-multi-index right-multi-index)))))))
+         "array-curry: ")))))
 
 (define (%%mutable-array-curry array right-dimension)
   (call-with-values
@@ -3642,59 +3741,79 @@ OTHER DEALINGS IN THE SOFTWARE.
     (lambda (left-interval right-interval)
       (let ((getter (%%array-getter array))
             (setter (%%array-setter   array)))
-        (make-array left-interval
-                    (case (%%interval-dimension left-interval)
-                      ((0)  (lambda () array))
-                      ((1)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i)       (make-array right-interval
-                                                                  (lambda ( )       (getter   i))
-                                                                  (lambda (v)       (setter v i)))))
-                              ((1)  (lambda (i)       (make-array right-interval
-                                                                  (lambda (  j)     (getter   i j))
-                                                                  (lambda (v j)     (setter v i j)))))
-                              ((2)  (lambda (i)       (make-array right-interval
-                                                                  (lambda (  j k)   (getter   i j k))
-                                                                  (lambda (v j k)   (setter v i j k)))))
-                              ((3)  (lambda (i)       (make-array right-interval
-                                                                  (lambda (  j k l) (getter   i j k l))
-                                                                  (lambda (v j k l) (setter v i j k l)))))
-                              (else (lambda (i)       (make-array right-interval
-                                                                  (lambda      multi-index  (apply getter   i       multi-index))
-                                                                  (lambda (v . multi-index) (apply setter v i       multi-index)))))))
-                      ((2)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i j)     (make-array right-interval
-                                                                  (lambda (   )     (getter   i j))
-                                                                  (lambda (v  )     (setter v i j)))))
-                              ((1)  (lambda (i j)     (make-array right-interval
-                                                                  (lambda (    k)   (getter   i j k))
-                                                                  (lambda (v   k)   (setter v i j k)))))
-                              ((2)  (lambda (i j)     (make-array right-interval
-                                                                  (lambda (    k l) (getter   i j k l))
-                                                                  (lambda (v   k l) (setter v i j k l)))))
-                              (else (lambda (i j)     (make-array right-interval
-                                                                  (lambda      multi-index  (apply getter   i j     multi-index))
-                                                                  (lambda (v . multi-index) (apply setter v i j     multi-index)))))))
-                      ((3)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i j k)   (make-array right-interval
-                                                                  (lambda (     )   (getter   i j k))
-                                                                  (lambda (v    )   (setter v i j k)))))
-                              ((1)  (lambda (i j k)   (make-array right-interval
-                                                                  (lambda (      l) (getter   i j k l))
-                                                                  (lambda (v     l) (setter v i j k l)))))
-                              (else (lambda (i j k)   (make-array right-interval
-                                                                  (lambda      multi-index  (apply getter   i j k   multi-index))
-                                                                  (lambda (v . multi-index) (apply setter v i j k   multi-index)))))))
-                      ((4)  (case (%%interval-dimension right-interval)
-                              ((0)  (lambda (i j k l) (make-array right-interval
-                                                                  (lambda (     )   (getter   i j k l))
-                                                                  (lambda (v    )   (setter v i j k l)))))
-                              (else (lambda (i j k l) (make-array right-interval
-                                                                  (lambda      multi-index  (apply getter   i j k l multi-index))
-                                                                  (lambda (v . multi-index) (apply setter v i j k l multi-index)))))))
-                      (else (lambda left-multi-index
-                              (make-array right-interval
-                                          (lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
-                                          (lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))
+        (%%make-safe-immutable-array
+         left-interval
+         (case (%%interval-dimension left-interval)
+           ((0)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda ()        (make-array right-interval
+                                                       (lambda ( )       (getter  ))
+                                                       (lambda (v)       (setter v)))))
+                   ((1)  (lambda ()        (make-array right-interval
+                                                       (lambda (  i)     (getter   i))
+                                                       (lambda (v i)     (setter v i)))))
+                   ((2)  (lambda ()        (make-array right-interval
+                                                       (lambda (  i j)   (getter   i j))
+                                                       (lambda (v i j)   (setter v i j)))))
+                   ((3)  (lambda ()        (make-array right-interval
+                                                       (lambda (  i j k) (getter   i j k))
+                                                       (lambda (v i j k) (setter v i j k)))))
+                   ((4)  (lambda ()        (make-array right-interval
+                                                       (lambda (  i j k l) (getter   i j k l))
+                                                       (lambda (v i j k l) (setter v i j k l)))))
+                   (else (lambda ()        (make-array right-interval
+                                                       (lambda      multi-index  (apply getter           multi-index))
+                                                       (lambda (v . multi-index) (apply setter v         multi-index)))))))
+           ((1)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i)       (make-array right-interval
+                                                       (lambda ( )       (getter   i))
+                                                       (lambda (v)       (setter v i)))))
+                   ((1)  (lambda (i)       (make-array right-interval
+                                                       (lambda (  j)     (getter   i j))
+                                                       (lambda (v j)     (setter v i j)))))
+                   ((2)  (lambda (i)       (make-array right-interval
+                                                       (lambda (  j k)   (getter   i j k))
+                                                       (lambda (v j k)   (setter v i j k)))))
+                   ((3)  (lambda (i)       (make-array right-interval
+                                                       (lambda (  j k l) (getter   i j k l))
+                                                       (lambda (v j k l) (setter v i j k l)))))
+                   (else (lambda (i)       (make-array right-interval
+                                                       (lambda      multi-index  (apply getter   i       multi-index))
+                                                       (lambda (v . multi-index) (apply setter v i       multi-index)))))))
+           ((2)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j)     (make-array right-interval
+                                                       (lambda (   )     (getter   i j))
+                                                       (lambda (v  )     (setter v i j)))))
+                   ((1)  (lambda (i j)     (make-array right-interval
+                                                       (lambda (    k)   (getter   i j k))
+                                                       (lambda (v   k)   (setter v i j k)))))
+                   ((2)  (lambda (i j)     (make-array right-interval
+                                                       (lambda (    k l) (getter   i j k l))
+                                                       (lambda (v   k l) (setter v i j k l)))))
+                   (else (lambda (i j)     (make-array right-interval
+                                                       (lambda      multi-index  (apply getter   i j     multi-index))
+                                                       (lambda (v . multi-index) (apply setter v i j     multi-index)))))))
+           ((3)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j k)   (make-array right-interval
+                                                       (lambda (     )   (getter   i j k))
+                                                       (lambda (v    )   (setter v i j k)))))
+                   ((1)  (lambda (i j k)   (make-array right-interval
+                                                       (lambda (      l) (getter   i j k l))
+                                                       (lambda (v     l) (setter v i j k l)))))
+                   (else (lambda (i j k)   (make-array right-interval
+                                                       (lambda      multi-index  (apply getter   i j k   multi-index))
+                                                       (lambda (v . multi-index) (apply setter v i j k   multi-index)))))))
+           ((4)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda (i j k l) (make-array right-interval
+                                                       (lambda (     )   (getter   i j k l))
+                                                       (lambda (v    )   (setter v i j k l)))))
+                   (else (lambda (i j k l) (make-array right-interval
+                                                       (lambda      multi-index  (apply getter   i j k l multi-index))
+                                                       (lambda (v . multi-index) (apply setter v i j k l multi-index)))))))
+           (else (lambda left-multi-index
+                   (make-array right-interval
+                               (lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
+                               (lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index)))))))
+         "array-curry: ")))))
 
 (define (%%specialized-array-curry array right-dimension)
   (call-with-values
@@ -3721,10 +3840,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (apply values
                                                 (append (%%interval-lower-bounds->list left-interval)
                                                         right-multi-index))))))))
-        (make-array
+        (%%make-safe-immutable-array
          left-interval
          (case (%%interval-dimension left-interval)
-           ((0)  (lambda () array))
+           ((0)  (case (%%interval-dimension right-interval)
+                   ((0)  (lambda ()        (%%specialized-array-share array right-interval (lambda ()                            (values        )) in-order?)))
+                   ((1)  (lambda ()        (%%specialized-array-share array right-interval (lambda (i)                           (values i      )) in-order?)))
+                   ((2)  (lambda ()        (%%specialized-array-share array right-interval (lambda (i j)                         (values i j    )) in-order?)))
+                   ((3)  (lambda ()        (%%specialized-array-share array right-interval (lambda (i j k)                       (values i j k  )) in-order?)))
+                   ((4)  (lambda ()        (%%specialized-array-share array right-interval (lambda (i j k l)                     (values i j k l)) in-order?)))
+                   (else (lambda ()        (%%specialized-array-share array right-interval (lambda multi-index (apply values         multi-index)) in-order?)))))
            ((1)  (case (%%interval-dimension right-interval)
                    ((0)  (lambda (i)       (%%specialized-array-share array right-interval (lambda ()                            (values i      )) in-order?)))
                    ((1)  (lambda (i)       (%%specialized-array-share array right-interval (lambda (j)                           (values i j    )) in-order?)))
@@ -3744,7 +3869,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                    ((0)  (lambda (i j k l) (%%specialized-array-share array right-interval (lambda ()                            (values i j k l)) in-order?)))
                    (else (lambda (i j k l) (%%specialized-array-share array right-interval (lambda multi-index (apply values i j k l multi-index)) in-order?)))))
            (else (lambda left-multi-index
-                   (%%specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) in-order?)))))))))
+                   (%%specialized-array-share array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) in-order?))))
+         "array-curry: ")))))
 
 (define (%%array-curry array right-dimension)
   (cond ((specialized-array? array)
@@ -3779,6 +3905,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (getter-0 (%%array-getter array)))
     (case (length arrays)
       ((0) (case (%%interval-dimension domain)
+             ((0)  (lambda ()          (f (getter-0))))
              ((1)  (lambda (i)         (f (getter-0 i))))
              ((2)  (lambda (i j)       (f (getter-0 i j))))
              ((3)  (lambda (i j k)     (f (getter-0 i j k))))
@@ -3787,6 +3914,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
       ((1) (let ((getter-1 (%%array-getter (car arrays))))
              (case (%%interval-dimension domain)
+               ((0)  (lambda ()          (f (getter-0)
+                                            (getter-1))))
                ((1)  (lambda (i)         (f (getter-0 i)
                                             (getter-1 i))))
                ((2)  (lambda (i j)       (f (getter-0 i j)
@@ -3800,6 +3929,9 @@ OTHER DEALINGS IN THE SOFTWARE.
       ((2) (let ((getter-1 (%%array-getter (car arrays)))
                  (getter-2 (%%array-getter (cadr arrays))))
              (case (%%interval-dimension domain)
+               ((0)  (lambda ()          (f (getter-0)
+                                            (getter-1)
+                                            (getter-2))))
                ((1)  (lambda (i)         (f (getter-0 i)
                                             (getter-1 i)
                                             (getter-2 i))))
@@ -3819,6 +3951,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (getter-2 (%%array-getter (cadr arrays)))
                  (getter-3 (%%array-getter (caddr arrays))))
              (case (%%interval-dimension domain)
+               ((0)  (lambda ()          (f (getter-0)
+                                            (getter-1)
+                                            (getter-2)
+                                            (getter-3))))
                ((1)  (lambda (i)         (f (getter-0 i)
                                             (getter-1 i)
                                             (getter-2 i)
@@ -3842,6 +3978,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       (else
        (let ((getters (cons getter-0 (map array-getter arrays))))
          (case (%%interval-dimension domain)
+           ((0)  (lambda ()          (apply f (map (lambda (g) (g))                   getters))))
            ((1)  (lambda (i)         (apply f (map (lambda (g) (g i))                 getters))))
            ((2)  (lambda (i j)       (apply f (map (lambda (g) (g i j))               getters))))
            ((3)  (lambda (i j k)     (apply f (map (lambda (g) (g i j k))             getters))))
@@ -3849,6 +3986,7 @@ OTHER DEALINGS IN THE SOFTWARE.
            (else (lambda multi-index (apply f (map (lambda (g) (apply g multi-index)) getters))))))))))
 
 (define (%%array-map f array arrays)
+  ;; unsafe, for internal use on known intervals
   (make-array (%%array-domain array)
               (%%specialize-function-applied-to-array-getters f array arrays)))
 
@@ -3860,7 +3998,10 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every (lambda (d) (%%interval= d (%%array-domain array))) (map %%array-domain arrays)))
          (apply error "array-map: Not all arrays have the same domain: " f array arrays))
         (else
-         (%%array-map f array arrays))))
+         ;; safe
+         (%%make-safe-immutable-array (%%array-domain array)
+                                      (%%specialize-function-applied-to-array-getters f array arrays)
+                                      "array-map: "))))
 
 ;;; applies f to the elements of the arrays in lexicographical order.
 
@@ -4297,7 +4438,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ((1) (%%array->list a))
                  (else
                   (%%array->list
-                   (array-map a->l (%%array-curry a (fx- dim 1))))))))
+                   (%%array-map a->l (%%array-curry a (fx- dim 1)) '()))))))
            (a->l array)))))
 
 (define (array->vector* array)
@@ -4312,7 +4453,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                  ((1) (%%array->vector a))
                  (else
                   (%%array->vector
-                   (array-map a->v (%%array-curry a (fx- dim 1))))))))
+                   (%%array-map a->v (%%array-curry a (fx- dim 1)) '()))))))
            (a->v array)))))
 
 (define (array-assign! destination source)
@@ -4334,9 +4475,10 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; the error check in %%array-reduce will catch it.
   (%%array-outer-product
    (lambda (a b)
-     (%%array-reduce f (array-map g a b) "array-inner-product: "))
+     (%%array-reduce f (%%array-map g a (list b)) "array-inner-product: "))
    (array-copy (%%array-curry A 1))
-   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
+   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))
+   "array-inner-product: "))
 
 (define (array-inner-product A f g B)
   (cond ((not (array? A))
@@ -4918,6 +5060,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                          (%%interval-lower-bounds new-domain))
                         (indexer
                          (case newnd
+                           ((0) (%%indexer-0 base))
                            ((1) (%%indexer-1 base
                                              (vector-ref new-lowers 0)
                                              (vector-ref newstrides 0)))
