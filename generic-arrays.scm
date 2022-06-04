@@ -1299,7 +1299,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;; unfortunately, the next three functions were written by hand, so beware of bugs.
 
 (define (%%indexer-0 base)
-  (lambda () base))
+  (if (eqv? base 0)
+      (lambda () 0)       ;; Don't generate closure for common case.
+      (lambda () base)))
 
 (define (%%indexer-1 base
                      low-0
