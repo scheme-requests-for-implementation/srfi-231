@@ -82,6 +82,7 @@ MathJax.Hub.Config({
          (<li> "Draft #7 published: 2022-04-25")
          (<li> "Draft #8 published: 2022-05-23")
          (<li> "Draft #9 published: 2022-05-26")
+         (<li> "Draft #10 published: 2022-06-01")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -107,7 +108,7 @@ MathJax.Hub.Config({
          )
         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
         (<ul>
-         (<li> "Empty and zero-dimensional arrays are incorporated into this SRFI.  It is an error to call the setter or getter of an empty array.  Zero-dimensional arrays specify their sole element wtih an empty multi-index.")
+         (<li> "Empty and zero-dimensional arrays are incorporated into this SRFI.  It is an error to call the setter or getter of an empty array.  Zero-dimensional arrays specify their sole element with an empty multi-index.")
          (<li> (<code>"specialized-array-default-safe?")" and "(<code>"specialized-array-default-mutable?")" are now "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")" parameters.")
          (<li>  (<code>'list->array)" is now called as "(<code>"(list->array interval list ...)")"; i.e., the order of the first two arguments has been reversed.")
          (<li> (<code> "array-copy")" no longer allows changing the domain of the result, use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
@@ -617,7 +618,7 @@ if "(<code>(<var>"interval"))" is not an interval.")
         (<p> "for all $0\\leq j<d$, otherwise it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
 
         (format-lambda-list '(interval-contains-multi-index? interval #\. multi-index))
-        (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (array-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (array-upper-bounds->list "(<var>'interval)"))")".")
+        (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (interval-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (interval-upper-bounds->list "(<var>'interval)"))")".")
         (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
 
         (format-lambda-list '(interval-projections interval right-dimension))
