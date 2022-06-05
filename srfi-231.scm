@@ -2405,8 +2405,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 "))
 
 (<h2> "Implementation")
-(<p> "We provide an implementation in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
-in the implementation are "(<code>"define-structure")", "(<code>"define-macro")", and DSSSL optional arguments.")
+(<p> "We provide a "(<a> href: (string-append "https://github.com/scheme-requests-for-implementation/srfi-" SRFI) "sample implementation")" in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
+in the implementation are "(<code>"define-structure")", "(<code>"define-macro")", and DSSSL optional arguments.  The sample implementation open codes specialized versions of algorithms for intervals and arrays of dimension no greater than 4, but a simple implementation could employ only the general algorithms that are used for dimensions greater than 4.")
 (<p> "There is a "(<a> href: (string-append "https://github.com/scheme-requests-for-implementation/srfi-" SRFI) "git repository")" of this document, a sample implementation, a test file, and other materials.")
 (<h2> "Relationship to other array libraries")
 (<h3> "Other SRFIs")

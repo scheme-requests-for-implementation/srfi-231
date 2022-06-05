@@ -1856,8 +1856,8 @@ indexer:       (lambda multi-index
 ;;;    no major faults
 </code></pre>
     <h2>Implementation</h2>
-    <p>We provide an implementation in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
-      in the implementation are <code>define-structure</code>, <code>define-macro</code>, and DSSSL optional arguments.</p>
+    <p>We provide a <a href="https://github.com/scheme-requests-for-implementation/srfi-231">sample implementation</a> in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
+      in the implementation are <code>define-structure</code>, <code>define-macro</code>, and DSSSL optional arguments.  The sample implementation open codes specialized versions of algorithms for intervals and arrays of dimension no greater than 4, but a simple implementation could employ only the general algorithms that are used for dimensions greater than 4.</p>
     <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-231">git repository</a> of this document, a sample implementation, a test file, and other materials.</p>
     <h2>Relationship to other array libraries</h2>
     <h3>Other SRFIs</h3>
