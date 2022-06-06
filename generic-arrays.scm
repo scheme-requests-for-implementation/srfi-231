@@ -1269,7 +1269,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                             "(storage-class-data->body "
                             prefix '-storage-class
                             "): "))
-                         data))))))))
+                         data)
+                  data)))))))
   (let ((result
          `(begin
             ,@(map construct
