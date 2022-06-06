@@ -763,6 +763,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (list char-storage-class 'char-storage-class 'string    make-string)
         (list  c64-storage-class  'c64-storage-class 'f32vector make-f32vector)
         (list c128-storage-class 'c128-storage-class 'f64vector make-f64vector)
+        (list generic-storage-class 'generic-storage-class 'vector make-vector)
         ))
 
 (define uniform-storage-classes
@@ -1076,6 +1077,38 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (test (make-specialized-array-from-data 'a)
       "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
+
+(let ((test-values
+       (list ;;       storae-class  good data           bad data
+        (list generic-storage-class (make-vector 10)    (make-u16vector 10))
+        (list    char-storage-class (make-string 10)    (make-u16vector 10))
+        (list      u1-storage-class (make-u16vector 10) (make-u32vector 10))
+        (list      u8-storage-class (make-u8vector 10)  (make-u16vector 10))
+        (list     u16-storage-class (make-u16vector 10) (make-u32vector 10))
+        (list     u32-storage-class (make-u32vector 10) (make-u16vector 10))
+        (list     u64-storage-class (make-u64vector 10) (make-s16vector 10))
+        (list      s8-storage-class (make-s8vector 10)  (make-u16vector 10))
+        (list     s16-storage-class (make-s16vector 10) (make-u16vector 10))
+        (list     s32-storage-class (make-s32vector 10) (make-u16vector 10))
+        (list     s64-storage-class (make-s64vector 10) (make-u16vector 10))
+        (list     f32-storage-class (make-f32vector 10) (make-u16vector 10))
+        (list     f64-storage-class (make-f64vector 10) (make-u16vector 10))
+        (list     f64-storage-class (make-f64vector 10) (make-u16vector 10))
+        (list     c64-storage-class (make-f32vector 10) (make-u16vector 10) (make-f32vector 5))
+        (list    c128-storage-class (make-f64vector 10) (make-u16vector 10) (make-f64vector 5)))))
+  (for-each (lambda (data)
+              (let ((storage-class (car data))
+                    (good-data     (cadr data))
+                    (rest          (cddr data)))
+                (test (and (array? (make-specialized-array-from-data good-data storage-class))
+                           (eq? ((storage-class-data? storage-class) good-data)
+                                #t))
+                      #t)
+                (for-each (lambda (bad)
+                            (test (make-specialized-array-from-data bad storage-class)
+                                  "make-specialized-array-from-data: The first argument is not compatible with the storage class: "))
+                          rest)))
+            test-values))
 
 (pretty-print
  (array->list*
