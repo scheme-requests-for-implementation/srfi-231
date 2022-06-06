@@ -618,9 +618,9 @@ if "(<code>(<var>"interval"))" is not an interval.")
         (<p> "for all $0\\leq j<d$, otherwise it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
 
         (format-lambda-list '(interval-contains-multi-index? interval #\. multi-index))
-        (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (interval-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (interval-upper-bounds->list "(<var>'interval)"))")".")
-        (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
-
+        (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index (a sequence of exact integers) of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (interval-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (interval-upper-bounds->list "(<var>'interval)"))")".")
+        (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'multi-index))",..., do not satisfy this condition.")
+        
         (format-lambda-list '(interval-projections interval right-dimension))
         (<p> "Conceptually, "(<code> 'interval-projections)" takes a $d$-dimensional interval
 $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
@@ -2215,15 +2215,15 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                           (list*->array 2 '((15 16 17))))))) ;; to match this array
 => error"))
 
-(format-lambda-list '(array-ref A #\. i-tail))
-(<p> "Assumes that "(<code>(<var>'A))" is an array, and every element of "(<code>(<var>'i-tail))" is an exact integer.")
-(<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>'i-tail)")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not an array,  if the number of arguments specified is not the correct number for "(<code>"(array-getter "(<var>'A)")")", or if "(<code>(<var>'i-tail))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
-
-(format-lambda-list '(array-set! A v #\. i-tail))
-(<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that every element of "(<code>(<var>'i-tail))" is an exact integer.")
-(<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v i-tail")")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for "(<code>"(array-setter "(<var>'A)")")", or if "(<code>(<var>'i-tail))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
+(format-lambda-list '(array-ref A #\. multi-index))
+(<p> "Assumes that "(<code>(<var>'A))" is an array, and  "(<code>(<var>'multi-index))" is a sequence of exact integers.")
+(<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>'multi-index)")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not an array,  if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
+     
+(format-lambda-list '(array-set! A v #\. multi-index))
+(<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that "(<code>(<var>'multi-index))" is a sequence of exact integers.")
+(<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v multi-index")")")".")
+(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array, if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
 
 (<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
 
