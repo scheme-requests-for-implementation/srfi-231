@@ -396,8 +396,8 @@
     <pre><code>(&lt;= (interval-upper-bound <var>interval1</var> j) (interval-upper-bound <var>interval2</var> j))</code></pre>
     <p>for all $0\leq j&lt;d$, otherwise it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> . <var>multi-index</var></code></p>
-    <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>multi-index</var></code> is a multi-index of length $d$, then <code>interval-contains-multi-index?</code> returns <code>(every &lt;= (interval-lower-bounds-&gt;list <var>interval</var>) <var>multi-index</var> (interval-upper-bounds-&gt;list <var>interval</var>))</code>.</p>
-    <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
+    <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>multi-index</var></code> is a multi-index (a sequence of exact integers) of length $d$, then <code>interval-contains-multi-index?</code> returns <code>(every &lt;= (interval-lower-bounds-&gt;list <var>interval</var>) <var>multi-index</var> (interval-upper-bounds-&gt;list <var>interval</var>))</code>.</p>
+    <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>multi-index</var></code>,..., do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a id="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
     <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval
       $[l_0,u_0)\times [l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$
@@ -1679,14 +1679,14 @@ indexer:       (lambda multi-index
                           (list*-&gt;array 2 '((14)))
                           (list*-&gt;array 2 '((15 16 17))))))) ;; to match this array
 =&gt; error</code></pre>
-    <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> . <var>i-tail</var></code></p>
-    <p>Assumes that <code><var>A</var></code> is an array, and every element of <code><var>i-tail</var></code> is an exact integer.</p>
-    <p>Returns <code>(apply (array-getter <var>A</var>) <var>i-tail</var>)</code>.</p>
-    <p>It is an error if <code><var>A</var></code> is not an array,  if the number of arguments specified is not the correct number for <code>(array-getter <var>A</var>)</code>, or if <code><var>i-tail</var></code> is not in the domain of <code><var>A</var></code>, so, in particular, if <code><var>A</var></code> is empty.</p>
-    <p><b>Procedure: </b><code><a id="array-set!">array-set!</a> <var>A</var> <var>v</var> . <var>i-tail</var></code></p>
-    <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that every element of <code><var>i-tail</var></code> is an exact integer.</p>
-    <p>Returns <code>(apply (array-setter <var>A</var>) <var>v i-tail</var>)</code>.</p>
-    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array,  if the number of arguments specified is not the correct number for <code>(array-setter <var>A</var>)</code>, or if <code><var>i-tail</var></code> is not in the domain of <code><var>A</var></code>, so, in particular, if <code><var>A</var></code> is empty.</p>
+    <p><b>Procedure: </b><code><a id="array-ref">array-ref</a> <var>A</var> . <var>multi-index</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is an array, and  <code><var>multi-index</var></code> is a sequence of exact integers.</p>
+    <p>Returns <code>(apply (array-getter <var>A</var>) <var>multi-index</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not an array,  if the number of elements in <code><var>multi-index</var></code> is not the the dimension of <code><var>A</var></code>, or if <code><var>multi-index</var></code> is not in the domain of <code><var>A</var></code>, so, in particular, if <code><var>A</var></code> is empty.</p>
+    <p><b>Procedure: </b><code><a id="array-set!">array-set!</a> <var>A</var> <var>v</var> . <var>multi-index</var></code></p>
+    <p>Assumes that <code><var>A</var></code> is a mutable array, that <code><var>v</var></code> is a value that can be stored within that array, and that <code><var>multi-index</var></code> is a sequence of exact integers.</p>
+    <p>Returns <code>(apply (array-setter <var>A</var>) <var>v multi-index</var>)</code>.</p>
+    <p>It is an error if <code><var>A</var></code> is not a mutable array, if <code>v</code> is not an appropriate value to be stored in that array, if the number of elements in <code><var>multi-index</var></code> is not the the dimension of <code><var>A</var></code>, or if <code><var>multi-index</var></code> is not in the domain of <code><var>A</var></code>, so, in particular, if <code><var>A</var></code> is empty.</p>
     <p><b>Note: </b>In the sample implementation, because <code>array-ref</code> and <code>array-set!</code> take a variable number of arguments and they must check that <code><var>A</var></code> is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which <code>1D-Haar-loop</code> is coded below, can take up to three times as long runtime.</p>
     <p><b>Note: </b>In the sample implementation, checking whether the multi-indices are exact integers and within the domain of the array, and checking whether the value is appropriate for storage into the array, is delegated to the underlying definition of the array argument.  If the first argument is a safe specialized array, then these items are checked; if it is an unsafe specialized array, they are not.  If it is a generalized array, it is up to the programmer whether to define the getter and setter of the array to check the correctness of the arguments.</p>
     <p><b>Procedure: </b><code><a id="specialized-array-reshape">specialized-array-reshape</a> <var>array</var> <var>new-domain</var> [ <var>copy-on-failure?</var> #f ]</code></p>
