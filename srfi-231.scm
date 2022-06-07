@@ -620,7 +620,7 @@ if "(<code>(<var>"interval"))" is not an interval.")
         (format-lambda-list '(interval-contains-multi-index? interval #\. multi-index))
         (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index (a sequence of exact integers) of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (interval-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (interval-upper-bounds->list "(<var>'interval)"))")".")
         (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'multi-index))",..., do not satisfy this condition.")
-        
+
         (format-lambda-list '(interval-projections interval right-dimension))
         (<p> "Conceptually, "(<code> 'interval-projections)" takes a $d$-dimensional interval
 $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
@@ -2219,7 +2219,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and  "(<code>(<var>'multi-index))" is a sequence of exact integers.")
 (<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>'multi-index)")")".")
 (<p> "It is an error if "(<code>(<var>'A))" is not an array,  if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
-     
+
 (format-lambda-list '(array-set! A v #\. multi-index))
 (<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that "(<code>(<var>'multi-index))" is a sequence of exact integers.")
 (<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v multi-index")")")".")
