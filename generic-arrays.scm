@@ -3547,7 +3547,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%immutable-array-sample array scales))))
 
-(define (%%array-outer-product combiner A B message)
+(define (%%array-outer-product combiner A B)
   (let* ((D_A            (%%array-domain A))
          (D_B            (%%array-domain B))
          (A_             (%%array-getter A))
@@ -3631,7 +3631,7 @@ OTHER DEALINGS IN THE SOFTWARE.
              (lambda args
                (combiner (apply A_ (take args dim_A))
                          (apply B_ (drop args dim_A))))))))
-    (%%make-safe-immutable-array result-domain result-getter message)))
+    (make-array result-domain result-getter)))
 
 (define (array-outer-product combiner array1 array2)
   (cond ((not (array? array1))
@@ -3641,7 +3641,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (procedure? combiner))
          (error "array-outer-product: The first argument is not a procedure: " combiner array1 array2))
         (else
-         (%%array-outer-product combiner array1 array2 "array-outer-product: "))))
+         (%%array-outer-product combiner array1 array2))))
 
 (define (%%make-safe-immutable-array domain getter message)
   (case (%%interval-dimension domain)
@@ -4000,9 +4000,8 @@ OTHER DEALINGS IN THE SOFTWARE.
          (apply error "array-map: Not all arrays have the same domain: " f array arrays))
         (else
          ;; safe
-         (%%make-safe-immutable-array (%%array-domain array)
-                                      (%%specialize-function-applied-to-array-getters f array arrays)
-                                      "array-map: "))))
+         (make-array (%%array-domain array)
+                     (%%specialize-function-applied-to-array-getters f array arrays)))))
 
 ;;; applies f to the elements of the arrays in lexicographical order.
 
@@ -4478,8 +4477,7 @@ OTHER DEALINGS IN THE SOFTWARE.
    (lambda (a b)
      (%%array-reduce f (%%array-map g a (list b)) "array-inner-product: "))
    (array-copy (%%array-curry A 1))
-   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))
-   "array-inner-product: "))
+   (array-copy (%%array-curry (%%array-permute B (%%index-rotate (%%array-dimension B) 1)) 1))))
 
 (define (array-inner-product A f g B)
   (cond ((not (array? A))
