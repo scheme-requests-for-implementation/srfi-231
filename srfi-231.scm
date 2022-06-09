@@ -83,6 +83,7 @@ MathJax.Hub.Config({
          (<li> "Draft #8 published: 2022-05-23")
          (<li> "Draft #9 published: 2022-05-26")
          (<li> "Draft #10 published: 2022-06-01")
+         (<li> "Draft #11 published: 2022-06-10")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -1079,10 +1080,18 @@ if "(<code>(<var> 'array))" is not a mutable array.")
   (for-each display (list \"(array-every = A B) => \" (array-every = A B) #\\newline))
   (for-each display (list \"(array-body A) => \" (array-body A) #\\newline))
   (for-each display (list \"(array-body B) => \" (array-body B) #\\newline))
-  (for-each display (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => \" #\\newline
-                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\\newline))
-  (for-each display (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => \" #\\newline
-                          (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\\newline)))"))
+  (for-each
+   display
+   (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) => \"
+         #\\newline
+         (pad 16 (number->string (u16vector-ref (vector-ref (array-body A) 1) 0) 2))
+         #\\newline))
+  (for-each
+   display
+   (list \"(pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) => \"
+         #\\newline
+         (pad 16 (number->string (u16vector-ref (vector-ref (array-body B) 1) 0) 2))
+         #\\newline)))"))
 (<p> "prints")
 (<pre>
 "(array-every = A B) => #t
@@ -1303,8 +1312,7 @@ of whose elements is itself an (immutable) array and ")
                     => (3 4)"))
 
 (<p> (<b> "Example: ")"NumPy has the operation "(<a> href: "https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html" "numpy.squeeze")", which can eliminate, or \"squeeze\" out, all axes of an array with length 1.  It can be implemented using "(<code>'partition)" from SRFI 1 by")
-(<pre>(<code>
-"(define (array-squeeze a)
+(<pre>(<code>"(define (array-squeeze a)
   (call-with-values
       (lambda ()
         (let ((interval (array-domain a)))
@@ -1325,23 +1333,31 @@ of whose elements is itself an (immutable) array and ")
  ((0 1 0 0)
   (0 1 0 1)))
 
-(array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args))))))
+(array->list*
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5))
+              (lambda args (apply string-append (map number->string args))))))
 =>
 \"1234\"
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number->string args))))))
+(array-dimension
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5))
+              (lambda args (apply string-append (map number->string args))))))
 =>
 0
 
-(array->list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args))))))
+(array->list*
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5))
+              (lambda args (apply string-append (map number->string args))))))
 =>
 (\"1234\" \"2234\")
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number->string args))))))
+(array-dimension
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5))
+              (lambda args (apply string-append (map number->string args))))))
 =>
 1"))
-
-
-
-
 
 (format-lambda-list '(array-extract array new-domain))
 (<p> "Returns a new array with the same getter (and setter, if appropriate) of the first argument, defined on the second argument.")
@@ -2115,7 +2131,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
           ;; we've assigned every array to the appropriate subarray of result
           result
           (let ((array (car arrays)))
-            ;; the lower and upper bounds in the kth axis of the result where we copy the next array
+            ;; the lower and upper bounds in the kth axis of the result where we copy the
+            ;; next array
             (vector-set! lowers k (car subdividers))
             (vector-set! uppers k (cadr subdividers))
             ;; the translation that aligns the next array with the subarray of the result
@@ -2163,12 +2180,15 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together, in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
 (<pre>(<code>"(every
  (lambda (k)                                        ;; for each coordinate direction
-   (let ((slices                                    ;; the \"slices\" perpendicular to that direction
+   (let ((slices                                    ;; the \"slices\"
+                                                    ;; perpendicular to that direction
           (array-curry (array-permute A (index-first (array-dimension A) k))
                        (- (array-dimension A) 1))))
      (array-every
-      (lambda (slice)                               ;; for every slice perpendicular to direction k
-        (let ((slice-kth-width                      ;; the kth interval width of the \"corner\" element
+      (lambda (slice)                               ;; for every slice perpendicular
+                                                    ;; to direction k
+        (let ((slice-kth-width                      ;; the kth interval width of the
+                                                    ;; \"corner\" element
                (interval-width
                 (array-domain
                  (apply (array-getter slice)
@@ -2176,7 +2196,8 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
                 k)))
           (array-every
            (lambda (a)                              ;; all arrays within that slice
-             (= (interval-width (array-domain a) k) ;; have the same width in the kth direction
+             (= (interval-width (array-domain a) k) ;; have the same width in the kth
+                                                    ;; direction
                 slice-kth-width))
            slice)))
       slices)))
@@ -2288,8 +2309,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 "))
 (<p>"The following examples succeed:")
 (<pre>
- (<code>
-"(specialized-array-reshape
+ (<code>"(specialized-array-reshape
  (array-copy (make-array (make-interval '#(2 1 3 1)) list))
  (make-interval '#(6)))
 (specialized-array-reshape
@@ -2308,16 +2328,19 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))
  (make-interval '#(3 1 2 1)))
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))
+ (array-sample
+  (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list))
+                 '#(#f #f #f #t))
+  '#(1 1 2 1))
  (make-interval '#(4)))
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#t #f #t #t)) '#(1 1 2 1))
- (make-interval '#(4)))
-"))
+ (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list))
+                              '#(#t #f #t #t))
+               '#(1 1 2 1))
+ (make-interval '#(4)))"))
 (<p>"The following examples raise an exception: ")
 (<pre>
- (<code>
-"(specialized-array-reshape
+ (<code>"(specialized-array-reshape
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f))
  (make-interval '#(6)))
 (specialized-array-reshape
@@ -2330,12 +2353,17 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t))
  (make-interval '#(3 2)))
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))
+ (array-sample
+  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+                 '#(#f #f #f #t))
+  '#(1 1 2 1))
  (make-interval '#(4)) )
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1))
- (make-interval '#(4)))
-"))
+ (array-sample
+  (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list))
+                 '#(#f #f #t #t))
+  '#(1 1 2 1))
+ (make-interval '#(4)))"))
 (<p> "In the next examples, we start with vector fields, $100\\times 100$ arrays of 4-vectors.  In one example, we reshape each large array to $100\\times 100\\times2\\times2$ vector fields (so we consider each 4-vector as a $2\\times 2$ matrix), and multiply the $2\\times 2$ matrices together.  In the second example, we reshape each 4-vector to a $2\\times 2$ matrix individually, and compare the times.")
 (<pre>
  (<code>
@@ -3199,7 +3227,8 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
                                  (array-storage-class a)))
          (domain     (array-domain a))
          (translates (map (lambda (translation)
-                            (array-extract (array-translate big-a translation) domain))
+                            (array-extract (array-translate big-a translation)
+                                           domain))
                           '(#(1 0) #(0 1) #(-1 0) #(0 -1)
                             #(1 1) #(1 -1) #(-1 1) #(-1 -1)))))
     ;; Returns a generalized array that contains the number
