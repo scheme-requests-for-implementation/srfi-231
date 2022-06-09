@@ -3644,58 +3644,54 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%array-outer-product combiner array1 array2))))
 
 (define (%%make-safe-immutable-array domain getter message)
-  (case (%%interval-dimension domain)
-    ((0) (make-array domain
-                     (lambda ()
-                       (getter))))
-    ((1) (make-array domain
-                     (lambda (i)
-                       (cond ((not (exact-integer? i))
-                              (error (string-append message "multi-index component is not an exact integer: ") i))
-                             ((not (%%interval-contains-multi-index?-1 domain i))
-                              (error (string-append message "domain does not contain multi-index: ") domain i))
-                             (else
-                              (getter i))))))
-    ((2) (make-array domain
-                     (lambda (i j)
-                       (cond ((not (and (exact-integer? i)
-                                        (exact-integer? j)))
-                              (error (string-append message "multi-index component is not an exact integer: ") i j))
-                             ((not (%%interval-contains-multi-index?-2 domain i j))
-                              (error (string-append message "domain does not contain multi-index: ") domain i j))
-                             (else
-                              (getter i j))))))
-    ((3) (make-array domain
-                     (lambda (i j k)
-                       (cond ((not (and (exact-integer? i)
-                                        (exact-integer? j)
-                                        (exact-integer? k)))
-                              (error (string-append message "multi-index component is not an exact integer: ") i j k))
-                             ((not (%%interval-contains-multi-index?-3 domain i j k))
-                              (error (string-append message "domain does not contain multi-index: ") domain i j k))
-                             (else
-                              (getter i j k))))))
-    ((4) (make-array domain
-                     (lambda (i j k l)
-                       (cond ((not (and (exact-integer? i)
-                                        (exact-integer? j)
-                                        (exact-integer? k)
-                                        (exact-integer? l)))
-                              (error (string-append message "multi-index component is not an exact integer: ") i j k l))
-                             ((not (%%interval-contains-multi-index?-4 domain i j k l))
-                              (error (string-append message "domain does not contain multi-index: ") domain i j k l))
-                             (else
-                              (getter i j k l))))))
-    (else (make-array domain
-                      (lambda multi-index
-                        (cond ((not (%%every exact-integer? multi-index))
-                               (apply error (string-append message "multi-index component is not an exact integer: ") multi-index))
-                              ((not (= (length multi-index) (%%interval-dimension domain)))
-                               (apply error (string-append message "multi-index is not the correct dimension: ") domain multi-index))
-                              ((not (%%interval-contains-multi-index?-general domain multi-index))
-                               (apply error (string-append message "domain does not contain multi-index: ") domain multi-index))
-                              (else
-                               (apply getter multi-index))))))))
+  (make-array
+   domain
+   (case (%%interval-dimension domain)
+     ((0) (lambda ()
+            (getter)))
+     ((1) (lambda (i)
+            (cond ((not (exact-integer? i))
+                   (error (string-append message "multi-index component is not an exact integer: ") i))
+                  ((not (%%interval-contains-multi-index?-1 domain i))
+                   (error (string-append message "domain does not contain multi-index: ") domain i))
+                  (else
+                   (getter i)))))
+     ((2) (lambda (i j)
+            (cond ((not (and (exact-integer? i)
+                             (exact-integer? j)))
+                   (error (string-append message "multi-index component is not an exact integer: ") i j))
+                  ((not (%%interval-contains-multi-index?-2 domain i j))
+                   (error (string-append message "domain does not contain multi-index: ") domain i j))
+                  (else
+                   (getter i j)))))
+     ((3) (lambda (i j k)
+            (cond ((not (and (exact-integer? i)
+                             (exact-integer? j)
+                             (exact-integer? k)))
+                   (error (string-append message "multi-index component is not an exact integer: ") i j k))
+                  ((not (%%interval-contains-multi-index?-3 domain i j k))
+                   (error (string-append message "domain does not contain multi-index: ") domain i j k))
+                  (else
+                   (getter i j k)))))
+     ((4) (lambda (i j k l)
+            (cond ((not (and (exact-integer? i)
+                             (exact-integer? j)
+                             (exact-integer? k)
+                             (exact-integer? l)))
+                   (error (string-append message "multi-index component is not an exact integer: ") i j k l))
+                  ((not (%%interval-contains-multi-index?-4 domain i j k l))
+                   (error (string-append message "domain does not contain multi-index: ") domain i j k l))
+                  (else
+                   (getter i j k l)))))
+     (else (lambda multi-index
+             (cond ((not (%%every exact-integer? multi-index))
+                    (apply error (string-append message "multi-index component is not an exact integer: ") multi-index))
+                   ((not (= (length multi-index) (%%interval-dimension domain)))
+                    (apply error (string-append message "multi-index is not the correct dimension: ") domain multi-index))
+                   ((not (%%interval-contains-multi-index?-general domain multi-index))
+                    (apply error (string-append message "domain does not contain multi-index: ") domain multi-index))
+                   (else
+                    (apply getter multi-index))))))))
 
 (define (%%immutable-array-curry array right-dimension)
   (call-with-values
