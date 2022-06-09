@@ -759,10 +759,18 @@
   (for-each display (list &quot;(array-every = A B) =&gt; &quot; (array-every = A B) #\newline))
   (for-each display (list &quot;(array-body A) =&gt; &quot; (array-body A) #\newline))
   (for-each display (list &quot;(array-body B) =&gt; &quot; (array-body B) #\newline))
-  (for-each display (list &quot;(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =&gt; &quot; #\newline
-                          (pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) #\newline))
-  (for-each display (list &quot;(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =&gt; &quot; #\newline
-                          (pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) #\newline)))</code></pre>
+  (for-each
+   display
+   (list &quot;(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2)) =&gt; &quot;
+	 #\newline
+         (pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body A) 1) 0) 2))
+	 #\newline))
+  (for-each
+   display
+   (list &quot;(pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2)) =&gt; &quot;
+	 #\newline
+         (pad 16 (number-&gt;string (u16vector-ref (vector-ref (array-body B) 1) 0) 2))
+	 #\newline)))</code></pre>
     <p>prints</p>
     <pre>(array-every = A B) =&gt; #t
 (array-body A) =&gt; #(16 #u16(3895))
@@ -949,17 +957,29 @@ indexer:       (lambda multi-index
  ((0 1 0 0)
   (0 1 0 1)))
 
-(array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
+(array-&gt;list*
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5))
+	      (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 &quot;1234&quot;
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
+(array-dimension
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(2 3 4 5))
+	      (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 0
 
-(array-&gt;list* (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
+(array-&gt;list*
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5))
+	      (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 (&quot;1234&quot; &quot;2234&quot;)
-(array-dimension (array-squeeze (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5)) (lambda args (apply string-append (map number-&gt;string args))))))
+(array-dimension
+ (array-squeeze
+  (make-array (make-interval '#(1 2 3 4) '#(3 3 4 5))
+	      (lambda args (apply string-append (map number-&gt;string args))))))
 =&gt;
 1</code></pre>
     <p><b>Procedure: </b><code><a id="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
@@ -1583,7 +1603,8 @@ indexer:       (lambda multi-index
           ;; we've assigned every array to the appropriate subarray of result
           result
           (let ((array (car arrays)))
-            ;; the lower and upper bounds in the kth axis of the result where we copy the next array
+            ;; the lower and upper bounds in the kth axis of the result where we copy the
+            ;; next array
             (vector-set! lowers k (car subdividers))
             (vector-set! uppers k (cadr subdividers))
             ;; the translation that aligns the next array with the subarray of the result
@@ -1628,12 +1649,15 @@ indexer:       (lambda multi-index
     <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together, in the configuration given by their indices in <code><var>A</var></code>.  We can always do this when <code>(array-dimension <var>A</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>A</var></code> are zero, we require: </p>
     <pre><code>(every
  (lambda (k)                                        ;; for each coordinate direction
-   (let ((slices                                    ;; the &quot;slices&quot; perpendicular to that direction
+   (let ((slices                                    ;; the &quot;slices&quot;
+                                                    ;; perpendicular to that direction
           (array-curry (array-permute A (index-first (array-dimension A) k))
                        (- (array-dimension A) 1))))
      (array-every
-      (lambda (slice)                               ;; for every slice perpendicular to direction k
-        (let ((slice-kth-width                      ;; the kth interval width of the &quot;corner&quot; element
+      (lambda (slice)                               ;; for every slice perpendicular
+						    ;; to direction k
+        (let ((slice-kth-width                      ;; the kth interval width of the
+                                                    ;; &quot;corner&quot; element
                (interval-width
                 (array-domain
                  (apply (array-getter slice)
@@ -1641,7 +1665,8 @@ indexer:       (lambda multi-index
                 k)))
           (array-every
            (lambda (a)                              ;; all arrays within that slice
-             (= (interval-width (array-domain a) k) ;; have the same width in the kth direction
+             (= (interval-width (array-domain a) k) ;; have the same width in the kth
+                                                    ;; direction
                 slice-kth-width))
            slice)))
       slices)))
@@ -1764,10 +1789,15 @@ indexer:       (lambda multi-index
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t))
  (make-interval '#(3 1 2 1)))
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))
+ (array-sample
+  (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list))
+                 '#(#f #f #f #t))
+  '#(1 1 2 1))
  (make-interval '#(4)))
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#t #f #t #t)) '#(1 1 2 1))
+ (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list))
+                              '#(#t #f #t #t))
+               '#(1 1 2 1))
  (make-interval '#(4)))
 </code></pre>
     <p>The following examples raise an exception: </p>
@@ -1784,11 +1814,12 @@ indexer:       (lambda multi-index
  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t))
  (make-interval '#(3 2)))
 (specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1))
- (make-interval '#(4)) )
-(specialized-array-reshape
- (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1))
+ (array-sample
+  (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+		 '#(#f #f #f #t))
+  '#(1 1 2 1))
  (make-interval '#(4)))
+
 </code></pre>
     <p>In the next examples, we start with vector fields, $100\times 100$ arrays of 4-vectors.  In one example, we reshape each large array to $100\times 100\times2\times2$ vector fields (so we consider each 4-vector as a $2\times 2$ matrix), and multiply the $2\times 2$ matrices together.  In the second example, we reshape each 4-vector to a $2\times 2$ matrix individually, and compare the times.</p>
     <pre><code>(define interval-flat (make-interval '#(100 100 4)))
@@ -2610,7 +2641,8 @@ Reconstructed image:
                                  (array-storage-class a)))
          (domain     (array-domain a))
          (translates (map (lambda (translation)
-                            (array-extract (array-translate big-a translation) domain))
+                            (array-extract (array-translate big-a translation)
+                                           domain))
                           '(#(1 0) #(0 1) #(-1 0) #(0 -1)
                             #(1 1) #(1 -1) #(-1 1) #(-1 -1)))))
     ;; Returns a generalized array that contains the number
