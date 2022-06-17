@@ -4361,14 +4361,14 @@ OTHER DEALINGS IN THE SOFTWARE.
               (if (not mutable?)
                     (%%array-freeze! result)
                     result)
-              (error (string-append message "The volume of the first argument does not equal the length of the second: ") l interval))
+              (error (string-append message "The volume of the first argument does not equal the length of the second: ") interval l))
           (let ((item (car local)))
             (if (checker item)
                 (begin
                   (setter body i item)
                   (loop (fx+ i 1)
                         (cdr local)))
-                (error (string-append message "Not all elements of the source can be stored in destination: ") l interval item)))))))
+                (error (string-append message "Not all elements of the source can be stored in destination: ") interval l item)))))))
 
 (define (list->array interval
                      l
@@ -4377,15 +4377,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (mutable? (specialized-array-default-mutable?))
                      (safe? (specialized-array-default-safe?)))
   (cond ((not (interval? interval))
-         (error "list->array: The first argument is not an interval: " l interval))
+         (error "list->array: The first argument is not an interval: " interval l))
         ((not (list? l))
-         (error "list->array: The second argument is not a list: " l interval))
+         (error "list->array: The second argument is not a list: " interval l))
         ((not (storage-class? result-storage-class))
-         (error "list->array: The third argument is not a storage-class: " l interval result-storage-class))
+         (error "list->array: The third argument is not a storage-class: " interval l result-storage-class))
         ((not (boolean? mutable?))
-         (error "list->array: The fourth argument is not a boolean: " l interval result-storage-class mutable?))
+         (error "list->array: The fourth argument is not a boolean: " interval l result-storage-class mutable?))
         ((not (boolean? safe?))
-         (error "list->array: The fifth argument is not a boolean: " l interval result-storage-class mutable? safe?))
+         (error "list->array: The fifth argument is not a boolean: " interval l result-storage-class mutable? safe?))
         (else
          (%%list->array interval
                         l
@@ -4401,18 +4401,18 @@ OTHER DEALINGS IN THE SOFTWARE.
                         (mutable? (specialized-array-default-mutable?))
                         (safe? (specialized-array-default-safe?)))
   (cond ((not (interval? interval))
-         (error "vector->array: The first argument is not an interval: " v interval))
+         (error "vector->array: The first argument is not an interval: " interval v))
         ((not (vector? v))
-         (error "vector->array: The second argument is not a vector: " v interval))
+         (error "vector->array: The second argument is not a vector: " interval v))
         ((not (= (vector-length v)
                  (%%interval-volume interval)))
-         (error "vector->array: The volume of the first argument does not equal the length of the second: " v interval))
+         (error "vector->array: The volume of the first argument does not equal the length of the second: " interval v))
         ((not (storage-class? result-storage-class))
-         (error "vector->array: The third argument is not a storage-class: " v interval result-storage-class))
+         (error "vector->array: The third argument is not a storage-class: " interval v result-storage-class))
         ((not (boolean? mutable?))
-         (error "vector->array: The fourth argument is not a boolean: " v interval result-storage-class mutable?))
+         (error "vector->array: The fourth argument is not a boolean: " interval v result-storage-class mutable?))
         ((not (boolean? safe?))
-         (error "vector->array: The fifth argument is not a boolean: " v interval result-storage-class mutable? safe?))
+         (error "vector->array: The fifth argument is not a boolean: " interval v result-storage-class mutable? safe?))
         (else
          (specialized-array-reshape
           (%!array-copy (%%make-specialized-array-from-data v generic-storage-class #f #f)
