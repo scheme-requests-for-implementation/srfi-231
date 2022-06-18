@@ -1074,13 +1074,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (lambda (v i val)
                       (,set! v i val))
                     ;; checker
-                    ,checker
+                    ,checker           ;; already expanded inline
                     ;; maker
-                    ,make
+                    (lambda (n val)
+                      (,make n val))
                     ;; copier
-                    ,copy!
+                    ,copy!             ;; complex call to memcopy, so don't expand inline
                     ;; length
-                    ,length
+                    (lambda (v)
+                      (,length v))
                     ;; default
                     ,default
                     ;; data?
@@ -1088,7 +1090,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (,? data))
                     ;; data->body
                     (lambda (data)
-                      (if (not (,? data))
+                      (if (,? data)
+                          data
                           (error ,(symbol->string
                                    (symbol-concatenate
                                     "Expecting a "
@@ -1097,8 +1100,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     "(storage-class-data->body "
                                     name
                                     "): "))
-                                 data)
-                          data))))))
+                                 data)))))))
             '(generic s8       u8       s16       u16       s32       u32       s64       u64       f32       f64       char)
             '(vector  s8vector u8vector s16vector u16vector s32vector u32vector s64vector u64vector f32vector f64vector string)
             '(#f      0        0        0         0         0         0         0         0         0.0        0.0     #\0)
@@ -1259,8 +1261,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                    (fxeven? (,(symbol-concatenate floating-point-prefix 'vector-length) data))))
             ;; data->body
             (lambda (data)
-              (if (not (and (,(symbol-concatenate floating-point-prefix 'vector?) data)
-                            (fxeven? (,(symbol-concatenate floating-point-prefix 'vector-length) data))))
+              (if (and (,(symbol-concatenate floating-point-prefix 'vector?) data)
+                       (fxeven? (,(symbol-concatenate floating-point-prefix 'vector-length) data)))
+                  data
                   (error ,(symbol->string
                            (symbol-concatenate
                             "Expecting a "
@@ -1269,8 +1272,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                             "(storage-class-data->body "
                             prefix '-storage-class
                             "): "))
-                         data)
-                  data)))))))
+                         data))))))))
   (let ((result
          `(begin
             ,@(map construct
