@@ -2461,14 +2461,13 @@ translate: ")
 
 
 (<h3> "Racket's array library")
-(<p> "Racket has an extensive "(<a> href: "https://docs.racket-lang.org/math/array.html" "array library")", written by Neil Toronto, as part of its \"Math Library\".  We give a superficial comparison of some aspects of Racket's library with this proposal:")
+(<p> "Racket has an extensive "(<a> href: "https://docs.racket-lang.org/math/array.html" "array library")", written by Neil Toronto, as part of its \"Math Library\".  I do not claim to have a complete understanding of Racket's array library, but attempt here to  give a superficial comparison of some aspects of Racket's library with this proposal:")
 (<ul>
- (<li> "Racket's library allows zero-dimensional arrays, which are simply a Scheme value; this proposal does not.")
  (<li> "Racket's library has what it calls "(<a> href: "https://docs.racket-lang.org/math/array_broadcasting.html" "broadcasting")" and "(<a> href: "https://docs.racket-lang.org/math/array_slicing.html" "slicing")"; this proposal lacks these features as primitives.")
  (<li> "Racket's "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html" "nonstrict arrays")" correspond to our \"generalized arrays\".")
  (<li> "Racket's arrays axes are indexed from zero; this SRFI allows nonzero lower bounds. Thus Racket's library has no need for array-translate.")
  (<li> "Racket's "(<a> href: "https://docs.racket-lang.org/math/array_pointwise.html" "array-map")" is similar to the one in this proposal, except that ours always returns a generalized array.")
- (<li> "Racket's "(<a> href: "https://docs.racket-lang.org/math/array_transform.html" "array-axis-ref")" can be implemented in this SRFI with array-permute and array-curry. Racket's array-axis-permute is similar to our array-permute.  Both have array-reshape and array-append.  Racket's array-flatten is the same as (list->vector (array->list array)) in this proposal.")
+ (<li> "Racket's "(<a> href: "https://docs.racket-lang.org/math/array_transform.html" "array-axis-ref")" can be implemented in this SRFI with "(<code>'array-permute)" and "(<code>'array-curry)". Racket's array-axis-permute is similar to our "(<code>'array-permute)".  Both have "(<code>'array-reshape)" and "(<code>'array-append)".  Racket's array-flatten is similar to "(<code>"(array->vector array)")" in this proposal.")
  (<li> "Racket's "(<a> href: "https://docs.racket-lang.org/math/array_fold.html" "array-axis-fold")" can be implemented in this SRFI as"
  (<pre>(<code>
 "(define (array-axis-fold arr k f init)
@@ -2477,11 +2476,11 @@ translate: ")
              (array-curry
               (array-permute arr (index-last (array-dimension arr) k))
               1)))"))
- "If one wants what Racket calls a \"strict\" array as a result, apply array-copy to the result.  One can define Racket's \"*-axis-*\" procedures similarly.")
+ "If one wants what Racket calls a \"strict\" array as a result, apply "(<code>'array-copy)" to the result.  One can define Racket's \"*-axis-*\" procedures similarly.")
  (<li> "Racket's library has specialized mathematical array operations for many math procedures; this library does not.")
  (<li> "Racket's library has "(<a> href: "https://docs.racket-lang.org/math/array_subtypes.html" "flonum and complex flonum arrays")"; this library has similar features, including for various other homogeneous storage types, and is extendable.")
- (<li> "Racket has many procedures to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.")
- (<li> "I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.")
+ (<li> "Racket has many procedures to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with "(<code>'array-permute)", "(<code>'array-curry)", and "(<code>'array-stack)".")
+ (<li> "I don't see procedures in Racket's library corresponding to "(<code>'array-curry)", "(<code>'array-decurry)", "(<code>'array-tile)", "(<code>'array-block)", "(<code>'array-reverse)", or "(<code>'array-sample)".")
  (<li> "I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.")
  )
 
