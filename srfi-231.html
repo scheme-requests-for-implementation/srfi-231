@@ -1916,25 +1916,24 @@ indexer:       (lambda multi-index
       <dt><code>(array-set! A obj k1 ...)</code></dt>
       <dd><code>(let ((A! (array-setter A))) ... (A! obj k1 ...) ...)</code> or <code>(array-set! A obj k1 ...)</code></dd></dl>
     <h3>Racket's array library</h3>
-    <p>Racket has an extensive <a href="https://docs.racket-lang.org/math/array.html">array library</a>, written by Neil Toronto, as part of its &quot;Math Library&quot;.  We give a superficial comparison of some aspects of Racket's library with this proposal:</p>
+    <p>Racket has an extensive <a href="https://docs.racket-lang.org/math/array.html">array library</a>, written by Neil Toronto, as part of its &quot;Math Library&quot;.  I do not claim to have a complete understanding of Racket's array library, but attempt here to  give a superficial comparison of some aspects of Racket's library with this proposal:</p>
     <ul>
-      <li>Racket's library allows zero-dimensional arrays, which are simply a Scheme value; this proposal does not.</li>
       <li>Racket's library has what it calls <a href="https://docs.racket-lang.org/math/array_broadcasting.html">broadcasting</a> and <a href="https://docs.racket-lang.org/math/array_slicing.html">slicing</a>; this proposal lacks these features as primitives.</li>
       <li>Racket's <a href="https://docs.racket-lang.org/math/array_nonstrict.html">nonstrict arrays</a> correspond to our &quot;generalized arrays&quot;.</li>
       <li>Racket's arrays axes are indexed from zero; this SRFI allows nonzero lower bounds. Thus Racket's library has no need for array-translate.</li>
       <li>Racket's <a href="https://docs.racket-lang.org/math/array_pointwise.html">array-map</a> is similar to the one in this proposal, except that ours always returns a generalized array.</li>
-      <li>Racket's <a href="https://docs.racket-lang.org/math/array_transform.html">array-axis-ref</a> can be implemented in this SRFI with array-permute and array-curry. Racket's array-axis-permute is similar to our array-permute.  Both have array-reshape and array-append.  Racket's array-flatten is the same as (list-&gt;vector (array-&gt;list array)) in this proposal.</li>
+      <li>Racket's <a href="https://docs.racket-lang.org/math/array_transform.html">array-axis-ref</a> can be implemented in this SRFI with <code>array-permute</code> and <code>array-curry</code>. Racket's array-axis-permute is similar to our <code>array-permute</code>.  Both have <code>array-reshape</code> and <code>array-append</code>.  Racket's array-flatten is similar to <code>(array-&gt;vector array)</code> in this proposal.</li>
       <li>Racket's <a href="https://docs.racket-lang.org/math/array_fold.html">array-axis-fold</a> can be implemented in this SRFI as
         <pre><code>(define (array-axis-fold arr k f init)
   (array-map (lambda (pencil)
                (array-foldl f init pencil))
              (array-curry
               (array-permute arr (index-last (array-dimension arr) k))
-              1)))</code></pre>If one wants what Racket calls a &quot;strict&quot; array as a result, apply array-copy to the result.  One can define Racket's &quot;*-axis-*&quot; procedures similarly.</li>
+              1)))</code></pre>If one wants what Racket calls a &quot;strict&quot; array as a result, apply <code>array-copy</code> to the result.  One can define Racket's &quot;*-axis-*&quot; procedures similarly.</li>
       <li>Racket's library has specialized mathematical array operations for many math procedures; this library does not.</li>
       <li>Racket's library has <a href="https://docs.racket-lang.org/math/array_subtypes.html">flonum and complex flonum arrays</a>; this library has similar features, including for various other homogeneous storage types, and is extendable.</li>
-      <li>Racket has many procedures to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with array-permute, array-curry, and array-stack.</li>
-      <li>I don't see procedures in Racket's library corresponding to array-curry, array-reverse, or array-sample.</li>
+      <li>Racket has many procedures to select and recombine data from various axes of arrays, some of which can be simulated in this SRFI with <code>array-permute</code>, <code>array-curry</code>, and <code>array-stack</code>.</li>
+      <li>I don't see procedures in Racket's library corresponding to <code>array-curry</code>, <code>array-decurry</code>, <code>array-tile</code>, <code>array-block</code>, <code>array-reverse</code>, or <code>array-sample</code>.</li>
       <li>I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.</li>
     </ul>
     <h2>Other examples</h2>
