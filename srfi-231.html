@@ -1560,7 +1560,7 @@ indexer:       (lambda multi-index
         (make-specialized-array result-domain))
        (curried-result
         (array-curry result (interval-dimension element-domain))))
-  (array-for-each array-assign! result-array A)
+  (array-for-each array-assign! curried-result A)
   result-array)</code></pre>
     <p>Any missing optional arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of <code><var>A</var></code>'s array elements.</p>
@@ -1674,6 +1674,66 @@ indexer:       (lambda multi-index
       slices)))
  (iota (array-dimension A)))</code></pre>
     <p>This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>A</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>A</var></code> successively along each coordinate axis of <code><var>A</var></code>, in any order of the axes.  Each element of <code><var>A</var></code> is accessed once, and each element of <code><var>A</var></code>'s array elements is accessed once.</p>
+    <p>Each element of <code><var>A</var></code> is itself an array; one can copy the contents of each array element of <code><var>A</var></code> to the result array with the following algorithm:</p>
+    <pre><code>(let* ((A_dim
+        (array-dimension A))
+       (ks
+        (list-&gt;vector (iota A_dim)))
+       (corner-multi-index
+        (make-list (fx- A_dim 1) 0))
+       (slice-offsets       ;; the indices in each direction where the &quot;cuts&quot; are
+        (vector-map
+         (lambda (k)        ;; the direction
+           (let* ((pencil   ;; a pencil in that direction
+                   (apply (array-getter (array-curry (array-permute A (index-last A_dim k)) 1))
+                          corner-multi-index))
+                  (pencil_
+                   (array-getter pencil))
+                  (pencil-size
+                   (interval-width (array-domain pencil) 0))
+                  (result   ;; include sum of all kth interval-widths in pencil
+                   (make-vector (fx+ pencil-size 1) 0)))
+             (do ((i 0 (fx+ i 1)))
+                 ((fx= i pencil-size) result)
+               (vector-set! result
+                            (fx+ i 1)
+                            (fx+ (vector-ref result i)
+                                 (interval-width (array-domain (pencil_ i)) k))))))
+         ks))
+       (result
+        (make-specialized-array
+         (make-interval
+          (vector-map (lambda (v)
+                        (vector-ref v (fx- (vector-length v) 1)))
+                      slice-offsets))
+         storage-class
+         (storage-class-default storage-class)
+         safe?)))
+  ;; We copy the elements from each input array block to the corresponding block
+  ;; in the result array.
+  (interval-for-each
+   (lambda multi-index
+     (let* ((vector-multi-index
+             (list-&gt;vector multi-index))
+            (corner     ;; where the subarray will sit in the result array
+             (vector-map (lambda (i k)
+                           (vector-ref (vector-ref slice-offsets k) i))
+                         vector-multi-index
+                         ks))
+            (subarray
+             (apply A_ multi-index))
+            (translated-subarray  ;; translate the subarray to corner
+             (array-translate
+              subarray
+              (vector-map -
+                          corner
+                          (interval-lower-bounds (array-domain subarray))))))
+       (array-assign! (array-extract result (array-domain translated-subarray))
+                      translated-subarray)))
+   (array-domain A))
+  (if (not mutable?)
+      (array-freeze! result)
+      result))</code></pre>
     <p>Omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.</p>
     <p><b>Examples: </b></p>
