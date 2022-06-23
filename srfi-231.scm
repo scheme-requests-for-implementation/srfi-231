@@ -84,6 +84,7 @@ MathJax.Hub.Config({
          (<li> "Draft #9 published: 2022-05-26")
          (<li> "Draft #10 published: 2022-06-01")
          (<li> "Draft #11 published: 2022-06-09")
+         (<li> "Draft #12 published: 2022-06-20")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -2084,7 +2085,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
         (make-specialized-array result-domain))
        (curried-result
         (array-curry result (interval-dimension element-domain))))
-  (array-for-each array-assign! result-array A)
+  (array-for-each array-assign! curried-result A)
   result-array)"))
 (<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of "(<code>(<var>'A))"'s array elements.")
@@ -2203,6 +2204,66 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
       slices)))
  (iota (array-dimension A)))"))
 (<p> "This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.  Each element of "(<code>(<var>'A))" is accessed once, and each element of "(<code>(<var>'A))"'s array elements is accessed once.")
+(<p> "Each element of "(<code>(<var>'A))" is itself an array; one can copy the contents of each array element of "(<code>(<var>'A))" to the result array with the following algorithm:")
+(<pre>(<code>"(let* ((A_dim
+        (array-dimension A))
+       (ks
+        (list->vector (iota A_dim)))
+       (corner-multi-index
+        (make-list (fx- A_dim 1) 0))
+       (slice-offsets       ;; the indices in each direction where the \"cuts\" are
+        (vector-map
+         (lambda (k)        ;; the direction
+           (let* ((pencil   ;; a pencil in that direction
+                   (apply (array-getter (array-curry (array-permute A (index-last A_dim k)) 1))
+                          corner-multi-index))
+                  (pencil_
+                   (array-getter pencil))
+                  (pencil-size
+                   (interval-width (array-domain pencil) 0))
+                  (result   ;; include sum of all kth interval-widths in pencil
+                   (make-vector (fx+ pencil-size 1) 0)))
+             (do ((i 0 (fx+ i 1)))
+                 ((fx= i pencil-size) result)
+               (vector-set! result
+                            (fx+ i 1)
+                            (fx+ (vector-ref result i)
+                                 (interval-width (array-domain (pencil_ i)) k))))))
+         ks))
+       (result
+        (make-specialized-array
+         (make-interval
+          (vector-map (lambda (v)
+                        (vector-ref v (fx- (vector-length v) 1)))
+                      slice-offsets))
+         storage-class
+         (storage-class-default storage-class)
+         safe?)))
+  ;; We copy the elements from each input array block to the corresponding block
+  ;; in the result array.
+  (interval-for-each
+   (lambda multi-index
+     (let* ((vector-multi-index
+             (list->vector multi-index))
+            (corner     ;; where the subarray will sit in the result array
+             (vector-map (lambda (i k)
+                           (vector-ref (vector-ref slice-offsets k) i))
+                         vector-multi-index
+                         ks))
+            (subarray
+             (apply A_ multi-index))
+            (translated-subarray  ;; translate the subarray to corner
+             (array-translate
+              subarray
+              (vector-map -
+                          corner
+                          (interval-lower-bounds (array-domain subarray))))))
+       (array-assign! (array-extract result (array-domain translated-subarray))
+                      translated-subarray)))
+   (array-domain A))
+  (if (not mutable?)
+      (array-freeze! result)
+      result))"))
 (<p> "Omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if all elements of the result cannot by manipulated by the given storage class.")
 (<p>(<b> "Examples: "))
