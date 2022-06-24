@@ -1119,7 +1119,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (<p> "It is an error to call any of these procedures if "(<code>(<var> 'array))" is not a specialized array.")
 
 (format-lambda-list '(array-packed? A))
-(<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))" are stored in "(<code>"(array-body "(<var>'A)")")" with increasing and consecutive indices, and "(<code>'#f)" otherwise.")
+(<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))", taken in lexicographical order, are stored in "(<code>"(array-body "(<var>'A)")")" with increasing and consecutive indices, and "(<code>'#f)" otherwise.")
 (<p> "It is an error if "(<code>(<var>'A))" is not a specialized array.")
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
@@ -2305,7 +2305,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (format-lambda-list '(array-set! A v #\. multi-index))
 (<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that "(<code>(<var>'multi-index))" is a sequence of exact integers.")
 (<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v multi-index")")")".")
-(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>'v)" is not an appropriate value to be stored in that array, if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
+(<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>(<var>'v))" is not an appropriate value to be stored in that array, if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
 
 (<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
 
