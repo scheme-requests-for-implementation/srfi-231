@@ -4298,7 +4298,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (let* ((intervals
           (map (lambda (ignore)
                  (random-interval 1 4))
-               (make-list (random 1 3)))))
+               (make-list (random 4)))))
     (test (apply interval-cartesian-product intervals)
           (apply my-interval-cartesian-product intervals))))
 
