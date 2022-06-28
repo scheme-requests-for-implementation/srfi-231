@@ -501,12 +501,11 @@ OTHER DEALINGS IN THE SOFTWARE.
   (%%finish-interval (vector-concatenate (map %%interval-lower-bounds intervals))
                      (vector-concatenate (map %%interval-upper-bounds intervals))))
 
-(define (interval-cartesian-product interval #!rest intervals)
-  (let ((intervals (cons interval intervals)))
-    (cond ((not (%%every interval? intervals))
-           (apply error "interval-cartesian-product: Not all arguments are intervals: " intervals))
-          (else
-           (%%interval-cartesian-product intervals)))))
+(define (interval-cartesian-product #!rest intervals)
+  (cond ((not (%%every interval? intervals))
+         (apply error "interval-cartesian-product: Not all arguments are intervals: " intervals))
+        (else
+         (%%interval-cartesian-product intervals))))
 
 (define (interval-dilate interval lower-diffs upper-diffs)
   (cond ((not (interval? interval))
