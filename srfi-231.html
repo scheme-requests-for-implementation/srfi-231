@@ -61,6 +61,7 @@
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li><code>array-elements-in-order?</code> has been renamed <code>array-packed?</code>.</li>
+      <li><code>interval-cartesian-product</code> can now take zero arguments, in which case it returns <code>(make-interval '#())</code>.</li>
       <li><code>char-storage-class</code> is provided.</li>
       <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, <a href="#array-freeze!"><code>array-freeze!</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
@@ -488,13 +489,13 @@
     <p><b>Procedure: </b><code><a id="interval-scale">interval-scale</a> <var>interval</var> <var>scales</var></code></p>
     <p>If <code><var>interval</var></code> is a $d$-dimensional interval $[0,u_1)\times\cdots\times[0,u_{d-1})$ with all lower bounds zero, and <code><var>scales</var></code> is a length-$d$ vector of positive exact integers, which we'll denote by $\vec s$, then <code>interval-scale</code> returns the interval $[0,\operatorname{ceiling}(u_1/s_1))\times\cdots\times[0,\operatorname{ceiling}(u_{d-1}/s_{d-1}))$.</p>
     <p>It is an error if  <code><var>interval</var></code> and <code><var>scales</var></code> do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a id="interval-cartesian-product">interval-cartesian-product</a> <var>interval</var> . <var>intervals</var></code></p>
-    <p>Implements the Cartesian product of the intervals in <code>(cons <var>interval</var> <var>intervals</var>)</code>. Returns</p>
+    <p><b>Procedure: </b><code><a id="interval-cartesian-product">interval-cartesian-product</a> . <var>intervals</var></code></p>
+    <p>Implements the Cartesian product of the intervals in <code><var>intervals</var></code>. Returns:</p>
     <pre><code>(make-interval
  (list-&gt;vector
-  (apply append (map interval-lower-bounds-&gt;list (cons interval intervals))))
+  (apply append (map interval-lower-bounds-&gt;list intervals)))
  (list-&gt;vector
-  (apply append (map interval-upper-bounds-&gt;list (cons interval intervals)))))</code></pre>
+  (apply append (map interval-upper-bounds-&gt;list intervals))))</code></pre>
     <p>It is an error if any argument is not an interval.</p>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.

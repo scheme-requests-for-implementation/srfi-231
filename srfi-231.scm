@@ -123,6 +123,7 @@ MathJax.Hub.Config({
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> (<code>'array-tile)" is now more flexible in how you can decompose an array.")
          (<li> (<code>'array-elements-in-order?)" has been renamed "(<code>'array-packed?)".")
+         (<li> (<code>'interval-cartesian-product)" can now take zero arguments, in which case it returns "(<code>"(make-interval '#())")".")
          (<li> (<code>'char-storage-class)" is provided.")
          (<li> "Introduced new procedures "
                (<a> href: "#interval-width" (<code>'interval-width))", "
@@ -725,19 +726,13 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
      " returns the interval $[0,\\operatorname{ceiling}(u_1/s_1))\\times\\cdots\\times[0,\\operatorname{ceiling}(u_{d-1}/s_{d-1}))$.")
 (<p> "It is an error if  "(<code>(<var>'interval))" and "(<code>(<var>'scales))" do not satisfy this condition.")
 
-(format-lambda-list '(interval-cartesian-product interval #\. intervals))
-(<p> "Implements the Cartesian product of the intervals in "
-     (<code>
-      "(cons "
-      (<var>'interval)
-      " "
-      (<var>'intervals)
-      ")")". Returns")
+(format-lambda-list '(interval-cartesian-product  #\. intervals))
+(<p> "Implements the Cartesian product of the intervals in "(<code>(<var>'intervals))". Returns:")
 (<pre>(<code>"(make-interval
  (list->vector
-  (apply append (map interval-lower-bounds->list (cons interval intervals))))
+  (apply append (map interval-lower-bounds->list intervals)))
  (list->vector
-  (apply append (map interval-upper-bounds->list (cons interval intervals)))))"))
+  (apply append (map interval-upper-bounds->list intervals))))"))
 (<p> "It is an error if any argument is not an interval.")
 
 (<h2> "Storage classes")
