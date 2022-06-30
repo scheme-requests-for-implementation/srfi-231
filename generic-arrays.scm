@@ -661,7 +661,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (%%interval-for-each f interval)
   (if (not (eqv? (%%interval-volume interval) 0)) ;; Fast track (make-interval '#(1000000 1000000  0)) case
       (case (%%interval-dimension interval)
-        ((0) (f))
+        ((0) (f) (void))
         ((1) (let ((lower-i (%%interval-lower-bound interval 0))
                    (upper-i (%%interval-upper-bound interval 0)))
                (let i-loop ((i lower-i))
