@@ -37,6 +37,86 @@ OTHER DEALINGS IN THE SOFTWARE.
          (mostly-fixnum)
          (not safe))
 
+;;; INLINING: Gambit's inlining directives are a bit of a coarse tool.
+;;; So what I've decided to do is not inline by default, and inline
+;;; small accessors, etc., by hand.  Let's hope I catch them all.
+
+(declare (inline))
+
+;;; An interval is a cross product of multi-indices
+
+;;; [l_0,u_0) x [l_1,u_1) x ... x [l_n-1,u_n-1)
+
+;;; where l_i < u_i for 0 <= i < n, and n >= 0 is the dimension of the interval
+
+(define-type %%interval
+  id: 63374ab5-06fa-4d43-8c74-dd46f75ff7b5
+  copier: #f
+  no-functional-setter:
+  (dimension read-only:)                  ;; a fixnum
+  (%%volume read-write: equality-skip:)   ;; #f or an exact integer, calculated when needed
+  (lower-bounds read-only:)               ;; a vector of exact integers l_0,...,l_n-1
+  (upper-bounds read-only:)               ;; a vector of exact integers u_0,...,u_n-1
+  )
+
+
+(define-type %%array
+  id: d0995125-4e60-4b86-90a2-3bffbe52bcc4
+  copier: #f
+  ;; Part of all arrays
+  ;; an interval
+  no-functional-setter:
+  (domain read-only:)
+  ;; (lambda (i_0 ... i_n-1) ...) returns a value for (i_0,...,i_n-1) in (array-domain a)
+  (getter read-only:)
+  ;; Part of mutable arrays
+  ;; (lambda (v i_0 ... i_n-1) ...) sets a value for (i_0,...,i_n-1) in (array-domain a)
+  (setter read-write:)
+  ;; Part of specialized arrays
+  ;; a storage class
+  (storage-class read-only:)
+  ;; the backing store for this array
+  (body read-only:)
+  ;; see below
+  (indexer read-only:)
+  ; do we check whether bounds (in getters and setters) and values (in setters) are valid
+  (safe? read-only:)
+  ; are the elements adjacent and in order?
+  (in-order? read-write:)
+  )
+
+;;;
+;;; A storage-class contains functions and objects to manipulate the
+;;; backing store of a specialized-array.
+;;;
+;;; getter:     (lambda (body i) ...)   returns the value of body at index i
+;;; setter:     (lambda (body i v) ...) sets the value of body at index i to v
+;;; checker:    (lambda (val) ...)      checks that val is an appropriate value for storing in (maker n)
+;;; maker:      (lambda (n val) ...)    makes a body of length n with value val
+;;; length:     (lambda (body) ...)     returns the number of objects in body
+;;; default:    object                  is the default value with which to fill body
+;;; data?:      (lambda (data) ...)     returns #t iff data can be converted to a body
+;;; data->body: (lambda (data) ...)     converts data to a body, raising an exception if needed
+;;;
+
+(define-type storage-class
+  id: 65dd13e3-eb6d-4214-8de6-78d962d71885
+  copier: #f
+  read-only:
+  no-functional-setter:
+  getter
+  setter
+  checker
+  maker
+  copier
+  length
+  default
+  data?
+  data->body
+  )
+
+(declare (not inline))
+
 ;;; Our naming convention prefixes %% to the names of internal procedures,
 
 (cond-expand
@@ -67,13 +147,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;; Inlining the following routines causes too much code bloat
 ;; after compilation.
 
-(declare (not inline))
-
 ;;; We do not need a multi-argument every.
 
 (define (%%every pred list)
-  ;; don't inline %%every, but unroll the loop if advantageous
-  (declare (inline))
   (let loop ((list list))
     (or (null? list)
         (and (pred (car list))
@@ -113,22 +189,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (declare (inline))
 
-;;; An interval is a cross product of multi-indices
-
-;;; [l_0,u_0) x [l_1,u_1) x ... x [l_n-1,u_n-1)
-
-;;; where l_i < u_i for 0 <= i < n, and n > 0 is the dimension of the interval
-
-(define-structure %%interval
-  dimension               ;; a fixnum
-  %%volume                ;; #f or an exact integer, calculated when needed
-  lower-bounds            ;; a vector of exact integers l_0,...,l_n-1
-  upper-bounds            ;; a vector of exact integers u_0,...,u_n-1
-  )                       ;; end %%interval
 (define (interval? x)
   (%%interval? x))
-
-(declare (not inline))
 
 (define %%vector-of-zeros
   '#(#()
@@ -174,8 +236,6 @@ OTHER DEALINGS IN THE SOFTWARE.
            (%%finish-interval (vector-copy lower-bounds)
                               (vector-copy upper-bounds)))))))
 
-(declare (inline))
-
 (define (%%interval-lower-bound interval i)
   (vector-ref (%%interval-lower-bounds interval) i))
 
@@ -187,7 +247,7 @@ OTHER DEALINGS IN THE SOFTWARE.
      (%%interval-lower-bound interval k)))
 
 (define (%%interval-widths interval)
-  (vector-map -
+  (vector-map (lambda (x y) (- x y))
               (%%interval-upper-bounds interval)
               (%%interval-lower-bounds interval)))
 
@@ -436,8 +496,6 @@ OTHER DEALINGS IN THE SOFTWARE.
     (do ((i 0 (fx+ i 1)))
         ((fx= i n) result)
       (vector-set! result (vector-ref permutation i) i))))
-
-
 
 (define (%%interval-permute interval permutation)
   (%%finish-interval (%%vector-permute (%%interval-lower-bounds interval) permutation)
@@ -869,20 +927,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (declare (inline))
 
-(define-structure %%array
-  ;; Part of all arrays
-  domain                  ;; an interval
-  getter                  ;; (lambda (i_0 ... i_n-1) ...) returns a value for (i_0,...,i_n-1) in (array-domain a)
-  ;; Part of mutable arrays
-  setter                  ;; (lambda (v i_0 ... i_n-1) ...) sets a value for (i_0,...,i_n-1) in (array-domain a)
-  ;; Part of specialized arrays
-  storage-class           ;; a storage-class
-  body                    ;; the backing store for this array
-  indexer                 ;; see below
-  safe?                   ;; do we check whether bounds (in getters and setters) and values (in setters) are valid
-  in-order?               ;; are the elements adjacent and in order?
-  )
-
 (define specialized-array-default-safe?
   (make-parameter
    #f
@@ -899,7 +943,6 @@ OTHER DEALINGS IN THE SOFTWARE.
          bool
          (error "specialized-array-default-mutable?: The argument is not a boolean: " bool)))))
 
-(declare (not inline))
 
 ;; An array has a domain (which is an interval) and an getter that maps that domain into some type of
 ;; Scheme objects
@@ -1020,21 +1063,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-freeze! A))))
 
-;;;
-;;; A storage-class contains functions and objects to manipulate the
-;;; backing store of a specialized-array.
-;;;
-;;; getter:     (lambda (body i) ...)   returns the value of body at index i
-;;; setter:     (lambda (body i v) ...) sets the value of body at index i to v
-;;; checker:    (lambda (val) ...)      checks that val is an appropriate value for storing in (maker n)
-;;; maker:      (lambda (n val) ...)    makes a body of length n with value val
-;;; length:     (lambda (body) ...)     returns the number of objects in body
-;;; default:    object                  is the default value with which to fill body
-;;; data?:      (lambda (data) ...)     returns #t iff data can be converted to a body
-;;; data->body: (lambda (data) ...)     converts data to a body, raising an exception if needed
-;;;
-
-(define-structure storage-class getter setter checker maker copier length default data? data->body)
+(declare (not inline))
 
 ;;; We define specialized storage-classes for:
 ;;;
@@ -1073,12 +1102,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (lambda (v i val)
                       (,set! v i val))
                     ;; checker
-                    ,checker           ;; already expanded inline
+                    ,checker           ;; already expanded
                     ;; maker
                     (lambda (n val)
                       (,make n val))
                     ;; copier
-                    ,copy!             ;; complex call to memcopy, so don't expand inline
+                    ,copy!             ;; complex call to memcopy, so don't expand
                     ;; length
                     (lambda (v)
                       (,length v))
@@ -3171,7 +3200,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (cond ((not (fx= (length indices) n))
                 (error "The number of indices does not equal the array dimension: " indices))
                (else
-                (apply getter (map - indices translation-list)))))))))
+                (apply getter (map (lambda (x y) (- x y))  indices translation-list)))))))))
 
 (define (%%setter-translate setter translation)
   (case (vector-length translation)
@@ -3202,7 +3231,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (cond ((not (fx= (length indices) n))
                 (error "The number of indices does not equal the array dimension: " v indices))
                (else
-                (apply setter v (map - indices translation-list)))))))))
+                (apply setter v (map (lambda (x y) (- x y))  indices translation-list)))))))))
 
 (define (%%array-translate array translation)
   (cond ((specialized-array? array)
@@ -4714,7 +4743,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (let* ((A                (%%array-translate     ;; make lower-bounds zero
                                    (array-copy A-arg)  ;; evaluate all (array) elements of A-arg
-                                   (vector-map - (%%interval-lower-bounds (array-domain A-arg)))))
+                                   (vector-map (lambda (x) (- x))  (%%interval-lower-bounds (array-domain A-arg)))))
                 (A_D              (%%array-domain A))
                 (A_               (%%array-getter A))
                 (A_dim            (%%interval-dimension A_D))
@@ -4787,7 +4816,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (translated-subarray  ;; translate the subarray to corner
                                (%%array-translate
                                 subarray
-                                (vector-map -
+                                (vector-map (lambda (x y) (- x y))
                                             corner
                                             (%%interval-lower-bounds (%%array-domain subarray))))))
                          (%%move-array-elements (%%array-extract result (%%array-domain translated-subarray))
@@ -5092,5 +5121,3 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                (mutable-array? array)
                                                (%%array-safe? array)
                                                (%%array-in-order? array)))))))))
-
-(declare (inline))
