@@ -33,6 +33,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (declare (standard-bindings)
          (extended-bindings)
+         (inlining-limit 1000)
          (block)
          (mostly-fixnum)
          (not safe))
@@ -263,7 +264,126 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define (%%interval-upper-bounds->list interval)
   (vector->list (%%interval-upper-bounds interval)))
 
+(define-macro (macro-make-index-tables)
+  `(begin
+     (define %%index-rotates
+       ',(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (k)
+                         (list->vector
+                          (let ((identity-permutation (iota n)))
+                            (append (drop identity-permutation k)
+                                    (take identity-permutation k)))))
+                       (iota (+ n 1)))))
+               (iota 5))))
+
+     (define %%index-firsts
+       ',(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (k)
+                         (list->vector
+                          (let ((identity-permutation (iota n)))
+                            (cons k
+                                  (append (take identity-permutation k)
+                                          (drop identity-permutation (fx+ k 1)))))))
+                       (iota n))))
+               (iota 5))))
+
+     (define %%index-lasts
+       ',(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (k)
+                         (list->vector
+                          (let ((identity-permutation (iota n)))
+                            (append (take identity-permutation k)
+                                    (drop identity-permutation (fx+ k 1))
+                                    (list k)))))
+                       (iota n))))
+               (iota 5))))))
+
+(macro-make-index-tables)
+
+(define (%%index-rotate n k)
+  (if (fx< n 5)
+      (vector-ref (vector-ref %%index-rotates n) k)
+      (let ((identity-permutation (iota n)))
+        (list->vector (append (drop identity-permutation k)
+                              (take identity-permutation k))))))
+
+(define (%%index-first n k)
+  (if (fx< n 5)
+      (vector-ref (vector-ref %%index-firsts n) k)
+      (let ((identity-permutation (iota n)))
+        (list->vector (cons k
+                            (append (take identity-permutation k)
+                                    (drop identity-permutation (fx+ k 1))))))))
+
+(define (%%index-last n k)
+  (if (fx< n 5)
+      (vector-ref (vector-ref %%index-lasts n) k)
+      (let ((identity-permutation (iota n)))
+        (list->vector (append (take identity-permutation k)
+                              (drop identity-permutation (fx+ k 1))
+                              (list k))))))
+
+(define (%%interval-empty? interval)
+  (eqv? (%%interval-volume interval) 0))
+
+(define (%%interval-volume interval)
+  (or (%%interval-%%volume interval)
+      (%%compute-interval-volume interval)))
+
 (declare (not inline))
+
+(define (%%compute-interval-volume interval)
+  (let* ((upper-bounds
+              (%%interval-upper-bounds interval))
+             (lower-bounds
+              (%%interval-lower-bounds interval))
+             (dimension
+              (%%interval-dimension interval))
+             (volume
+              (do ((i (fx- dimension 1) (fx- i 1))
+                   (result 1 (* result (- (vector-ref upper-bounds i)
+                                          (vector-ref lower-bounds i)))))
+                  ((fx< i 0) result))))
+        (%%interval-%%volume-set! interval volume)
+        volume))
+
+(define (index-rotate n k)
+  (cond ((not (and (fixnum? n)
+                   (fx<= 0 n)))
+         (error "index-rotate: The first argument is not a nonnegative fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k n)))
+         (error "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): " n k))
+        (else
+         (%%index-rotate n k))))
+
+(define (index-first n k)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-first: The first argument is not a positive fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k)
+                   (fx< k n)))
+         (error "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+        (else
+         (%%index-first n k))))
+
+(define (index-last n k)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-last: The first argument is not a positive fixnum: " n k))
+        ((not (and (fixnum? k)
+                   (fx<= 0 k)
+                   (fx< k n)))
+         (error "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
+        (else
+         (%%index-last n k))))
 
 (define (interval-dimension interval)
   (cond ((not (interval? interval))
@@ -355,9 +475,6 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%interval-volume interval))))
 
-(define (%%interval-empty? interval)
-  (eqv? (%%interval-volume interval) 0))
-
 (define (interval-empty? interval)
   (cond ((not (interval? interval))
          (error "interval-empty?: The argument is not an interval: " interval))
@@ -379,103 +496,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (let ()
                         (vector-set! permutation-range p_i #t)
                         (loop (fx+ i 1))))))))))
-
-(define-macro (macro-make-index-tables)
-  `(begin
-     (define %%index-rotates
-       ',(list->vector
-          (map (lambda (n)
-                 (list->vector
-                  (map (lambda (k)
-                         (list->vector
-                          (let ((identity-permutation (iota n)))
-                            (append (drop identity-permutation k)
-                                    (take identity-permutation k)))))
-                       (iota (+ n 1)))))
-               (iota 5))))
-
-     (define %%index-firsts
-       ',(list->vector
-          (map (lambda (n)
-                 (list->vector
-                  (map (lambda (k)
-                         (list->vector
-                          (let ((identity-permutation (iota n)))
-                            (cons k
-                                  (append (take identity-permutation k)
-                                          (drop identity-permutation (fx+ k 1)))))))
-                       (iota n))))
-               (iota 5))))
-
-     (define %%index-lasts
-       ',(list->vector
-          (map (lambda (n)
-                 (list->vector
-                  (map (lambda (k)
-                         (list->vector
-                          (let ((identity-permutation (iota n)))
-                            (append (take identity-permutation k)
-                                    (drop identity-permutation (fx+ k 1))
-                                    (list k)))))
-                       (iota n))))
-               (iota 5))))))
-
-(macro-make-index-tables)
-
-(define (%%index-rotate n k)
-  (if (fx< n 5)
-      (vector-ref (vector-ref %%index-rotates n) k)
-      (let ((identity-permutation (iota n)))
-        (list->vector (append (drop identity-permutation k)
-                              (take identity-permutation k))))))
-
-(define (%%index-first n k)
-  (if (fx< n 5)
-      (vector-ref (vector-ref %%index-firsts n) k)
-      (let ((identity-permutation (iota n)))
-        (list->vector (cons k
-                            (append (take identity-permutation k)
-                                    (drop identity-permutation (fx+ k 1))))))))
-
-(define (%%index-last n k)
-  (if (fx< n 5)
-      (vector-ref (vector-ref %%index-lasts n) k)
-      (let ((identity-permutation (iota n)))
-        (list->vector (append (take identity-permutation k)
-                              (drop identity-permutation (fx+ k 1))
-                              (list k))))))
-
-(define (index-rotate n k)
-  (cond ((not (and (fixnum? n)
-                   (fx<= 0 n)))
-         (error "index-rotate: The first argument is not a nonnegative fixnum: " n k))
-        ((not (and (fixnum? k)
-                   (fx<= 0 k n)))
-         (error "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): " n k))
-        (else
-         (%%index-rotate n k))))
-
-(define (index-first n k)
-  (cond ((not (and (fixnum? n)
-                   (fxpositive? n)))
-         (error "index-first: The first argument is not a positive fixnum: " n k))
-        ((not (and (fixnum? k)
-                   (fx<= 0 k)
-                   (fx< k n)))
-         (error "index-first: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
-        (else
-         (%%index-first n k))))
-
-(define (index-last n k)
-  (cond ((not (and (fixnum? n)
-                   (fxpositive? n)))
-         (error "index-last: The first argument is not a positive fixnum: " n k))
-        ((not (and (fixnum? k)
-                   (fx<= 0 k)
-                   (fx< k n)))
-         (error "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
-        (else
-         (%%index-last n k))))
 
 (define (%%vector-permute vector permutation)
   (let* ((n (vector-length vector))
@@ -584,22 +604,6 @@ OTHER DEALINGS IN THE SOFTWARE.
            (if (%%vector-every (lambda (x y) (<= x y)) new-lower-bounds new-upper-bounds)
                (%%finish-interval new-lower-bounds new-upper-bounds)
                (error "interval-dilate: Some resulting lower bounds are greater than corresponding upper bounds: " interval lower-diffs upper-diffs))))))
-
-(define (%%interval-volume interval)
-  (or (%%interval-%%volume interval)
-      (let* ((upper-bounds
-              (%%interval-upper-bounds interval))
-             (lower-bounds
-              (%%interval-lower-bounds interval))
-             (dimension
-              (%%interval-dimension interval))
-             (volume
-              (do ((i (fx- dimension 1) (fx- i 1))
-                   (result 1 (* result (- (vector-ref upper-bounds i)
-                                          (vector-ref lower-bounds i)))))
-                  ((fx< i 0) result))))
-        (%%interval-%%volume-set! interval volume)
-        volume)))
 
 (define (%%interval= interval1 interval2)
   ;; This can be used a fair amount, so we open-code it
@@ -1606,6 +1610,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; the domain to the natural numbers in lexicographical order.
 ;;;
 
+(declare (inline))
+
 (define (specialized-array? obj)
   (and (array? obj)
        (not (eq? (%%array-body obj) #f))))
@@ -1642,6 +1648,8 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "array-empty?: The argument is not an array: " obj))
         (else
          (%%array-empty? obj))))
+
+(declare (not inline))
 
 (define (%%compute-array-packed? domain indexer)
   (or (%%interval-empty? domain)
