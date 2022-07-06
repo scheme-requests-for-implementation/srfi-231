@@ -33,7 +33,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (declare (standard-bindings)
          (extended-bindings)
-         (inlining-limit 1000)
+         (inlining-limit 600)
          (block)
          (mostly-fixnum)
          (not safe))
@@ -4232,7 +4232,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (apply error "array-foldl: The first argument is not a procedure: " op id array arrays))
         ((not (%%every array? (cons array arrays)))
          (apply error "array-foldl: Not all arguments after the first two are arrays: " op id array arrays))
-        ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (array-domain array))) arrays))
+        ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
          (apply error "array-foldl: Not all arrays have the same domain: " op id array arrays))
         ((null? arrays)
          (%%interval-foldl (%%array-getter array) op id (%%array-domain array)))
@@ -4256,7 +4256,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (apply error "array-foldr: The first argument is not a procedure: " op id array arrays))
         ((not (%%every array? (cons array arrays)))
          (apply error "array-foldr: Not all arguments after the first two are arrays: " op id array arrays))
-        ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (array-domain array))) arrays))
+        ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
          (apply error "array-foldr: Not all arrays have the same domain: " op id array arrays))
         ((null? arrays)
          ;; We let array-reverse do a redundant array? check to not generate
@@ -4657,9 +4657,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (car arrays))
                     (lowers
                      ;; the domains of the arrays differ only in the kth axis
-                     (%%interval-lower-bounds->vector (array-domain first-array)))
+                     (%%interval-lower-bounds->vector (%%array-domain first-array)))
                     (uppers
-                     (%%interval-upper-bounds->vector (array-domain first-array)))
+                     (%%interval-upper-bounds->vector (%%array-domain first-array)))
                     (result
                      ;; the result array
                      (%%make-specialized-array
@@ -4673,7 +4673,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (translation
                      ;; a vector we'll use to align each argument
                      ;; array into the proper subarray of the result
-                     (make-vector (array-dimension first-array) 0)))
+                     (make-vector (%%array-dimension first-array) 0)))
                (let loop ((arrays arrays)
                           (subdividers axis-subdividers))
                  (if (null? arrays)
@@ -4685,7 +4685,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (vector-set! lowers k (car subdividers))
                        (vector-set! uppers k (cadr subdividers))
                        (vector-set! translation k (- (car subdividers)
-                                                     (interval-lower-bound (array-domain array) k)))
+                                                     (%%interval-lower-bound (%%array-domain array) k)))
                        (%%move-array-elements
                         (%%array-extract result (%%finish-interval lowers uppers))
                         (%%array-translate array translation)
@@ -4751,7 +4751,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (let* ((A                (%%array-translate     ;; make lower-bounds zero
                                    (array-copy A-arg)  ;; evaluate all (array) elements of A-arg
-                                   (vector-map (lambda (x) (- x))  (%%interval-lower-bounds (array-domain A-arg)))))
+                                   (vector-map (lambda (x) (- x))  (%%interval-lower-bounds (%%array-domain A-arg)))))
                 (A_D              (%%array-domain A))
                 (A_               (%%array-getter A))
                 (A_dim            (%%interval-dimension A_D))
@@ -5070,8 +5070,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                       (%!array-copy array
                                                     (%%array-storage-class array)
                                                     (mutable-array? array)
-                                                    (array-safe? array)
-                                                    "array-reshape: ")
+                                                    (%%array-safe? array)
+                                                    "specialized-array-reshape: ")
                                       new-domain)
                                      (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
                                  (loop-3 (fx+ ok 1)))
