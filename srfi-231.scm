@@ -265,7 +265,7 @@ MathJax.Hub.Config({
                "  If the domain of $B$, $D_B$, is a subset of the domain of $A$, then $T_{BA}(\\vec i)=\\vec i$ is a one-to-one affine mapping.  We define "
                (<code>'array-extract)" to define this common operation; it's like looking at a rectangular sub-part of a spreadsheet. We use it to extract the common part of overlapping domains of three arrays in an image processing example below. ")
          (<li> (<b> "Tiling an array: ")
-               "For various reasons (parallel processing, optimizing cache localization, GPU programming, etc.) one may wish to process a large array as a number of subarrays of the same dimensions, which we call "(<i>'tiling)" the array.  The procedure "(<code>'array-tile)" returns a new array, each entry of which is a subarray extracted (in the sense of "(<code>'array-extract)") from the input array.")
+               "For various reasons (parallel processing, optimizing cache localization, GPU programming, etc.), one may wish to process a large array as a number of subarrays of the same dimensions.  We call this "(<i>'tiling)" the array.  The procedure "(<code>'array-tile)" returns a new array, each entry of which is a subarray extracted (in the sense of "(<code>'array-extract)") from the input array.")
          (<li> (<b> "Translating the domain of an array: ")
                "If $\\vec d$ is a vector of integers, then $T_{BA}(\\vec i)=\\vec i-\\vec d$ is a one-to-one affine map of $D_B=\\{\\vec i+\\vec d\\mid \\vec i\\in D_A\\}$ onto $D_A$. "
                "We call $D_B$ the "(<i>'translate)" of $D_A$, and we define "(<code>'array-translate)" to provide this operation.")
@@ -304,24 +304,24 @@ MathJax.Hub.Config({
         (<h3> "Generalized arrays")
         (<p> "Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. "
              "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers
-in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$, $l_k<u_k$,  (the "(<i>'domain)" of the array) to Scheme objects.
+in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$, $l_k<u_k$ — the "(<i>'domain)" of the array — to Scheme objects.
 Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.")
         (<p> "Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.")
         (<p> "We also consider as Scheme objects the case when $d>0$ and some $l_k=u_k$; in this case the mathematical cross product is empty, and arrays with such a domain have no elements but still \"dimension\" $d$.  Applying the function associated with this array is an error.")
         (<p> "Finally, we allow $d=0$; such an array would have one element, and the function that accesses it is a function with no arguments (i.e., a \"thunk\").")
         (<p> "So an array specifies a  multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to Scheme objects.  This mapping is called the "(<i> 'getter)" of the array, accessed with the procedure "(<code>'array-getter)"; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure "(<code>'array-domain)".")
-        (<p> "If this mapping can be changed, the array is said to be "(<i> 'mutable)" and the mutation is effected
+        (<p> "If this mapping can be changed, the array is said to be "(<i> 'mutable)", and the mutation is effected
 by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" procedure, i.e., the value it returns may not depend solely on the arguments passed to the getter.")
         (<p> "In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
-they may have hash tables or databases behind an implementation, one may read the values from a file, etc.")
+they may have hash tables or databases behind an implementation, or may read the values from a file, etc.")
         (<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array may be either mutable or immutable.")
 
         (<h3> "Sharing generalized arrays")
-        (<p> "Even if an array $A$ is not a specialized array, then it could be \"shared\" by specifying a new interval $D_B$ as the domain of "
+        (<p> "Even if an array $A$ is not a specialized array, it could be \"shared\" by specifying a new interval $D_B$ as the domain of "
              "a new array $B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ would then be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
-        (<p> "One could again \"share\" $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ can be computed with the overhead of computing a single affine transformation.")
+        (<p> "One could again \"share\" $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ could be computed with the overhead of computing a single affine transformation.")
         (<p> "So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the procedure "(<code>'specialized-array-share)", not a more general "(<code>'array-share)".")
-        (<p> "Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote "(<code>"(array-getter "(<var>'A)")")" by "(<code>(<var>'A_))", then if "(<code>(<var>'B))" is the result of "(<code>'array-extract)" applied to "(<code>(<var>'A))", then "
+        (<p> "Certain ways of sharing generalized arrays, however, are relatively easy to code and are not expensive.  If we denote "(<code>"(array-getter "(<var>'A)")")" by "(<code>(<var>'A_))", then if "(<code>(<var>'B))" is the result of "(<code>'array-extract)" applied to "(<code>(<var>'A))", then "
              (<code>"(array-getter "(<var>'B)")")" is simply "(<code>(<var>'A_))".  Similarly, if "(<code>(<var>'A))" is a two-dimensional array, and "(<code>(<var>'B))" is derived from "(<code>(<var>'A))" by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter "(<var>'B)")")" is "
              (<code>"(lambda (i j) ("(<var>'A_)" j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>(<var>'A_))", at least for arrays of small dimension.")
         (<p> "Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)",  "
@@ -619,7 +619,7 @@ if "(<code>(<var>"interval"))" is not an interval.")
         (<p> "and")
         (<pre>
          (<code>"(<= (interval-upper-bound "(<var>'interval1)" j) (interval-upper-bound "(<var>'interval2)" j))"))
-        (<p> "for all $0\\leq j<d$, otherwise it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
+        (<p> "for all $0\\leq j<d$.  Otherwise, it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
 
         (format-lambda-list '(interval-contains-multi-index? interval #\. multi-index))
         (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index (a sequence of exact integers) of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (interval-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (interval-upper-bounds->list "(<var>'interval)"))")".")
@@ -737,7 +737,7 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 
 (<h2> "Storage classes")
 (<p> "Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
-The procedures allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
+The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
 (format-lambda-list '(make-storage-class getter setter checker maker copier length default data? data->body))
@@ -838,7 +838,7 @@ manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 2"(<sup> (<var> 'X))"-1 inclusive),
 "(<code> "f"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"= 8, 16, 32, and 64 (which have default value 0.0 and manipulate 8-, 16-, 32-, and 64-bit floating-point numbers), and
 "(<code> "c"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively, 32- and 64-bit floating-point numbers as real and imaginary parts).")
-(<p> "Implementations with an appropriate homogeneous vector type should define the associated global variable using "(<code>'make-storage-class)", otherwise they shall define the associated global variable to "(<code>'#f)".")
+(<p> "Implementations with an appropriate homogeneous vector type should define the associated global variable using "(<code>'make-storage-class)".  Otherwise, they shall define the associated global variable to "(<code>'#f)".")
 
 (<h2> "Arrays")
 (<p> "Arrays are a data type distinct from other Scheme data types.")
@@ -997,7 +997,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
                                              #\[ initial-value "(storage-class-default " storage-class")" #\]
                                              #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "Constructs a mutable specialized array from its arguments.")
-(<p> (<code>(<var>'interval))" must be given an interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'initial-value))" must be a value that can be manipulated by "(<code>(<var>'storage-class))"; if it is not given it defaults to "(<code>"(storage-class-default "(<var>'storage-class)")")". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
+(<p> (<code>(<var>'interval))" must be given an interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given, it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'initial-value))" must be a value that can be manipulated by "(<code>(<var>'storage-class))"; if it is not given, it defaults to "(<code>"(storage-class-default "(<var>'storage-class)")")". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given, it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
 
 (<p>"The body of the result is constructed as ")
 (<pre>
@@ -2174,7 +2174,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 (format-lambda-list '(array-block A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is a nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together, in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
+(<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
 (<pre>(<code>"(every
  (lambda (k)                                        ;; for each coordinate direction
    (let ((slices                                    ;; the \"slices\"
@@ -2199,7 +2199,7 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
            slice)))
       slices)))
  (iota (array-dimension A)))"))
-(<p> "This procedure then returns a specialized array, with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.  Each element of "(<code>(<var>'A))" is accessed once, and each element of "(<code>(<var>'A))"'s array elements is accessed once.")
+(<p> "This procedure then returns a specialized array with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.  Each element of "(<code>(<var>'A))" is accessed once, and each element of "(<code>(<var>'A))"'s array elements is accessed once.")
 (<p> "Each element of "(<code>(<var>'A))" is itself an array; one can copy the contents of each array element of "(<code>(<var>'A))" to the result array with the following algorithm:")
 (<pre>(<code>"(let* ((A_dim
         (array-dimension A))
