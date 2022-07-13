@@ -401,7 +401,7 @@
     <p>for all $0\leq j&lt;d$.  Otherwise, it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a id="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> . <var>multi-index</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>multi-index</var></code> is a multi-index (a sequence of exact integers) of length $d$, then <code>interval-contains-multi-index?</code> returns <code>(every &lt;= (interval-lower-bounds-&gt;list <var>interval</var>) <var>multi-index</var> (interval-upper-bounds-&gt;list <var>interval</var>))</code>.</p>
-    <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>multi-index</var></code>,..., do not satisfy this condition.</p>
+    <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>multi-index</var></code> do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a id="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
     <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval
       $[l_0,u_0)\times [l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$
@@ -499,7 +499,7 @@
     <p>It is an error if any argument is not an interval.</p>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
-      The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
+      The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, to specify a default value for initial elements of the backing store, to recognize which data can be converted to a backing store of this storage class, and to convert data to a backing store of this storage class.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a id="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var> <var>data?</var> <var>data-&gt;body</var></code></p>
     <p>Here we assume the following relationships between the arguments of <code>make-storage-class</code>.  Assume that the &quot;elements&quot; of
@@ -558,7 +558,7 @@
                       #f
                       vector?
                       values))</code></pre>
-    <p><code>char-storage-class</code> is defined as if by</p>
+    <p>In the sample implementation <code>char-storage-class</code> is defined as</p>
     <pre><code>(define char-storage-class
   (make-storage-class string-ref
                       string-set!
