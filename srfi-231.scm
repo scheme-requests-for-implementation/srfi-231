@@ -623,7 +623,7 @@ if "(<code>(<var>"interval"))" is not an interval.")
 
         (format-lambda-list '(interval-contains-multi-index? interval #\. multi-index))
         (<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var>'multi-index))" is a multi-index (a sequence of exact integers) of length $d$, then "(<code> 'interval-contains-multi-index?)" returns "(<code>"(every <= (interval-lower-bounds->list "(<var>'interval)") "(<var>'multi-index)" (interval-upper-bounds->list "(<var>'interval)"))")".")
-        (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'multi-index))",..., do not satisfy this condition.")
+        (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'multi-index))" do not satisfy this condition.")
 
         (format-lambda-list '(interval-projections interval right-dimension))
         (<p> "Conceptually, "(<code> 'interval-projections)" takes a $d$-dimensional interval
@@ -737,7 +737,7 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 
 (<h2> "Storage classes")
 (<p> "Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
-The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
+The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, to specify a default value for initial elements of the backing store, to recognize which data can be converted to a backing store of this storage class, and to convert data to a backing store of this storage class.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
 (format-lambda-list '(make-storage-class getter setter checker maker copier length default data? data->body))
@@ -818,7 +818,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
                       #f
                       vector?
                       values))"))
-(<p> (<code> 'char-storage-class)" is defined as if by")
+(<p> "In the sample implementation "(<code> 'char-storage-class)" is defined as")
 (<pre>
  (<code>
 "(define char-storage-class
