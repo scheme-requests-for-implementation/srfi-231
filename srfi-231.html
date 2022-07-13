@@ -334,14 +334,28 @@
     <p> for
       $0\leq i&lt;{}$<code>(vector-length <var>lower-bounds</var>)</code>.  It is an error if
       <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code> do not satisfy these conditions.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(3 4)))
+      (B (make-interval '#(0 0) '#(3 4))))
+  (interval= A B))   ;; =&gt; #t</code></pre>
     <p><b>Procedure: </b><code><a id="interval?">interval?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is an interval, and <code>#f</code> otherwise.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(3 4)))
+      (B 1))
+  (interval? A)      ;; =&gt; #t
+  (interval? B))     ;; =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-dimension">interval-dimension</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p>then <code>interval-dimension</code> returns <code>(vector-length <var>lower-bounds</var>)</code>.</p>
     <p>It is an error to call <code>interval-dimension</code>
       if <code><var>interval</var></code> is not an interval.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(3 4)))
+      (B (make-interval '#())))
+  (interval-dimension A)   ;; =&gt; 2
+  (interval-dimension B))  ;; =&gt; 0</code></pre>
     <p><b>Procedure: </b><code><a id="interval-lower-bound">interval-lower-bound</a> <var>interval</var> <var>i</var></code></p>
     <p><b>Procedure: </b><code><a id="interval-upper-bound">interval-upper-bound</a> <var>interval</var> <var>i</var></code></p>
     <p><b>Procedure: </b><code><a id="interval-width">interval-width</a> <var>interval</var> <var>i</var></code></p>
@@ -356,6 +370,11 @@
       <code>(vector-ref <var>upper-bounds</var> <var>i</var>)</code>, and <code>interval-width</code> returns
       <code>(- (vector-ref <var>upper-bounds</var> <var>i</var>) (vector-ref <var>lower-bounds</var> <var>i</var>))</code>.</p>
     <p>It is an error to call <code>interval-lower-bound</code>, <code>interval-upper-bound</code>, or <code>interval-width</code> if <code><var>interval</var></code> and <code><var>i</var></code> do not satisfy these conditions.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(3 4))))
+  (interval-lower-bound A 0)  ;; =&gt; 1
+  (interval-upper-bound A 0)  ;; =&gt; 3
+  (interval-width A 0))       ;; =&gt; 2</code></pre>
     <p><b>Procedure: </b><code><a id="interval-lower-bounds-rarrow-list">interval-lower-bounds-&gt;list</a> <var>interval</var></code></p>
     <p><b>Procedure: </b><code><a id="interval-upper-bounds-rarrow-list">interval-upper-bounds-&gt;list</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
@@ -363,6 +382,10 @@
     <p> then <code>interval-lower-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>lower-bounds</var>)</code> and  <code>interval-upper-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>upper-bounds</var>)</code>.</p>
     <p>It is an error to call
        <code>interval-lower-bounds-&gt;list</code> or <code>interval-upper-bounds-&gt;list</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(3 4))))
+  (interval-lower-bounds-&gt;list A)   ;; =&gt; (1 0)
+  (interval-upper-bounds-&gt;list A))  ;; =&gt; (3 4)</code></pre>
     <p><b>Procedure: </b><code><a id="interval-lower-bounds-rarrow-vector">interval-lower-bounds-&gt;vector</a> <var>interval</var></code></p>
     <p><b>Procedure: </b><code><a id="interval-upper-bounds-rarrow-vector">interval-upper-bounds-&gt;vector</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
@@ -370,21 +393,40 @@
     <p> then <code>interval-lower-bounds-&gt;vector</code> returns a copy of <code><var>lower-bounds</var></code>  and <code>interval-upper-bounds-&gt;vector</code> returns a copy of <code><var>upper-bounds</var></code>.</p>
     <p>It is an error to call
       <code>interval-lower-bounds-&gt;vector</code> or <code>interval-upper-bounds-&gt;vector</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(3 4))))
+  (interval-lower-bounds-&gt;vector A)   ;; =&gt; '#(1 0)
+  (interval-upper-bounds-&gt;vector A))  ;; =&gt; '#(3 4)</code></pre>
     <p><b>Procedure: </b><code><a id="interval-widths">interval-widths</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p>then, assuming the existence of <code>vector-map</code>, <code>interval-widths</code> returns </p>
     <pre><code>(vector-map - <var>upper-bounds</var> <var>lower-bounds</var>)</code></pre>
     <p>It is an error to call <code>interval-widths</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(3 4))))
+  (interval-widths A))     ;; =&gt; '#(2 4)</code></pre>
     <p><b>Procedure: </b><code><a id="interval-volume">interval-volume</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <pre><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code></pre>
     <p>then, assuming the existence of <code>vector-map</code>, <code>interval-volume</code> returns </p>
     <pre><code>(apply * (vector-&gt;list (vector-map - <var>upper-bounds</var> <var>lower-bounds</var>)))</code></pre>
     <p>It is an error to call <code>interval-volume</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(3 4)))
+      (B (make-interval '#())))
+  (interval-volume A)    ;; =&gt; 8
+  (interval-volume B))   ;; =&gt; 1</code></pre>
     <p><b>Procedure: </b><code><a id="interval-empty?">interval-empty?</a> <var>interval</var></code></p>
     <p>Assumes <code><var>interval</var></code> is an interval; returns <code>(eqv? 0 (interval-volume <var>interval</var>))</code>.</p>
     <p>It is an error to call <code>interval-empty?</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(3 4)))
+      (B (make-interval '#()))
+      (C (make-interval '#(1 0) '#(1 4))))
+  (interval-empty? A)     ;; =&gt; #f
+  (interval-empty? B)     ;; =&gt; #f
+  (interval-empty? C))    ;; =&gt; #t</code></pre>
     <p><b>Procedure: </b><code><a id="interval=">interval=</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals built with </p>
     <pre><code>(make-interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code></pre>
@@ -393,15 +435,35 @@
     <p>respectively, then <code>interval=</code> returns</p>
     <pre><code>(and (equal? <var>lower-bounds1</var> <var>lower-bounds2</var>) (equal? <var>upper-bounds1</var> <var>upper-bounds2</var>))</code></pre>
     <p>It is an error to call <code>interval=</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1)))
+      (B (make-interval '#(1 1)))
+      (C (make-interval '#(0) '#(1)))
+      (D (make-interval '#(0 0)))
+      (E (make-interval '#(0))))
+  (interval= A B)      ;; =&gt; #f
+  (interval= A C)      ;; =&gt; #t
+  (interval= D E))     ;; =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-subset?">interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals of the same dimension $d$, then <code>interval-subset?</code> returns <code>#t</code> if </p>
     <pre><code>(&gt;= (interval-lower-bound <var>interval1</var> j) (interval-lower-bound <var>interval2</var> j))</code></pre>
     <p>and</p>
     <pre><code>(&lt;= (interval-upper-bound <var>interval1</var> j) (interval-upper-bound <var>interval2</var> j))</code></pre>
     <p>for all $0\leq j&lt;d$.  Otherwise, it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(2 3)))
+      (B (make-interval '#(1 1)))
+      (C (make-interval '#(3 1) '#(3 3))))
+  (interval-subset? A B)   ;; =&gt; #f
+  (interval-subset? B A)   ;; =&gt; #t
+  (interval-subset? C A))  ;; =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> . <var>multi-index</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>multi-index</var></code> is a multi-index (a sequence of exact integers) of length $d$, then <code>interval-contains-multi-index?</code> returns <code>(every &lt;= (interval-lower-bounds-&gt;list <var>interval</var>) <var>multi-index</var> (interval-upper-bounds-&gt;list <var>interval</var>))</code>.</p>
     <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>multi-index</var></code> do not satisfy this condition.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(1 0) '#(4 5))))
+  (interval-contains-multi-index? A 2 1)   ;; =&gt; #t
+  (interval-contains-multi-index? A 0 3))  ;; =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-projections">interval-projections</a> <var>interval</var> <var>right-dimension</var></code></p>
     <p>Conceptually, <code>interval-projections</code> takes a $d$-dimensional interval
       $[l_0,u_0)\times [l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$
@@ -427,10 +489,35 @@
     (list-&gt;vector (drop lowers left-dimension))
     (list-&gt;vector (drop uppers left-dimension)))))</code></pre>
     <p>It is an error to call <code>interval-projections</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(2 3 1 5 4))))
+  (call-with-values
+      (lambda ()
+        (interval-projections A 2))
+    (lambda (left right)
+      (interval= (make-interval '#(2 3 1)) left)    ;; =&gt; #t
+      (interval= (make-interval '#(5 4)) right))))  ;; =&gt; #t</code></pre>
     <p><b>Procedure: </b><code><a id="interval-for-each">interval-for-each</a> <var>f</var> <var>interval</var></code></p>
     <p>This procedure assumes that <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a procedure whose domain includes elements of <code><var>interval</var></code>.  It is an error to call <code>interval-for-each</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
     <p><code>interval-for-each</code> calls <code><var>f</var></code> with each multi-index of <code><var>interval</var></code> as arguments, all in lexicographical order.</p>
     <p>In particular, if <code><var>interval</var></code> is zero-dimensional, <code><var>f</var></code> is called as a thunk; if the interval is empty, then <code><var>f</var></code> is never called.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(3 2))))
+  (interval-for-each (lambda (i j)
+                       (display i) (display #\space)
+                       (display j) (display #\space)
+                       (display &quot;=&gt; &quot;)
+                       (display (and (even? i)
+                                     (even? j)))
+                       (newline))
+                     A))</code></pre>
+    <p>Displays:</p>
+    <pre><code>0 0 =&gt; #t
+0 1 =&gt; #f
+1 0 =&gt; #f
+1 1 =&gt; #f
+2 0 =&gt; #t
+2 1 =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
       lower bounds $\ell_0,\dots,\ell_{d-1}$ and
@@ -465,6 +552,13 @@
   (and (vector-every (lambda (x y) (&lt;= x y)) lower-bounds upper-bounds)
        (make-interval lower-bounds upper-bounds)))</code></pre>
     <p>It is an error if the arguments are not all intervals with the same dimension.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(2 5) '#(10 7)))
+      (B (make-interval '#(0 6) '#(8 11)))
+      (C (make-interval '#(2 6) '#(8 7)))
+      (D (make-interval '#(1 1))))
+  (interval= (interval-intersect A B) C)  ;; =&gt; #t
+  (interval-intersect A D))               ;; =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-translate">interval-translate</a> <var>interval</var> <var>translation</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
       lower bounds $\ell_0,\dots,\ell_{d-1}$ and
@@ -474,6 +568,10 @@
       upper bounds $u_0+T_0,\dots,u_{d-1}+T_{d-1}$.
       It is an error if the arguments do not satisfy these conditions.</p>
     <p>One could define <code>(interval-translate interval translation)</code> by <code>(interval-dilate interval translation translation)</code>.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(2 5) '#(10 7)))
+      (B (make-interval '#(1 6) '#(9 8))))
+  (interval= (interval-translate A '#(-1 1)) B))  ;; =&gt; #t</code></pre>
     <p><b>Procedure: </b><code><a id="interval-permute">interval-permute</a> <var>interval</var> <var>permutation</var></code></p>
     <p>The argument <code><var>interval</var></code> must be an interval, and the argument <code><var>permutation</var></code> must be a valid permutation with the same dimension as <code><var>interval</var></code>.  It is an error if the arguments do not satisfy these conditions.</p>
     <p>Heuristically, this procedure returns a new interval whose axes have been permuted in a way consistent with <code><var>permutation</var></code>.
@@ -486,9 +584,17 @@
     <p>For example, if the argument interval represents $[0,4)\times[0,8)\times[0,21)\times [0,16)$ and the
       permutation is <code>#(3 0 1 2)</code>, then the result of <code>(interval-permute <var>interval</var> <var>permutation</var>)</code> will be
       the representation of $[0,16)\times [0,4)\times[0,8)\times[0,21)$.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(4 8 21 16)))
+      (B (make-interval '#(16 4 8 21))))
+  (interval= (interval-permute A '#(3 0 1 2)) B))  ;; =&gt; #t</code></pre>
     <p><b>Procedure: </b><code><a id="interval-scale">interval-scale</a> <var>interval</var> <var>scales</var></code></p>
     <p>If <code><var>interval</var></code> is a $d$-dimensional interval $[0,u_1)\times\cdots\times[0,u_{d-1})$ with all lower bounds zero, and <code><var>scales</var></code> is a length-$d$ vector of positive exact integers, which we'll denote by $\vec s$, then <code>interval-scale</code> returns the interval $[0,\operatorname{ceiling}(u_1/s_1))\times\cdots\times[0,\operatorname{ceiling}(u_{d-1}/s_{d-1}))$.</p>
     <p>It is an error if  <code><var>interval</var></code> and <code><var>scales</var></code> do not satisfy this condition.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(4 7)))
+      (B (make-interval '#(2 4))))
+  (interval= (interval-scale A '#(3 2)) B))  ;; =&gt; #t</code></pre>
     <p><b>Procedure: </b><code><a id="interval-cartesian-product">interval-cartesian-product</a> . <var>intervals</var></code></p>
     <p>Implements the Cartesian product of the intervals in <code><var>intervals</var></code>. Returns:</p>
     <pre><code>(make-interval
@@ -497,6 +603,11 @@
  (list-&gt;vector
   (apply append (map interval-upper-bounds-&gt;list intervals))))</code></pre>
     <p>It is an error if any argument is not an interval.</p>
+    <p><b>Example: </b></p>
+    <pre><code>(let ((A (make-interval '#(3 4)))
+      (B (make-interval '#(1 2 3) '#(7 8 9)))
+      (C (make-interval '#(0 0 1 2 3) '#(3 4 7 8 9))))
+  (interval= (interval-cartesian-product A B) C))  ;; =&gt; #t</code></pre>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
       The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, to specify a default value for initial elements of the backing store, to recognize which data can be converted to a backing store of this storage class, and to convert data to a backing store of this storage class.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
