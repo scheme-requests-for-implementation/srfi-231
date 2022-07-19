@@ -1409,7 +1409,7 @@ B:
  0 2 0 =&gt; (0 2 0)
  1 0 0 =&gt; (0 0 1)
  1 1 0 =&gt; (0 1 1)
- 1 2 0 =&gt; (0 2 1</code></pre>
+ 1 2 0 =&gt; (0 2 1)</code></pre>
     <p><b>Procedure: </b><code><a id="array-reverse">array-reverse</a> <var>array</var> #!optional <var>flip?</var></code></p>
     <p>We assume that <code><var>array</var></code> is an array and <code><var>flip?</var></code>, if given, is a vector of booleans whose length is the same as the dimension of <code><var>array</var></code>.  If <code><var>flip?</var></code> is not given, it is set to a vector with length the same as the dimension of <code><var>array</var></code>, all of whose elements are <code>#t</code>.</p>
     <p><code>array-reverse</code> returns a new array  that is specialized,  mutable, or immutable according to whether <code><var>array</var></code> is specialized, mutable, or immutable, respectively.  Informally, if <code>(vector-ref <var>flip?</var> k)</code> is true, then the ordering of multi-indices in the k'th coordinate direction is reversed, and is left undisturbed otherwise.</p>
