@@ -934,6 +934,31 @@ manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 
 (<h2> "Arrays")
 (<p> "Arrays are a data type distinct from other Scheme data types.")
+(<p> "In the examples we use a procedure "(<code>'array-unveil)" that lists the multi-indices and elements of an array in lexicographical order: ")
+(<pre>(<code>"(define (array-unveil A)
+  (let ((D_A (array-domain A))
+        (A_  (array-getter A)))
+    (interval-for-each (lambda args
+                         (for-each (lambda (arg)
+                                     (display #\\space) (display arg))
+                                   args)
+                         (for-each display
+                                   (list \" => \" (apply A_ args) #\\newline)))
+                       D_A)))"))
+(<p> "For example:")(<pre>(<code>"(let ((A (make-array (make-interval '#(2 3 2)) list)))
+  (array-unveil A))"))
+(<p> "displays:")(<pre>(<code>" 0 0 0 => (0 0 0)
+ 0 0 1 => (0 0 1)
+ 0 1 0 => (0 1 0)
+ 0 1 1 => (0 1 1)
+ 0 2 0 => (0 2 0)
+ 0 2 1 => (0 2 1)
+ 1 0 0 => (1 0 0)
+ 1 0 1 => (1 0 1)
+ 1 1 0 => (1 1 0)
+ 1 1 1 => (1 1 1)
+ 1 2 0 => (1 2 0)
+ 1 2 1 => (1 2 1)"))
 
 (<h3> "Parameters")
 
@@ -1065,23 +1090,45 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 
 (format-lambda-list '(array-dimension array))
 (<p> "Shorthand for "(<code>"(interval-dimension (array-domain "(<var>'array)"))")".  It is an error to call this procedure if "(<code>(<var>'array))" is not an array.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let ((A (make-array (make-interval '#(3 3)) list))
+      (B (make-array (make-interval '#()) (lambda () 42))))
+  (array-dimension A)   ;; => 2
+  (array-dimension B))  ;; => 0"))
 
 (format-lambda-list '(mutable-array? obj))
 (<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a mutable array and "(<code> '#f)" otherwise.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let ((A (array-copy (make-array (make-interval '#(2 2)) list)
+                     generic-storage-class
+                     #t))
+      (B (array-copy (make-array (make-interval '#(2 2)) list)
+                     generic-storage-class
+                     #f)))
+  (mutable-array? A)    ;; => #t
+  (mutable-array? B))   ;; => #f"))
 
 (format-lambda-list '(array-setter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
 (<pre>
  (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)" "(<var> 'setter)")"))
-(<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". It is an error to call "(<code> 'array-setter)"
+(<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". Other procedures can build mutable arrays, e.g., "(<code>'array-copy)".  It is an error to call "(<code> 'array-setter)"
 if "(<code>(<var> 'array))" is not a mutable array.")
 
 (format-lambda-list '(array-freeze! A))
 (<p> "Modifies the array "(<code>(<var>'A))" so it is not mutable.  Returns the modified argument.")
 (<p> "It is an error if "(<code>(<var>'A))" is not an array.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let ((A (array-copy (make-array (make-interval '#(2 2)) list)
+                     generic-storage-class
+                     #t)))
+  (mutable-array? A)  ;; => #t
+  (array-freeze! A)
+  (mutable-array? A)) ;; => #f"))
 
 (format-lambda-list '(array-empty? a))
 (<p> "Assumes "(<code>(<var>'a))" is an array, and returns "(<code>"(interval-empty? (array-domain "(<var>'a)"))")".  It is an error if the argument is not an array.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let ((A (make-array (make-interval '#(2 2)) list))
+      (B (make-array (make-interval '#(4 0 4)) list)))
+  (array-empty? A)   ;; => #f
+  (array-empty? B))  ;; => #t"))
 
 
 (format-lambda-list '(make-specialized-array interval
@@ -1123,6 +1170,15 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 "  (define (make-u16-array interval)
     (make-specialized-array interval u16-storage-class 0 #f))"))
 (<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(3 3)))")".")
+(<p>(<b> "Example: "))(<pre>(<code>"(let ((A (make-specialized-array (make-interval '#(2 3)) u8-storage-class 42)))
+  (array-unveil A))"))
+(<p> "displays:")
+(<pre>(<code>" 0 0 => 42
+ 0 1 => 42
+ 0 2 => 42
+ 1 0 => 42
+ 1 1 => 42
+ 1 2 => 42"))
 
 (format-lambda-list '(make-specialized-array-from-data data
                                                        #\[ storage-class "generic-storage-class" #\]
@@ -1137,6 +1193,12 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 
 (<p> "This routine constructs a new one-dimensional array with storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", safety "(<code>(<var>'safe?))", body "(<code>"((storage-class-data->body "(<var>'storage-class)") "(<var>'data)")")", with domain "(<code>"(make-interval (vector "(<var>'N)"))")", where "(<code>(<var>'N))" is the greatest number of elements one can fit into "(<code>(<var>'data))", and indexer "(<code>"(lambda (i) i)")".")
 (<p> "It is an error if the arguments do not satisfy these conditions, or if "(<code>(<var>'mutable?))" is true and "(<code>(<var>'data))" is not mutable.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let ((A (make-specialized-array-from-data '#(dog cat bird))))
+  (array-unveil A))"))
+(<p> "displays:")
+(<pre>(<code>" 0 => dog
+ 1 => cat
+ 2 => bird"))
 
 (<p>(<b>"Discussion:")" Correct transformations on specialized arrays "(<i>'require)" that the array's indexer, which maps the domain of the array to exact integers that index elements of the one-dimensional body of the array, be "(<i>'affine)".  The procedure "(<code>'make-specialized-array-from-data)" provides a structured way to turn externally-provided data into an array with a known, very simple, one-dimensional affine indexer.  With this start, the programmer can apply array transforms (e.g., "(<code>'array-extract)", "(<code>'specialized-array-reshape)", etc.) to massage the data into the shape needed.")
 (<p>"For example, to build a zero-dimensional array that stores its single element in a pre-existing vector, one could use the code:")
@@ -1209,6 +1271,29 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 (format-lambda-list '(array-packed? A))
 (<p> "Assumes that "(<code>(<var>'A))" is a specialized array, in which case it returns "(<code>'#t)" if the elements of "(<code>(<var>'A))", taken in lexicographical order, are stored in "(<code>"(array-body "(<var>'A)")")" with increasing and consecutive indices, and "(<code>'#f)" otherwise.")
 (<p> "It is an error if "(<code>(<var>'A))" is not a specialized array.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-specialized-array-from-data '#(0 1 2 3)))
+       (B (array-reverse A))
+       (C (array-sample A '#(2))))
+  (array-unveil A)
+  (display (array-packed? A)) (newline)
+  (array-unveil B)
+  (display (array-packed? B)) (newline)  ;; adjacent boxes but decreasing index
+  (array-unveil C)
+  (display (array-packed? C)) (newline)) ;; non-adjacent boxes"))
+(<p> "displays:")
+(<pre>(<code>" 0 => 0
+ 1 => 1
+ 2 => 2
+ 3 => 3
+#t
+ 0 => 3
+ 1 => 2
+ 2 => 1
+ 3 => 0
+#f
+ 0 => 0
+ 1 => 2
+#f"))
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
 (<p> "Constructs a new specialized array that shares the body of the specialized array "(<code>(<var> 'array))".
@@ -1290,6 +1375,23 @@ indexer:       (lambda multi-index
 (<p> "If "(<code>(<var>'array))" is a specialized array, then if any of "(<code>(<var>'result-storage-class))", "(<code>(<var>'mutable?))", "(<code>(<var>'safe?))" are omitted,  their values are assigned "(<code>"(array-storage-class "(<var>'array)")")", "(<code>"(mutable-array? "(<var>'array)")")", and "(<code>"(array-safe? "(<var>'array)")")", respectively.")
 (<p> "Otherwise, omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(2 2)) list))
+       (B (array-copy A)))
+  (display (specialized-array? A)) (newline)
+  (array-unveil A)
+  (display (specialized-array? B)) (newline)
+  (array-unveil B))"))
+(<p>"displays:")
+(<pre>(<code>"#f
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 1 0 => (1 0)
+ 1 1 => (1 1)
+#t
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 1 0 => (1 0)
+ 1 1 => (1 1)"))
 
 
 (format-lambda-list '(array-curry array inner-dimension))
@@ -1389,16 +1491,10 @@ of whose elements is itself an (immutable) array and ")
 (<p> "Please see the note in the discussion of "(<a> href: "#array-tile" "array-tile")".")
 
 (<p>(<b>"Example:"))
-(<pre>
- (<code>
-"(define a (make-array (make-interval '#(10 10))
-                      list))
-(define a_ (array-getter a))
-(a_ 3 4)  => (3 4)
-(define curried-a (array-curry a 1))
-(define curried-a_ (array-getter curried-a))
-((array-getter (curried-a_ 3)) 4)
-                    => (3 4)"))
+(<pre>(<code>"(let* ((A (make-array (make-interval '#(10 10)) list))
+       (B (array-curry A 1)))
+  (array-ref A 3 4)               ;; => (3 4)
+  (array-ref (array-ref B 3) 4))  ;; => (3 4)"))
 
 (<p> (<b> "Example: ")"NumPy has the operation "(<a> href: "https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html" "numpy.squeeze")", which can eliminate, or \"squeeze\" out, all axes of an array with length 1.  It can be implemented using "(<code>'partition)" from SRFI 1 by")
 (<pre>(<code>"(define (array-squeeze a)
@@ -1474,6 +1570,27 @@ of whose elements is itself an (immutable) array and ")
               ))
 (<p> "It is an error if the arguments of "(<code>'array-extract)" do not satisfy these conditions.")
 (<p> "If "(<code>(<var>'array))" is a specialized array, the resulting array inherits its mutability and safety from "(<code>(<var>'array))".")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(3 3)) list))
+       (B (array-extract A (make-interval '#(1 0) '#(3 2)))))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p>"displays:")(<pre>(<code>"A:
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 0 2 => (0 2)
+ 1 0 => (1 0)
+ 1 1 => (1 1)
+ 1 2 => (1 2)
+ 2 0 => (2 0)
+ 2 1 => (2 1)
+ 2 2 => (2 2)
+B:
+ 1 0 => (1 0)
+ 1 1 => (1 1)
+ 2 0 => (2 0)
+ 2 1 => (2 1)"))
 
 (format-lambda-list '(array-tile A S))
 (<p> "Decomposes  the array "(<code>(<var>'A))" into subarrays, or "(<i>'tiles)", specified by "(<i>'cuts)" perpendicular to the coordinate axes of "(<code>(<var>'A))", which are specified by the elements second argument, "(<code>(<var>'S))", and returns an array $T$ whose elements are those tiles.")
@@ -1569,6 +1686,28 @@ $$
 "))
 (<p> "that employs the same getter as the original array.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(2 3)) list))
+       (B (array-translate A '#(1 -3))))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (interval= (array-domain B) (make-interval '#(1 -3) '#(3 0))) ;; => #t
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p>"displays:")
+(<pre>(<code>"A:
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 0 2 => (0 2)
+ 1 0 => (1 0)
+ 1 1 => (1 1)
+ 1 2 => (1 2)
+B:
+ 1 -3 => (0 0)
+ 1 -2 => (0 1)
+ 1 -1 => (0 2)
+ 2 -3 => (1 0)
+ 2 -2 => (1 1)
+ 2 -1 => (1 2)"))
 
 (format-lambda-list '(array-permute array permutation))
 (<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'permutation))" is a valid permutation, and that the dimensions of the array and the permutation are the same. The resulting array will have domain "(<code>"(interval-permute (array-domain array) permutation)")".")
@@ -1616,6 +1755,28 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
                      ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
 (<p> "The only length-zero permutation is the empty permutation, specified by "(<code>"'#()")".")
 (<p>"It is an error to call "(<code>'array-permute)" if its arguments do not satisfy these conditions.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(1 3 2)) list))
+       (B (array-permute A '#(2 1 0))))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (interval= (array-domain B) (make-interval '#(2 3 1))) ;; => #t
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p>"displays:")
+(<pre>(<code>"A:
+ 0 0 0 => (0 0 0)
+ 0 0 1 => (0 0 1)
+ 0 1 0 => (0 1 0)
+ 0 1 1 => (0 1 1)
+ 0 2 0 => (0 2 0)
+ 0 2 1 => (0 2 1)
+B:
+ 0 0 0 => (0 0 0)
+ 0 1 0 => (0 1 0)
+ 0 2 0 => (0 2 0)
+ 1 0 0 => (0 0 1)
+ 1 1 0 => (0 1 1)
+ 1 2 0 => (0 2 1"))
 
 
 (format-lambda-list '(array-reverse array #!optional flip?))
@@ -1668,28 +1829,30 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
    (apply (array-getter "(<code>(<var>'array))")
           (flip-multi-index multi-index))))) "))
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'flip?))" don't satisfy these requirements.")
-(<p> "The following example using "(<code>'array-reverse)" was motivated by "(<a> href: "https://funcall.blogspot.com/2020/01/palindromes-redux-and-sufficiently.html" "a blog post by Joe Marshall")".")
+(<p> (<b> "Example: ")"The following example was motivated by "(<a> href: "https://funcall.blogspot.com/2020/01/palindromes-redux-and-sufficiently.html" "a blog post by Joe Marshall")".")
 (<pre>
  (<code>
 "(define (palindrome? s)
-  (let ((n (string-length s)))
-    (or (< n 2)
-        (let* ((a
-                ;; an array accessing the characters of s
-                (make-array (make-interval (vector n))
-                            (lambda (i)
-                              (string-ref s i))))
-               (ra
-                ;; the array accessed in reverse order
-                (array-reverse a))
-               (half-domain
-                (make-interval (vector (quotient n 2)))))
-          (array-every
-           char=?
-           ;; the first half of s
-           (array-extract a half-domain)
-           ;; the reversed second half of s
-           (array-extract ra half-domain))))))
+  (let* ((n
+          (string-length s))
+         (a
+          ;; an array accessing the characters of s
+          (make-array (make-interval (vector n))
+                      (lambda (i)
+                        (string-ref s i))))
+         (ra
+          ;; the characters accessed in reverse order
+          (array-reverse a))
+         (half-domain
+          (make-interval (vector (quotient n 2)))))
+    ;; If n is 0 or 1 the following extracted arrays
+    ;; are empty.
+    (array-every
+     char=?
+     ;; the first half of s
+     (array-extract a half-domain)
+     ;; the reversed second half of s
+     (array-extract ra half-domain))))
 
 (palindrome? \"\") => #t
 (palindrome? \"a\") => #t
@@ -1719,9 +1882,6 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
    (apply values
           (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
 (<p> "with the result inheriting the safety and mutability of "(<code>(<var>'array))".")
-
-
-
 (<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-sample)" returns")
 (<pre>
  (<code>
@@ -1745,6 +1905,27 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
    (apply (array-getter "(<code>(<var>'array))")
           (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'scales))" don't satisfy these requirements.")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(3 2)) list))
+       (B (array-sample A '#(2 1))))
+  (interval= (array-domain B) (make-interval '#(2 2)))  ;; => #t
+  (display \"A:\\n\")
+  (array-unveil A)
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p> "displays:")
+(<pre>(<code>"A:
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 1 0 => (1 0)
+ 1 1 => (1 1)
+ 2 0 => (2 0)
+ 2 1 => (2 1)
+B:
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 1 0 => (2 0)
+ 1 1 => (2 1)"))
+
 
 (format-lambda-list '(array-outer-product op array1 array2))
 (<p> "Implements the outer product of "(<code>(<var>'array1))" and "(<code>(<var>'array2))" with the operator "(<code>(<var>'op))", similar to the APL function with the same name.")
@@ -1763,6 +1944,24 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
      " should be precomputed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
      "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for "(<code>'array-inner-product)
      " applies "(<code>'array-outer-product)" to curried arrays, so we apply "(<code>"array-copy")" to the arguments before passage to "(<code>'array-outer-product)".")
+(<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(4)) (lambda (i) (* i 10))))
+       (B (make-array (make-interval '#(3)) values))
+       (C (array-outer-product + A B)))
+  (interval= (array-domain C) (make-interval '#(4 3)))  ;; => #t
+  (array-unveil C))"))
+(<p> "displays:")
+(<pre>(<code>" 0 0 => 0
+ 0 1 => 1
+ 0 2 => 2
+ 1 0 => 10
+ 1 1 => 11
+ 1 2 => 12
+ 2 0 => 20
+ 2 1 => 21
+ 2 2 => 22
+ 3 0 => 30
+ 3 1 => 31
+ 3 2 => 32"))
 
 (format-lambda-list '(array-inner-product A f g B))
 (<p> "Assumes that "(<code>(<var>'f))" and "(<code>(<var>'g))" are procedures of two arguments and "(<code>(<var>'A))" and "(<code>(<var>'B))" are arrays of dimension at least one, with the upper and lower bounds of the last axis of "(<code>(<var>'A))" the same as those of the first axis of "(<code>(<var>'B))". Computes the equivalent of")
@@ -1774,6 +1973,7 @@ a mutable array, then "(<code>'array-permute)" returns the new mutable array")
    (array-copy (array-curry (array-permute "(<var>'B)" (index-rotate (array-dimension "(<var>'B)") 1)))))"))
 (<p> "We precompute and store the curried arrays using "(<code>'array-copy)" for efficiency reasons, as described in "(<a> href: "#array-outer-product" (<code>'array-outer-product))".")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
+(<p> "See the extended examples below that use "(<code>'array-inner-product)".")
 
 (format-lambda-list '(array-map f array #\. arrays))
 (<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain and "(<code>(<var> 'f))" is a procedure, then "(<code> 'array-map)"
@@ -1815,6 +2015,47 @@ returns a new immutable array with the same domain and getter")
               (lambda (i)
                 (+ (a_ i) i))))"
 ))
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(1 1) '#(5 5)) list))
+       (B (array-map (lambda (arg) (apply * arg)) A)))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p> "displays:")
+(<pre>(<code>"A:
+ 1 1 => (1 1)
+ 1 2 => (1 2)
+ 1 3 => (1 3)
+ 1 4 => (1 4)
+ 2 1 => (2 1)
+ 2 2 => (2 2)
+ 2 3 => (2 3)
+ 2 4 => (2 4)
+ 3 1 => (3 1)
+ 3 2 => (3 2)
+ 3 3 => (3 3)
+ 3 4 => (3 4)
+ 4 1 => (4 1)
+ 4 2 => (4 2)
+ 4 3 => (4 3)
+ 4 4 => (4 4)
+B:
+ 1 1 => 1
+ 1 2 => 2
+ 1 3 => 3
+ 1 4 => 4
+ 2 1 => 2
+ 2 2 => 4
+ 2 3 => 6
+ 2 4 => 8
+ 3 1 => 3
+ 3 2 => 6
+ 3 3 => 9
+ 3 4 => 12
+ 4 1 => 4
+ 4 2 => 8
+ 4 3 => 12
+ 4 4 => 16"))
 
 
 (format-lambda-list '(array-for-each f array #\. arrays))
@@ -1844,6 +2085,34 @@ calls")
                    (cons "(<var> 'array)"
                          "(<var> 'arrays)")))))"))
 (<p> "It is an error to call "(<code> 'array-for-each)" if its arguments do not satisfy these conditions.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((A (make-array (make-interval '#(3 3)) list)))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (newline)
+  (array-for-each (lambda (entry)
+                    (pretty-print (apply + entry)))
+                  A))"))
+(<p>"displays:")
+(<pre>(<code>"A:
+ 0 0 => (0 0)
+ 0 1 => (0 1)
+ 0 2 => (0 2)
+ 1 0 => (1 0)
+ 1 1 => (1 1)
+ 1 2 => (1 2)
+ 2 0 => (2 0)
+ 2 1 => (2 1)
+ 2 2 => (2 2)
+
+0
+1
+2
+1
+2
+3
+2
+3
+4"))
 
 (format-lambda-list '(array-foldl op id array #\. arrays))
 (<p> "This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
@@ -1892,7 +2161,7 @@ calls")
 
 (<p> (<b>"Note: ")"Both "(<code>'array-foldl)" and "(<code>'array-foldr)" are implemented using tail-recursive algorithms in the sample implementation.")
 
-(<p> (<b>"Note: ")"If "(<code>(<var>'op))" is associative with two-sided identity "(<code>(<var>'id))", then "(<code>'array-foldl)" and "(<code>'array-foldr)" return the same results, but see:")
+(<p> (<b>"Example: ")"If "(<code>(<var>'op))" is associative with two-sided identity "(<code>(<var>'id))", then "(<code>'array-foldl)" and "(<code>'array-foldr)" return the same results, but see:")
 (<pre>(<code>
 "(define a (make-array (make-interval '#(10)) (lambda (i) i)))
 (array-foldl cons '() a)
@@ -1958,7 +2227,6 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 
 
 (format-lambda-list '(array-any pred array1 array2 "..."))
-
 (<p> "Assumes that "(<code>(<var>'array1))", "(<code>(<var>'array2))", etc., are arrays, all with the same domain, which we'll call "(<code>'interval)".  Also assumes that "(<code>(<var>'pred))" is a procedure that takes as many arguments as there are arrays and returns a single value.")
 (<p> (<code>'array-any)" first applies "(<code>"(array-getter "(<var>'array1)")")", etc., to the first element of "(<code>'interval)" in lexicographical order, to which value it then applies "(<code>(<var>'pred))".")
 (<p> "If the result of "(<code>(<var>'pred))" is not "(<code>'#f)", then that result is returned by "(<code>'array-any)".  If the result of "(<code>(<var>'pred))" is "(<code>'#f)", then "(<code>'array-any)" continues with the second element of "(<code>'interval)", etc., returning the first nonfalse value of  "(<code>(<var>'pred))".")
@@ -1966,9 +2234,16 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "If it happens that "(<code>(<var>'pred))" is applied to the results of applying "(<code>"(array-getter "(<var>'array1)")")", etc., to the last element of "(<code>'interval)", then this last call to "(<code>(<var>'pred))" is in tail position.")
 (<p> "The procedures "(<code>"(array-getter "(<var>'array1)")")", etc., are applied only to those values of "(<code>'interval)" necessary to determine the result of "(<code>'array-any)".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((A (make-array (make-interval '#(240) '#(250)) values))
+      (B (make-array (make-interval '#(250) '#(300)) values)))
+  
+  (define (square? n)
+    (and (exact? (sqrt n)) n))   ;; return the value
+
+  (array-any square? A)    ;; => #f
+  (array-any square? B))   ;; => 256, the first nonfalse value"))
 
 (format-lambda-list '(array-every pred array1 array2 "..."))
-
 (<p> "Assumes that "(<code>(<var>'array1))", "(<code>(<var>'array2))", etc., are arrays, all with the same domain, which we'll call "(<code>'interval)".  Also assumes that "(<code>(<var>'pred))" is a procedure that takes as many arguments as there are arrays and returns a single value.")
 (<p> (<code>'array-every)" first applies "(<code>"(array-getter "(<var>'array1)")")", etc., to the first element of "(<code>'interval)" in lexicographical order, to which values it then applies "(<code>(<var>'pred))".")
 (<p> "If the result of "(<code>(<var>'pred))" is "(<code>'#f)", then that result is returned by "(<code>'array-every)".  If the result of "(<code>(<var>'pred))" is nonfalse, then "(<code>'array-every)" continues with the second element of "(<code>'interval)", etc., returning the first  value of  "(<code>(<var>'pred))" that is "(<code>'#f)".")
@@ -1976,11 +2251,19 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "If it happens that "(<code>(<var>'pred))" is applied to the results of applying "(<code>"(array-getter "(<var>'array1)")")", etc., to the last element of "(<code>'interval)", then this last call to "(<code>(<var>'pred))" is in tail position.")
 (<p> "The procedures "(<code>"(array-getter "(<var>'array1)")")", etc., are applied only to those values of "(<code>'interval)" necessary to determine the result of "(<code>'array-every)".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
+(<p> "For an example, see the palindrome example above.")
 
 
 (format-lambda-list '(array->list array) 'array-rarrow-list)
 (<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated list in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((A (make-specialized-array-from-data '#(2 4 6 8)))
+       (B (array-reverse A)))
+  (pretty-print (array->list A))
+  (pretty-print (array->list B)))"))
+(<p> "displays:")
+(<pre>(<code>"(2 4 6 8)
+(8 6 4 2)"))
 
 (format-lambda-list '(list->array domain l #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list-rarrow-array)
 (<p> "Assumes that "
@@ -1991,6 +2274,40 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Returns a specialized array with domain "(<code>(<var>'domain))" whose elements are the elements of the list "(<code>(<var>'l))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'l))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((l (iota 12))
+       (A (list->array (make-interval '#(2 2 3)) l))
+       (B (list->array (make-interval '#(12)) l)))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p> "displays")
+(<pre>(<code>"A:
+ 0 0 0 => 0
+ 0 0 1 => 1
+ 0 0 2 => 2
+ 0 1 0 => 3
+ 0 1 1 => 4
+ 0 1 2 => 5
+ 1 0 0 => 6
+ 1 0 1 => 7
+ 1 0 2 => 8
+ 1 1 0 => 9
+ 1 1 1 => 10
+ 1 1 2 => 11
+B:
+ 0 => 0
+ 1 => 1
+ 2 => 2
+ 3 => 3
+ 4 => 4
+ 5 => 5
+ 6 => 6
+ 7 => 7
+ 8 => 8
+ 9 => 9
+ 10 => 10
+ 11 => 11"))
 
 (format-lambda-list '(list*->array d nested-list #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'list*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a nonnegative exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
@@ -2029,6 +2346,24 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (list*->array 2 '()) => An empty array with domain (make-interval '#(0 0))
 (list*->array 2 '(() ())) => An empty array with domain (make-interval '#(2 0))"))
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((A (list*->array 3 '(((1 2 3)
+                            (4 5 6))
+                           ((7 8 9)
+                            (10 11 12))))))
+  (array-unveil A))"))
+(<p> "displays:")
+(<pre>(<code>" 0 0 0 => 1
+ 0 0 1 => 2
+ 0 0 2 => 3
+ 0 1 0 => 4
+ 0 1 1 => 5
+ 0 1 2 => 6
+ 1 0 0 => 7
+ 1 0 1 => 8
+ 1 0 2 => 9
+ 1 1 0 => 10
+ 1 1 1 => 11
+ 1 1 2 => 12"))
 
 (format-lambda-list '(array->list* A) 'array-rarrow-list*)
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and returns a newly allocated nested list "(<code>(<var>'nested-list))".  If "(<code>(<var>'A))" is nonempty and has positive dimension and we denote the getter of "(<code>(<var>'A))" by "(<code>'A_)", then "(<code>(<var>'nested-list))" and "(<code>'A_)" satisfy")
@@ -2043,10 +2378,26 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (array->list* (make-array (make-interval '#(2 0)) error)) => '(() ())
 (array->list* (make-array (make-interval '#(0 2)) error)) => '()"))
 (<p> "It is an error if "(<code>(<var>'A))" is not an array.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((B (array->list* (make-array (make-interval '#(6 6)) (lambda (i j) (/ (+ 1 i j)))))))
+  (pretty-print B))"))
+(<p>"displays:")
+(<pre>(<code>"((1 1/2 1/3 1/4 1/5 1/6)
+ (1/2 1/3 1/4 1/5 1/6 1/7)
+ (1/3 1/4 1/5 1/6 1/7 1/8)
+ (1/4 1/5 1/6 1/7 1/8 1/9)
+ (1/5 1/6 1/7 1/8 1/9 1/10)
+ (1/6 1/7 1/8 1/9 1/10 1/11))"))
 
 (format-lambda-list '(array->vector array) 'array-rarrow-vector)
 (<p> "Stores the elements of "(<code>(<var>'array))" into a newly allocated vector in lexicographical order.  It is an error if "(<code>(<var>'array))" is not an array.")
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((A (make-specialized-array-from-data '#(2 4 6 8)))
+       (B (array-reverse A)))
+  (pretty-print (array->vector A))
+  (pretty-print (array->vector B)))"))
+(<p>"displays:")
+(<pre>(<code>"#(2 4 6 8)
+#(8 6 4 2)"))
 
 (format-lambda-list '(vector->array domain v #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector-rarrow-array)
 (<p> "Assumes that "
@@ -2057,6 +2408,40 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Returns a specialized array with domain "(<code>(<var>'domain))" whose elements are the elements of the vector "(<code>(<var>'v))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'v))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((v (list->vector (iota 12)))
+       (A (vector->array (make-interval '#(2 2 3)) v))
+       (B (vector->array (make-interval '#(12)) v)))
+  (display \"A:\\n\")
+  (array-unveil A)
+  (display \"B:\\n\")
+  (array-unveil B))"))
+(<p> "displays:")
+(<pre>(<code>"A:
+ 0 0 0 => 0
+ 0 0 1 => 1
+ 0 0 2 => 2
+ 0 1 0 => 3
+ 0 1 1 => 4
+ 0 1 2 => 5
+ 1 0 0 => 6
+ 1 0 1 => 7
+ 1 0 2 => 8
+ 1 1 0 => 9
+ 1 1 1 => 10
+ 1 1 2 => 11
+B:
+ 0 => 0
+ 1 => 1
+ 2 => 2
+ 3 => 3
+ 4 => 4
+ 5 => 5
+ 6 => 6
+ 7 => 7
+ 8 => 8
+ 9 => 9
+ 10 => 10
+ 11 => 11"))
 
 
 (format-lambda-list '(vector*->array d nested-vector #\[ result-storage-class "generic-storage-class" #\] #\[ mutable? "(specialized-array-default-mutable?)" #\] #\[ safe? "(specialized-array-default-safe?)" #\]) 'vector*-rarrow-array)
@@ -2090,6 +2475,24 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "and we assume that this value can be manipulated by "(<code>(<var>'storage-class))".")
 (<p> "If the resulting array would be empty or have dimension zero, see the examples for "(<code>'list*->array)".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((A (vector*->array 3 '#(#(#(1 2 3)
+                                #(4 5 6))
+                              #(#(7 8 9)
+                                #(10 11 12))))))
+  (array-unveil A))"))
+(<p> "displays:")
+(<pre>(<code>" 0 0 0 => 1
+ 0 0 1 => 2
+ 0 0 2 => 3
+ 0 1 0 => 4
+ 0 1 1 => 5
+ 0 1 2 => 6
+ 1 0 0 => 7
+ 1 0 1 => 8
+ 1 0 2 => 9
+ 1 1 0 => 10
+ 1 1 1 => 11
+ 1 1 2 => 12"))
 
 (format-lambda-list '(array->vector* A) 'array-rarrow-vector*)
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and returns a newly allocated nested vector "(<code>(<var>'nested-vector))".  If we denote the getter of "(<code>(<var>'A))" by "(<code>'A_)", then "(<code>(<var>'nested-vector))" and "(<code>'A_)" satisfy")
@@ -2099,6 +2502,15 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "If "(<code>(<var>'A))" is empty or zero dimensional, then see the examples for "(<code>'array->list*)".:")
 (<p> "Each element of "(<code>(<var>'A))" is accessed once.")
 (<p> "It is an error if "(<code>(<var>'A))" is not an array.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((B (array->vector* (make-array (make-interval '#(6 6)) (lambda (i j) (/ (+ 1 i j)))))))
+  (pretty-print B))"))
+(<p>"displays:")
+(<pre>(<code>"#(#(1 1/2 1/3 1/4 1/5 1/6)
+  #(1/2 1/3 1/4 1/5 1/6 1/7)
+  #(1/3 1/4 1/5 1/6 1/7 1/8)
+  #(1/4 1/5 1/6 1/7 1/8 1/9)
+  #(1/5 1/6 1/7 1/8 1/9 1/10)
+  #(1/6 1/7 1/8 1/9 1/10 1/11))"))
 
 (format-lambda-list '(array-assign! destination source))
 (<p> "Assumes that "(<code>(<var>'destination))" is a mutable array and "(<code>(<var>'source))" is an array with the same domain, and that the elements of "(<code>(<var>'source))" can be stored into "(<code>(<var>'destination))".")
@@ -2106,6 +2518,32 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
      "and assigns each value to the multi-index in "(<code>(<var>'destination))" in the same lexicographical order.")
 (<p> "It is an error if the arguments don't satisfy these assumptions.")
 (<p> "If assigning any element of "(<code>(<var>'destination))" affects the value of any element of "(<code>(<var>'source))", then the result is undefined.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((A (array-copy
+           (make-array (make-interval '#(5 5))
+                       (lambda (i j) (* i j)))
+           generic-storage-class
+           #t))    ;; ensure A is mutable
+       (D_B (make-interval '#(2 2) '#(5 5)))
+       (B (make-array D_B (lambda (i j) 100))))
+  (display \"A before assignment:\\n\")
+  (pretty-print (array->list* A))
+  (array-assign! (array-extract A D_B)
+                 B)
+  (display \"A after assignment:\\n\")
+  (pretty-print (array->list* A)))"))
+(<p>"displays:")
+(<pre>(<code>"A before assignment:
+((0 0 0 0 0)
+ (0 1 2 3 4)
+ (0 2 4 6 8)
+ (0 3 6 9 12)
+ (0 4 8 12 16))
+A after assignment:
+((0 0 0 0 0)
+ (0 1 2 3 4)
+ (0 2 100 100 100)
+ (0 3 100 100 100)
+ (0 4 100 100 100))"))
 
 (format-lambda-list '(array-stack k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
@@ -2177,6 +2615,35 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
   result-array)"))
 (<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of "(<code>(<var>'A))"'s array elements.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let* ((A (list*->array 1 '(1 2 3)))
+       (B (list*->array 1 '(4 5 6)))
+       (C (list*->array 1 '(7 8 9)))
+       (D (list*->array 1 '(10 11 12)))
+       (E (list*->array 1 (list A B C D)))
+       (F (array-decurry E)))
+  (array-every array? E)              ;; => #t
+  (array-every
+   (lambda (a)
+     (interval=
+      (array-domain a)
+      (make-interval '#(3))))         ;; => #t
+   E)
+  (interval= (array-domain F)
+             (make-interval '#(4 3))) ;; => #t
+  (array-unveil F))"))
+(<p>"displays:")
+(<pre>(<code>" 0 0 => 1
+ 0 1 => 2
+ 0 2 => 3
+ 1 0 => 4
+ 1 1 => 5
+ 1 2 => 6
+ 2 0 => 7
+ 2 1 => 8
+ 2 2 => 9
+ 3 0 => 10
+ 3 1 => 11
+ 3 2 => 12"))
 
 
 (format-lambda-list '(array-append k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
@@ -2389,11 +2856,21 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<p> "Assumes that "(<code>(<var>'A))" is an array, and  "(<code>(<var>'multi-index))" is a sequence of exact integers.")
 (<p> "Returns "(<code>"(apply (array-getter "(<var>'A)") "(<var>'multi-index)")")".")
 (<p> "It is an error if "(<code>(<var>'A))" is not an array,  if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((A (make-array (make-interval '#(10000 10000)) expt)))
+  (array-ref A 5 37)  ;; => 72759576141834259033203125
+  (array-ref A 37 5)) ;; => 69343957"))
 
 (format-lambda-list '(array-set! A v #\. multi-index))
 (<p> "Assumes that "(<code>(<var>'A))" is a mutable array, that "(<code>(<var>'v))" is a value that can be stored within that array, and that "(<code>(<var>'multi-index))" is a sequence of exact integers.")
 (<p> "Returns "(<code>"(apply (array-setter "(<var>'A)") "(<var>"v multi-index")")")".")
 (<p> "It is an error if "(<code>(<var>'A))" is not a mutable array, if "(<code>(<var>'v))" is not an appropriate value to be stored in that array, if the number of elements in "(<code>(<var>'multi-index))" is not the the dimension of "(<code>(<var>'A))", or if "(<code>(<var>'multi-index))" is not in the domain of "(<code>(<var>'A))", so, in particular, if "(<code>(<var>'A))" is empty.")
+(<p> (<b> "Example: "))(<pre>(<code>"(let ((A (array-copy
+          (list*->array 1 (iota 1000))
+          generic-storage-class
+          #t)))   ;; ensure array is mutable
+  (array-ref A 500)         ;; => 500
+  (array-set! A 'grok 500)
+  (array-ref A 500))        ;; => grok"))
 
 (<p>(<b> "Note: ")"In the sample implementation, because "(<code>'array-ref)" and "(<code>'array-set!)" take a variable number of arguments and they must check that "(<code>(<var>'A))" is an array of the appropriate type, programs written in a style using these procedures, rather than the style in which "(<code>'1D-Haar-loop)" is coded below, can take up to three times as long runtime.")
 

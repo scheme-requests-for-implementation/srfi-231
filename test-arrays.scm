@@ -4595,25 +4595,28 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; ((3 3) (3 4) (3 5) (3 6) (3 7))
   ;; ((4 4) (4 5) (4 6) (4 7) (4 8))
   )
+
 (define (palindrome? s)
-  (let ((n (string-length s)))
-    (or (< n 2)
-        (let* ((a
-                ;; an array accessing the characters of s
-                (make-array (make-interval (vector n))
-                            (lambda (i)
-                              (string-ref s i))))
-               (ra
-                ;; the array in reverse order
-                (array-reverse a))
-               (half-domain
-                (make-interval (vector (quotient n 2)))))
-          (array-every
-           char=?
-           ;; the first half of s
-           (array-extract a half-domain)
-           ;; the second half of s
-           (array-extract ra half-domain))))))
+  (let* ((n
+          (string-length s))
+         (a
+          ;; an array accessing the characters of s
+          (make-array (make-interval (vector n))
+                      (lambda (i)
+                        (string-ref s i))))
+         (ra
+          ;; the characters accessed in reverse order
+          (array-reverse a))
+         (half-domain
+          (make-interval (vector (quotient n 2)))))
+    ;; If n is 0 or 1 the following extracted arrays
+    ;; are empty.
+    (array-every
+     char=?
+     ;; the first half of s
+     (array-extract a half-domain)
+     ;; the reversed second half of s
+     (array-extract ra half-domain))))
 
 (for-each (lambda (s)
             (for-each display
