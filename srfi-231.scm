@@ -556,7 +556,7 @@ if "(<code>(<var>"interval"))" is not an interval.")
         (format-lambda-list '(interval-lower-bound interval i))
         (format-lambda-list '(interval-upper-bound interval i))
         (format-lambda-list '(interval-width       interval i))
-        (<p> "Assumes that "(<code>(<var>"interval"))" is an interval made, e.g., with "(<code>"(make-interval "(<var>"lower-bounds upper-bounds")")")" and "(<code>(<var>'i))" is a  exact integer that satisfies")
+        (<p> "Assumes that "(<code>(<var>"interval"))" is an interval made, e.g., with "(<code>"(make-interval "(<var>"lower-bounds upper-bounds")")")", and that "(<code>(<var>'i))" is an exact integer that satisfies")
         (<blockquote>
          "$0 \\leq i<$ "(<code>"(interval-dimension "(<var>"interval")")")".")
         (<p> " Then "(<code> 'interval-lower-bound)" returns
@@ -3266,7 +3266,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
          pgm-array)))))
 "
         ))
-(<p> "One can write a a procedure to convolve an image with a filter as follows: ")
+(<p> "One can write a procedure to convolve an image with a filter as follows: ")
 (<pre>
  (<code>
 "(define (array-convolve source filter)
