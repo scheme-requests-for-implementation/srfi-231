@@ -4222,6 +4222,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array->vector 'a)
       "array->vector: The argument is not an array: ")
 
+(let* ((multi-indices
+        '())
+       (a
+        (make-array (make-interval '#(3 5))
+                    (lambda (i j)
+                      (set! multi-indices (cons (list i j) multi-indices))
+                      (+ j (* i 5)))))
+       (result
+        (array->list a))
+       (correct-multi-indices
+        (let ((result '()))
+          (interval-for-each (lambda (i j)
+                               (set! result (cons (list i j) result)))
+                             (array-domain a))
+          result)))
+  (test result (iota 15))
+  (test multi-indices correct-multi-indices))
+
 (for-each (lambda (function arg name name2)
             (test (function 'b arg)
                   (string-append name "The first argument is not an interval: "))

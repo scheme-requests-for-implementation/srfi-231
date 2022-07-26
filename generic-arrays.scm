@@ -4349,7 +4349,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%array-reduce sum A "array-reduce: "))))
 
 (define (%%array->list array)
-  (array-foldr cons '() array))
+  (reverse!
+   (%%interval-foldl (%%array-getter array)
+                     (lambda (a b) (cons b a))
+                     '()
+                     (%%array-domain array))))
 
 (define (array->list array)
   (cond ((not (array? array))
