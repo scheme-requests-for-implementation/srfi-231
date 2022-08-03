@@ -721,103 +721,12 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-for-each f interval))))
 
 (define (%%interval-for-each f interval)
-  (if (not (eqv? (%%interval-volume interval) 0)) ;; Fast track (make-interval '#(1000000 1000000  0)) case
-      (case (%%interval-dimension interval)
-        ((0) (f) (void))
-        ((1) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (upper-i (%%interval-upper-bound interval 0)))
-               (let i-loop ((i lower-i))
-                 (if (< i upper-i)
-                     (begin
-                       (f i)
-                       (i-loop (+ i 1)))))))
-        ((2) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (lower-j (%%interval-lower-bound interval 1))
-                   (upper-i (%%interval-upper-bound interval 0))
-                   (upper-j (%%interval-upper-bound interval 1)))
-               (let i-loop ((i lower-i))
-                 (if (< i upper-i)
-                     (let j-loop ((j lower-j))
-                       (if (< j upper-j)
-                           (begin
-                             (f i j)
-                             (j-loop (+ j 1)))
-                           (i-loop (+ i 1))))))))
-        ((3) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (lower-j (%%interval-lower-bound interval 1))
-                   (lower-k (%%interval-lower-bound interval 2))
-                   (upper-i (%%interval-upper-bound interval 0))
-                   (upper-j (%%interval-upper-bound interval 1))
-                   (upper-k (%%interval-upper-bound interval 2)))
-               (let i-loop ((i lower-i))
-                 (if (< i upper-i)
-                     (let j-loop ((j lower-j))
-                       (if (< j upper-j)
-                           (let k-loop ((k lower-k))
-                             (if (< k upper-k)
-                                 (begin
-                                   (f i j k)
-                                   (k-loop (+ k 1)))
-                                 (j-loop (+ j 1))))
-                           (i-loop (+ i 1))))))))
-        ((4) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (lower-j (%%interval-lower-bound interval 1))
-                   (lower-k (%%interval-lower-bound interval 2))
-                   (lower-l (%%interval-lower-bound interval 3))
-                   (upper-i (%%interval-upper-bound interval 0))
-                   (upper-j (%%interval-upper-bound interval 1))
-                   (upper-k (%%interval-upper-bound interval 2))
-                   (upper-l (%%interval-upper-bound interval 3)))
-               (let i-loop ((i lower-i))
-                 (if (< i upper-i)
-                     (let j-loop ((j lower-j))
-                       (if (< j upper-j)
-                           (let k-loop ((k lower-k))
-                             (if (< k upper-k)
-                                 (let l-loop ((l lower-l))
-                                   (if (< l upper-l)
-                                       (begin
-                                         (f i j k l)
-                                         (l-loop (+ l 1)))
-                                       (k-loop (+ k 1))))
-                                 (j-loop (+ j 1))))
-                           (i-loop (+ i 1))))))))
-        (else
-
-         (let* ((lower-bounds (%%interval-lower-bounds->list interval))
-                (upper-bounds (%%interval-upper-bounds->list interval))
-                (arg          (map values lower-bounds)))                ; copy lower-bounds
-
-           ;; I'm not particularly happy with set! here because f might capture the continuation
-           ;; and then funny things might pursue ...
-           ;; But it seems that the only way to have this work efficiently without the set
-           ;; is to have arrays with fortran-style numbering.
-           ;; blah
-
-           (define (iterate lower-bounds-tail
-                            upper-bounds-tail
-                            arg-tail)
-             (let ((lower-bound (car lower-bounds-tail))
-                   (upper-bound (car upper-bounds-tail)))
-               (if (null? (cdr arg-tail))
-                   (let loop ((i lower-bound))
-                     (if (< i upper-bound)
-                         (begin
-                           (set-car! arg-tail i)
-                           (apply f arg)
-                           (loop (+ i 1)))))
-                   (let loop ((i lower-bound))
-                     (if (< i upper-bound)
-                         (begin
-                           (set-car! arg-tail i)
-                           (iterate (cdr lower-bounds-tail)
-                                    (cdr upper-bounds-tail)
-                                    (cdr arg-tail))
-                           (loop (+ i 1))))))))
-
-           (iterate lower-bounds
-                    upper-bounds
-                    arg))))))
+  (%%interval-foldl f
+                    (lambda (ignore f_i)
+                      f_i)
+                    'ignore
+                    interval)
+  (void))
 
 ;;; Calculates
 ;;;
@@ -2391,6 +2300,17 @@ OTHER DEALINGS IN THE SOFTWARE.
               "Arrays must have the same domains: ")
              destination source))
 
+  ;; We'll put this here temporarily because we know these
+  ;; algorithms are not call/cc safe.  We'll decide later
+  ;; whether there are some circumstances when we want to
+  ;; use these on generalized arrays.
+
+  (if (not (specialized-array? source))
+      (error (string-append
+              caller
+              "Attempting to move data from generalized array: ")
+             destination source))
+
   (if (specialized-array? destination)
       (if (%%array-packed? destination)
           ;; Maybe we can do a block copy
@@ -2608,7 +2528,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                   (storage-class-checker destination-storage-class))
                  (domain
                   (%%array-domain destination)))
-            (cond ((and (specialized-array? source)
+            (cond ((and (specialized-array? source) ;; redundant after new check at top, but leave it for now
                         (let ((compatibility-list
                                (assq (%%array-storage-class source)
                                      %%storage-class-compatibility-alist)))
@@ -2742,19 +2662,71 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; Builds a new specialized-array and populates the body of the result with
 ;;; (array-getter array) applied to the elements of (array-domain array)
 
+(define (%%generalized-array->specialized-array array storage-class mutable? safe? message)
+  (let* ((domain            (%%array-domain array))
+         (reversed-elements (%%array->reversed-list array))
+         (n                 (%%interval-volume domain))
+         (body              ((storage-class-maker storage-class) n (storage-class-default storage-class)))
+         (indexer           (%%interval->basic-indexer domain))
+         (setter            (storage-class-setter storage-class))
+         (checker           (storage-class-checker storage-class)))
+    (if (eq? storage-class generic-storage-class)
+        (let loop ((i (fx- n 1))
+                   (l reversed-elements))
+          (if (fx<= 0 i)
+              (begin
+                (vector-set! body i (car l))
+                (loop (fx- i 1)
+                      (cdr l)))
+              (%%finish-specialized-array domain
+                                          storage-class
+                                          body
+                                          indexer
+                                          mutable?
+                                          safe?
+                                          #t)))
+        (let loop ((i (fx- n 1))
+                   (l reversed-elements))
+          (if (fx<= 0 i)
+              (if (checker (car l))
+                  (begin
+                    (setter body i (car l))
+                    (loop (fx- i 1)
+                          (cdr l)))
+                  (error (string-append message "Not all elements of the source can be stored in destination: ") array storage-class mutable? safe?))
+              (%%finish-specialized-array domain
+                                          storage-class
+                                          body
+                                          indexer
+                                          mutable?
+                                          safe?
+                                          #t))))))
+
+(define (%%->specialized-array array)
+  ;; always generic-storage-class
+  (if (specialized-array? array)
+      array
+      (%%generalized-array->specialized-array array generic-storage-class #f #f "")))
+
 (define (%!array-copy array
                       result-storage-class
                       mutable?
                       safe?
                       message)
-  (let ((result (%%make-specialized-array (%%array-domain array)
-                                          result-storage-class
-                                          (storage-class-default result-storage-class)
-                                          safe?)))
-    (%%move-array-elements result array message)
-    (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
-        (%%array-freeze! result)
-        result)))
+  (if (specialized-array? array)
+      (let ((result (%%make-specialized-array (%%array-domain array)
+                                              result-storage-class
+                                              (storage-class-default result-storage-class)
+                                              safe?)))
+        (%%move-array-elements result array message)
+        (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
+            (%%array-freeze! result)
+            result))
+      (%%generalized-array->specialized-array array
+                                              result-storage-class
+                                              mutable?
+                                              safe?
+                                              message)))
 
 (define array-copy
   (let ()
@@ -3937,88 +3909,66 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%specialize-function-applied-to-array-getters f array arrays)
   (let ((domain (%%array-domain array))
-        (getter-0 (%%array-getter array)))
-    (case (length arrays)
-      ((0) (case (%%interval-dimension domain)
-             ((0)  (lambda ()          (f (getter-0))))
-             ((1)  (lambda (i)         (f (getter-0 i))))
-             ((2)  (lambda (i j)       (f (getter-0 i j))))
-             ((3)  (lambda (i j k)     (f (getter-0 i j k))))
-             ((4)  (lambda (i j k l)   (f (getter-0 i j k l))))
-             (else (lambda multi-index (f (apply getter-0 multi-index))))))
+        (arrays (cons array arrays)))
 
-      ((1) (let ((getter-1 (%%array-getter (car arrays))))
-             (case (%%interval-dimension domain)
-               ((0)  (lambda ()          (f (getter-0)
-                                            (getter-1))))
-               ((1)  (lambda (i)         (f (getter-0 i)
-                                            (getter-1 i))))
-               ((2)  (lambda (i j)       (f (getter-0 i j)
-                                            (getter-1 i j))))
-               ((3)  (lambda (i j k)     (f (getter-0 i j k)
-                                            (getter-1 i j k))))
-               ((4)  (lambda (i j k l)   (f (getter-0 i j k l)
-                                            (getter-1 i j k l))))
-               (else (lambda multi-index (f (apply getter-0 multi-index)
-                                            (apply getter-1 multi-index)))))))
-      ((2) (let ((getter-1 (%%array-getter (car arrays)))
-                 (getter-2 (%%array-getter (cadr arrays))))
-             (case (%%interval-dimension domain)
-               ((0)  (lambda ()          (f (getter-0)
-                                            (getter-1)
-                                            (getter-2))))
-               ((1)  (lambda (i)         (f (getter-0 i)
-                                            (getter-1 i)
-                                            (getter-2 i))))
-               ((2)  (lambda (i j)       (f (getter-0 i j)
-                                            (getter-1 i j)
-                                            (getter-2 i j))))
-               ((3)  (lambda (i j k)     (f (getter-0 i j k)
-                                            (getter-1 i j k)
-                                            (getter-2 i j k))))
-               ((4)  (lambda (i j k l)   (f (getter-0 i j k l)
-                                            (getter-1 i j k l)
-                                            (getter-2 i j k l))))
-               (else (lambda multi-index (f (apply getter-0 multi-index)
-                                            (apply getter-1 multi-index)
-                                            (apply getter-2 multi-index)))))))
-      ((3) (let ((getter-1 (%%array-getter (car arrays)))
-                 (getter-2 (%%array-getter (cadr arrays)))
-                 (getter-3 (%%array-getter (caddr arrays))))
-             (case (%%interval-dimension domain)
-               ((0)  (lambda ()          (f (getter-0)
-                                            (getter-1)
-                                            (getter-2)
-                                            (getter-3))))
-               ((1)  (lambda (i)         (f (getter-0 i)
-                                            (getter-1 i)
-                                            (getter-2 i)
-                                            (getter-3 i))))
-               ((2)  (lambda (i j)       (f (getter-0 i j)
-                                            (getter-1 i j)
-                                            (getter-2 i j)
-                                            (getter-3 i j))))
-               ((3)  (lambda (i j k)     (f (getter-0 i j k)
-                                            (getter-1 i j k)
-                                            (getter-2 i j k)
-                                            (getter-3 i j k))))
-               ((4)  (lambda (i j k l)   (f (getter-0 i j k l)
-                                            (getter-1 i j k l)
-                                            (getter-2 i j k l)
-                                            (getter-3 i j k l))))
-               (else (lambda multi-index (f (apply getter-0 multi-index)
-                                            (apply getter-1 multi-index)
-                                            (apply getter-2 multi-index)
-                                            (apply getter-3 multi-index)))))))
-      (else
-       (let ((getters (cons getter-0 (map array-getter arrays))))
-         (case (%%interval-dimension domain)
-           ((0)  (lambda ()          (apply f (map (lambda (g) (g))                   getters))))
-           ((1)  (lambda (i)         (apply f (map (lambda (g) (g i))                 getters))))
-           ((2)  (lambda (i j)       (apply f (map (lambda (g) (g i j))               getters))))
-           ((3)  (lambda (i j k)     (apply f (map (lambda (g) (g i j k))             getters))))
-           ((4)  (lambda (i j k l)   (apply f (map (lambda (g) (g i j k l))           getters))))
-           (else (lambda multi-index (apply f (map (lambda (g) (apply g multi-index)) getters))))))))))
+    (define-macro (generate-cases)
+
+      (define-macro (max-getters) 8)
+
+      (define-macro (number-of-dimensions) 5)
+
+      (define (make-getter i)
+        (symbol-append 'getter- i))
+
+      (define (symbol-append . args)
+        (string->symbol
+         (apply string-append (map (lambda (x)
+                                     (cond ((symbol? x) (symbol->string x))
+                                           ((number? x) (number->string x))
+                                           ((string? x) x)
+                                           (else (error "Arghh!"))))
+                                   args))))
+
+      (define (do-one number-of-getters)
+        (let ((getters (map make-getter
+                            (iota number-of-getters))))
+          `((,number-of-getters) (let ,(map (lambda (getter i)
+                                               `(,getter (%%array-getter (list-ref arrays ,i))))
+                                             getters
+                                             (iota number-of-getters))
+                                   (case (%%interval-dimension domain)
+                                     ,@(map (lambda (dimension)
+                                              (let ((multi-index (map (lambda (dim)
+                                                                        (symbol-append 'i_ dim))
+                                                                      (iota dimension))))
+                                                `((,dimension) (lambda ,multi-index
+                                                                 (f ,@(map (lambda (getter)
+                                                                             `(,(make-getter getter) ,@multi-index))
+                                                                           (iota number-of-getters)))))))
+                                            (iota (number-of-dimensions)))
+                                     (else (lambda multi-index (f ,@(map (lambda (getter)
+                                                                           `(apply ,getter multi-index))
+                                                                         getters)))))))))
+
+      (let ((result
+             `(case (length arrays)
+                ,@(map do-one (iota (max-getters) 1))
+                (else
+                 (let ((getters (map array-getter arrays)))
+                   (case (%%interval-dimension domain)
+                     ,@(map (lambda (dimension)
+                              (let ((multi-index (map (lambda (dim)
+                                                        (symbol-append 'i_ dim))
+                                                      (iota dimension))))
+                                `((,dimension) (lambda ,multi-index
+                                                 (apply f (map (lambda (g)
+                                                                 (g ,@multi-index))
+                                                               getters))))))
+                            (iota (number-of-dimensions)))
+                     (else (lambda multi-index (apply f (map (lambda (g) (apply g multi-index)) getters))))))))))
+        result))
+
+    (generate-cases)))
 
 (define (%%array-map f array arrays)
   ;; unsafe, for internal use on known intervals
@@ -4281,64 +4231,18 @@ OTHER DEALINGS IN THE SOFTWARE.
                            id
                            (%%array-domain array)))))
 
-(define (%%array-reduce sum A message)
-  ;; The issue here is that, given an empty interval, %%interval-for-each will
-  ;; happily not do anything, so then (car box), with box='()  will throw an error.
-  ;; So we check for empty array first.
-  (if (%%array-empty? A)
-      (error (string-append message "Attempting to reduce over an empty array: ") sum A)
-      (case (%%array-dimension A)
-        ((0) ((%%array-getter A)))
-        ((1) (let ((box '())
-                   (A_ (%%array-getter A)))
-               (%%interval-for-each
-                (lambda (i)
-                  (if (null? box)
-                      (set! box (list (A_ i)))
-                      (set-car! box (sum (car box)
-                                         (A_ i)))))
-                (%%array-domain A))
-               (car box)))
-        ((2) (let ((box '())
-                   (A_ (%%array-getter A)))
-               (%%interval-for-each
-                (lambda (i j)
-                  (if (null? box)
-                      (set! box (list (A_ i j)))
-                      (set-car! box (sum (car box)
-                                         (A_ i j)))))
-                (%%array-domain A))
-               (car box)))
-        ((3) (let ((box '())
-                   (A_ (%%array-getter A)))
-               (%%interval-for-each
-                (lambda (i j k)
-                  (if (null? box)
-                      (set! box (list (A_ i j k)))
-                      (set-car! box (sum (car box)
-                                         (A_ i j k)))))
-                (%%array-domain A))
-               (car box)))
-        ((4) (let ((box '())
-                   (A_ (%%array-getter A)))
-               (%%interval-for-each
-                (lambda (i j k l)
-                  (if (null? box)
-                      (set! box (list (A_ i j k l)))
-                      (set-car! box (sum (car box)
-                                         (A_ i j k l)))))
-                (%%array-domain A))
-               (car box)))
-        (else (let ((box '())
-                    (A_ (%%array-getter A)))
-                (%%interval-for-each
-                 (lambda args
-                   (if (null? box)
-                       (set! box (list (apply A_ args)))
-                       (set-car! box (sum (car box)
-                                          (apply A_ args)))))
-                 (%%array-domain A))
-                (car box))))))
+(define %%array-reduce
+  (let ((%%array-reduce-base (list 'base)))
+    (lambda (sum A message)
+      (if (%%array-empty? A)
+          (error (string-append message "Attempting to reduce over an empty array: ") sum A)
+          (%%interval-foldl (%%array-getter A)
+                            (lambda (id a)
+                              (if (eq? id %%array-reduce-base)
+                                  a
+                                  (sum id a)))
+                            %%array-reduce-base
+                            (%%array-domain A))))))
 
 (define (array-reduce sum A)
   (cond ((not (array? A))
@@ -4348,12 +4252,16 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-reduce sum A "array-reduce: "))))
 
-(define (%%array->list array)
-  (reverse!
-   (%%interval-foldl (%%array-getter array)
+(define (%%array->reversed-list array)
+  ;; safe in the face of (%%array-getter array) capturing
+  ;; the continuation using call/cc
+  (%%interval-foldl (%%array-getter array)
                      (lambda (a b) (cons b a))
                      '()
-                     (%%array-domain array))))
+                     (%%array-domain array)))
+
+(define (%%array->list array)
+  (reverse! (%%array->reversed-list array)))
 
 (define (array->list array)
   (cond ((not (array? array))
@@ -4362,12 +4270,13 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%array->list array))))
 
 (define (%%array->vector array)
-  (%%array-body
-   (%!array-copy array
-                 generic-storage-class
-                 #f
-                 #f
-                 "")))
+  (let* ((reversed-elements (%%array->reversed-list array))
+         (n (%%interval-volume (%%array-domain array)))
+         (result (make-vector n)))
+    (do ((i (fx- n 1) (fx- i 1))
+         (l reversed-elements (cdr l)))
+        ((fx< i 0) result)
+      (vector-set! result i (car l)))))
 
 (define (array->vector array)
   (cond ((not (array? array))
@@ -4503,7 +4412,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                            (%%array-domain source)))
          (error "array-assign: The destination and source do not have the same domains: " destination source))
         (else
-         (%%move-array-elements destination source "array-assign!: ")
+         (%%move-array-elements destination
+                                (%%->specialized-array source)
+                                "array-assign!: ")
          destination)))
 
 (define (%%array-inner-product A f g B)
@@ -4546,7 +4457,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; Refactored from array-stack to use in list*->array and vector*->array
 
 (define (%%array-stack k arrays storage-class mutable? safe? message)
-  (let* ((first-array
+  (let* ((arrays
+          (map %%->specialized-array arrays))
+         (first-array
           (car arrays))
          (number-of-arrays
           (length arrays))
@@ -4657,7 +4570,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    result)
                              (cdr arrays))))))
            (lambda (axis-subdividers kth-size)
-             (let* ((first-array
+             (let* ((arrays
+                     ;; We ensure all arrays are specialized, to make it call/cc safe
+                     (map %%->specialized-array arrays))
+                    (first-array
                      (car arrays))
                     (lowers
                      ;; the domains of the arrays differ only in the kth axis
@@ -4722,7 +4638,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (first-domain  (%%array-domain first-element)))
                  (if (not (%%array-every  (lambda (a) (%%interval= (%%array-domain a) first-domain)) A '()))
                      (error "array-decurry: Not all elements of the first argument (an array) have the domain: " A-arg)
-                     (let* ((result-domain  (%%interval-cartesian-product (list A_D first-domain)))
+                     (let* ((A (%%->specialized-array (array-map %%->specialized-array A)))
+                            (result-domain  (%%interval-cartesian-product (list A_D first-domain)))
                             (result         (%%make-specialized-array result-domain
                                                                       storage-class
                                                                       (storage-class-default storage-class)
@@ -4757,7 +4674,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    (array-copy A-arg)  ;; evaluate all (array) elements of A-arg
                                    (vector-map (lambda (x) (- x))  (%%interval-lower-bounds (%%array-domain A-arg)))))
                 (A_D              (%%array-domain A))
-                (A_               (%%array-getter A))
                 (A_dim            (%%interval-dimension A_D))
                 (ks               (list->vector (iota A_dim))))
            (cond ((not (%%array-every array? A '()))
@@ -4803,6 +4719,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                               (fx+ (vector-ref result i)
                                                    (%%interval-width (%%array-domain (pencil_ i)) k))))))
                            ks))
+                         (A
+                          (%%->specialized-array (array-map %%->specialized-array A)))
+                         (A_
+                          (%%array-getter A))
                          (result
                           (%%make-specialized-array
                            (make-interval
@@ -4943,6 +4863,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 
 (define (specialized-array-reshape array new-domain #!optional (copy-on-failure? #f))
+  (cond ((not (specialized-array? array))
+         (error "specialized-array-reshape: The first argument is not a specialized array: " array new-domain))
+        ((not (interval? new-domain))
+         (error "specialized-array-reshape: The second argument is not an interval " array new-domain))
+        ((not (fx= (%%interval-volume (%%array-domain array))
+                   (%%interval-volume new-domain)))
+         (error "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: " array new-domain))
+        ((not (boolean? copy-on-failure?))
+         (error "specialized-array-reshape: The third argument is not a boolean: " array new-domain copy-on-failure?))
+        (else
+         (%%specialized-array-reshape array new-domain copy-on-failure?))))
+
+(define (%%specialized-array-reshape array new-domain copy-on-failure?)
 
   (define (vector-filter p v)
 
@@ -4961,175 +4894,165 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (helper (fx+ k 1) i))))
       (helper 0 0)))
 
-  (cond ((not (specialized-array? array))
-         (error "specialized-array-reshape: The first argument is not a specialized array: " array new-domain))
-        ((not (interval? new-domain))
-         (error "specialized-array-reshape: The second argument is not an interval " array new-domain))
-        ((not (fx= (%%interval-volume (%%array-domain array))
-                   (%%interval-volume new-domain)))
-         (error "specialized-array-reshape: The volume of the domain of the first argument is not equal to the volume of the second argument: " array new-domain))
-        ((not (boolean? copy-on-failure?))
-         (error "specialized-array-reshape: The third argument is not a boolean: " array new-domain copy-on-failure?))
-        ((%%array-empty? array)
-         ;; Any empty array can be reshaped to any other empty array.
-         (%%finish-specialized-array new-domain
-                                     (%%array-storage-class array)
-                                     (%%array-body array)
-                                     (lambda args (apply error "indexer of empty array should not be called" args))  ;; meaningless
-                                     (mutable-array? array)
-                                     (%%array-safe? array)
-                                     (%%array-in-order? array)))
-        (else
-         (let* ((indexer
-                 (%%array-indexer array))
-                (domain
-                 (%%array-domain array))
-                (lowers
-                 (%%interval-lower-bounds domain))
-                (uppers
-                 (%%interval-upper-bounds domain))
-                (dims
-                 (vector-length lowers))
-                (sides
-                 (vector-map (lambda (u l) (- u l)) uppers lowers))
-                (args
-                 (vector->list lowers))
-                (base
-                 (apply indexer args))
-                (strides
-                 (let ((result   (make-vector dims))
-                       (vec-args (let ((result (make-vector dims)))
-                                   (do ((i 0 (fx+ i 1))
-                                        (args-tail args (cdr args-tail)))
-                                       ((fx= i dims) result)
-                                     (vector-set! result i args-tail)))))
-                   (do ((i 0 (fx+ i 1)))
-                       ((fx= i dims) result)
-                     (let ((arg (vector-ref vec-args i)))
-                       ;; gives a nonsense result if (vector-ref sides i) is 1,
-                       ;; but doesn't matter.
-                       (set-car! arg (+ 1 (car arg)))
-                       (vector-set! result i (fx- (apply indexer args) base))
-                       (set-car! arg (+ -1 (car arg)))))))
-                (filtered-strides
-                 (vector-filter (lambda (i)
-                                  (not (eqv? 1 (vector-ref sides i))))
-                                strides))
-                (filtered-sides
-                 (vector-filter (lambda (i)
-                                  (not (eqv? 1 (vector-ref sides i))))
-                                sides))
-                (new-sides
-                 (vector-map (lambda (u l) (- u l))
-                             (%%interval-upper-bounds new-domain)
-                             (%%interval-lower-bounds new-domain)))
-                ;; Notation from the NumPy code
-                (newdims
-                 new-sides)
-                (olddims
-                 filtered-sides)
-                (oldstrides
-                 filtered-strides)
-                (newnd
-                 (vector-length new-sides))
-                (newstrides
-                 (make-vector newnd 0))
-                (oldnd
-                 (vector-length filtered-sides)))
-           ;; In the following loops, the error call is in tail position
-           ;; so it can be continued.
-           ;; From this point on we're going to closely follow NumPy's code
-           (let loop-1 ((oi 0)
-                        (oj 1)
-                        (ni 0)
-                        (nj 1))
-             (if (and (fx< ni newnd)
-                      (fx< oi oldnd))
-                 ;; We find a minimal group of adjacent dimensions from left to right
-                 ;; on the old and new intervals with the same volume.
-                 ;; We then check to see that the elements in the old array of these
-                 ;; dimensions are evenly spaced, so an affine map can
-                 ;; cover them.
-                 (let loop-2 ((nj nj)
-                              (oj oj)
-                              (np (vector-ref newdims ni))
-                              (op (vector-ref olddims oi)))
-                   (if (not (fx= np op))
-                       (if (fx< np op)
-                           (loop-2 (fx+ nj 1)
-                                   oj
-                                   (fx* np (vector-ref newdims nj))
-                                   op)
-                           (loop-2 nj
-                                   (fx+ oj 1)
-                                   np
-                                   (fx* op (vector-ref olddims oj))))
-                       (let loop-3 ((ok oi))
-                         (if (fx< ok (fx- oj 1))
-                             (if (not (fx= (vector-ref oldstrides ok)
-                                           (fx* (vector-ref olddims    (fx+ ok 1))
-                                                (vector-ref oldstrides (fx+ ok 1)))))
-                                 (if copy-on-failure?
-                                     (specialized-array-reshape
-                                      (%!array-copy array
-                                                    (%%array-storage-class array)
-                                                    (mutable-array? array)
-                                                    (%%array-safe? array)
-                                                    "specialized-array-reshape: ")
-                                      new-domain)
-                                     (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
-                                 (loop-3 (fx+ ok 1)))
-                             (begin
-                               (vector-set! newstrides (fx- nj 1) (vector-ref oldstrides (fx- oj 1)))
-                               (let loop-4 ((nk (fx- nj 1)))
-                                 (if (fx< ni nk)
-                                     (begin
-                                       (vector-set! newstrides (fx- nk 1) (fx* (vector-ref newstrides nk)
-                                                                               (vector-ref newdims nk)))
-                                       (loop-4 (fx- nk 1)))
-                                     (loop-1 oj
-                                             (fx+ oj 1)
-                                             nj
-                                             (fx+ nj 1)))))))))
-                 ;; The NumPy code then sets the strides of the last
-                 ;; dimensions with side-length 1 to a value, we leave it zero.
-                 (let* ((new-lowers
-                         (%%interval-lower-bounds new-domain))
-                        (indexer
-                         (case newnd
-                           ((0) (%%indexer-0 base))
-                           ((1) (%%indexer-1 base
-                                             (vector-ref new-lowers 0)
-                                             (vector-ref newstrides 0)))
-                           ((2) (%%indexer-2 base
-                                             (vector-ref new-lowers 0)
-                                             (vector-ref new-lowers 1)
-                                             (vector-ref newstrides 0)
-                                             (vector-ref newstrides 1)))
-                           ((3) (%%indexer-3 base
-                                             (vector-ref new-lowers 0)
-                                             (vector-ref new-lowers 1)
-                                             (vector-ref new-lowers 2)
-                                             (vector-ref newstrides 0)
-                                             (vector-ref newstrides 1)
-                                             (vector-ref newstrides 2)))
-                           ((4) (%%indexer-4 base
-                                             (vector-ref new-lowers 0)
-                                             (vector-ref new-lowers 1)
-                                             (vector-ref new-lowers 2)
-                                             (vector-ref new-lowers 3)
-                                             (vector-ref newstrides 0)
-                                             (vector-ref newstrides 1)
-                                             (vector-ref newstrides 2)
-                                             (vector-ref newstrides 3)))
-                           (else
-                            (%%indexer-generic base
-                                               (vector->list new-lowers)
-                                               (vector->list newstrides))))))
-                   (%%finish-specialized-array new-domain
-                                               (%%array-storage-class array)
-                                               (%%array-body array)
-                                               indexer
-                                               (mutable-array? array)
-                                               (%%array-safe? array)
-                                               (%%array-in-order? array)))))))))
+  (if (%%array-empty? array)
+      ;; Any empty array can be reshaped to any other empty array.
+      (%%finish-specialized-array new-domain
+                                  (%%array-storage-class array)
+                                  (%%array-body array)
+                                  (lambda args (apply error "indexer of empty array should not be called" args))  ;; meaningless
+                                  (mutable-array? array)
+                                  (%%array-safe? array)
+                                  (%%array-in-order? array))
+      (let* ((indexer
+              (%%array-indexer array))
+             (domain
+              (%%array-domain array))
+             (lowers
+              (%%interval-lower-bounds domain))
+             (uppers
+              (%%interval-upper-bounds domain))
+             (dims
+              (vector-length lowers))
+             (sides
+              (vector-map (lambda (u l) (- u l)) uppers lowers))
+             (args
+              (vector->list lowers))
+             (base
+              (apply indexer args))
+             (strides
+              (let ((result   (make-vector dims))
+                    (vec-args (let ((result (make-vector dims)))
+                                (do ((i 0 (fx+ i 1))
+                                     (args-tail args (cdr args-tail)))
+                                    ((fx= i dims) result)
+                                  (vector-set! result i args-tail)))))
+                (do ((i 0 (fx+ i 1)))
+                    ((fx= i dims) result)
+                  (let ((arg (vector-ref vec-args i)))
+                    ;; gives a nonsense result if (vector-ref sides i) is 1,
+                    ;; but doesn't matter.
+                    (set-car! arg (+ 1 (car arg)))
+                    (vector-set! result i (fx- (apply indexer args) base))
+                    (set-car! arg (+ -1 (car arg)))))))
+             (filtered-strides
+              (vector-filter (lambda (i)
+                               (not (eqv? 1 (vector-ref sides i))))
+                             strides))
+             (filtered-sides
+              (vector-filter (lambda (i)
+                               (not (eqv? 1 (vector-ref sides i))))
+                             sides))
+             (new-sides
+              (vector-map (lambda (u l) (- u l))
+                          (%%interval-upper-bounds new-domain)
+                          (%%interval-lower-bounds new-domain)))
+             ;; Notation from the NumPy code
+             (newdims
+              new-sides)
+             (olddims
+              filtered-sides)
+             (oldstrides
+              filtered-strides)
+             (newnd
+              (vector-length new-sides))
+             (newstrides
+              (make-vector newnd 0))
+             (oldnd
+              (vector-length filtered-sides)))
+        ;; In the following loops, the error call is in tail position
+        ;; so it can be continued.
+        ;; From this point on we're going to closely follow NumPy's code
+        (let loop-1 ((oi 0)
+                     (oj 1)
+                     (ni 0)
+                     (nj 1))
+          (if (and (fx< ni newnd)
+                   (fx< oi oldnd))
+              ;; We find a minimal group of adjacent dimensions from left to right
+              ;; on the old and new intervals with the same volume.
+              ;; We then check to see that the elements in the old array of these
+              ;; dimensions are evenly spaced, so an affine map can
+              ;; cover them.
+              (let loop-2 ((nj nj)
+                           (oj oj)
+                           (np (vector-ref newdims ni))
+                           (op (vector-ref olddims oi)))
+                (if (not (fx= np op))
+                    (if (fx< np op)
+                        (loop-2 (fx+ nj 1)
+                                oj
+                                (fx* np (vector-ref newdims nj))
+                                op)
+                        (loop-2 nj
+                                (fx+ oj 1)
+                                np
+                                (fx* op (vector-ref olddims oj))))
+                    (let loop-3 ((ok oi))
+                      (if (fx< ok (fx- oj 1))
+                          (if (not (fx= (vector-ref oldstrides ok)
+                                        (fx* (vector-ref olddims    (fx+ ok 1))
+                                             (vector-ref oldstrides (fx+ ok 1)))))
+                              (if copy-on-failure?
+                                  (specialized-array-reshape
+                                   (%!array-copy array
+                                                 (%%array-storage-class array)
+                                                 (mutable-array? array)
+                                                 (%%array-safe? array)
+                                                 "specialized-array-reshape: ")
+                                   new-domain)
+                                  (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
+                              (loop-3 (fx+ ok 1)))
+                          (begin
+                            (vector-set! newstrides (fx- nj 1) (vector-ref oldstrides (fx- oj 1)))
+                            (let loop-4 ((nk (fx- nj 1)))
+                              (if (fx< ni nk)
+                                  (begin
+                                    (vector-set! newstrides (fx- nk 1) (fx* (vector-ref newstrides nk)
+                                                                            (vector-ref newdims nk)))
+                                    (loop-4 (fx- nk 1)))
+                                  (loop-1 oj
+                                          (fx+ oj 1)
+                                          nj
+                                          (fx+ nj 1)))))))))
+              ;; The NumPy code then sets the strides of the last
+              ;; dimensions with side-length 1 to a value, we leave it zero.
+              (let* ((new-lowers
+                      (%%interval-lower-bounds new-domain))
+                     (indexer
+                      (case newnd
+                        ((0) (%%indexer-0 base))
+                        ((1) (%%indexer-1 base
+                                          (vector-ref new-lowers 0)
+                                          (vector-ref newstrides 0)))
+                        ((2) (%%indexer-2 base
+                                          (vector-ref new-lowers 0)
+                                          (vector-ref new-lowers 1)
+                                          (vector-ref newstrides 0)
+                                          (vector-ref newstrides 1)))
+                        ((3) (%%indexer-3 base
+                                          (vector-ref new-lowers 0)
+                                          (vector-ref new-lowers 1)
+                                          (vector-ref new-lowers 2)
+                                          (vector-ref newstrides 0)
+                                          (vector-ref newstrides 1)
+                                          (vector-ref newstrides 2)))
+                        ((4) (%%indexer-4 base
+                                          (vector-ref new-lowers 0)
+                                          (vector-ref new-lowers 1)
+                                          (vector-ref new-lowers 2)
+                                          (vector-ref new-lowers 3)
+                                          (vector-ref newstrides 0)
+                                          (vector-ref newstrides 1)
+                                          (vector-ref newstrides 2)
+                                          (vector-ref newstrides 3)))
+                        (else
+                         (%%indexer-generic base
+                                            (vector->list new-lowers)
+                                            (vector->list newstrides))))))
+                (%%finish-specialized-array new-domain
+                                            (%%array-storage-class array)
+                                            (%%array-body array)
+                                            indexer
+                                            (mutable-array? array)
+                                            (%%array-safe? array)
+                                            (%%array-in-order? array))))))))
