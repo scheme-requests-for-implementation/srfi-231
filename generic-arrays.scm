@@ -735,106 +735,92 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; where multi-index_1, multi-index_2, ... are the elements of interval in lexicographical order
 
 (define (%%interval-foldl f operator identity interval)
+
+  (define-macro (generate-code)
+
+    (define (symbol-append . args)
+      (string->symbol
+       (apply string-append (map (lambda (x)
+                                   (cond ((symbol? x) (symbol->string x))
+                                         ((number? x) (number->string x))
+                                         ((string? x) x)
+                                         (else (error "Arghh!"))))
+                                 args))))
+
+
+      (define (make-lower k)
+        (symbol-append 'lower- k))
+
+      (define (make-upper k)
+        (symbol-append 'upper- k))
+
+      (define (make-arg k)
+        (symbol-append 'i_ k))
+
+      (define (make-loop-name k)
+        (symbol-append 'loop- k))
+
+      (define (make-loop index depth k)
+        `(let ,(make-loop-name index) ((,(make-arg index) ,(make-lower index))
+                                       (result result))
+              (if (= ,(make-arg index) ,(make-upper index))
+                  ,(if (= index 0)
+                       `result
+                       `(,(make-loop-name (- index 1)) (+ ,(make-arg (- index 1)) 1) result))
+                  ,(if (= depth 0)
+                       `(,(make-loop-name index) (+ ,(make-arg index) 1) (operator result (f ,@(map (lambda (i) (make-arg i)) (iota k)))))
+                       (make-loop (+ index 1) (- depth 1) k)))))
+
+      (define (do-one-case k)
+        (let ((result
+               `((,k)
+                 (let (,@(map (lambda (j)
+                                `(,(make-lower j) (%%interval-lower-bound interval ,j)))
+                              (iota k))
+                       ,@(map (lambda (j)
+                                `(,(make-upper j) (%%interval-upper-bound interval ,j)))
+                              (iota k))
+                       (result identity))
+                   ,(make-loop 0 (- k 1) k)))))
+          result))
+
+      `(case (%%interval-dimension interval)
+         ((0) (operator identity (f)))
+         ,@(map do-one-case (iota 8 1))
+         (else
+          (let ()
+
+            (define (get-next-args reversed-args
+                                   reversed-lowers
+                                   reversed-uppers)
+              (let ((next-index (+ (car reversed-args) 1)))
+                (if (< next-index (car reversed-uppers))
+                    (cons next-index (cdr reversed-args))
+                    (and (not (null? (cdr reversed-args)))
+                         (let ((tail-result (get-next-args (cdr reversed-args)
+                                                           (cdr reversed-lowers)
+                                                           (cdr reversed-uppers))))
+                           (and tail-result
+                                (cons (car reversed-lowers) tail-result)))))))
+
+            (let ((reversed-lowers (reverse (%%interval-lower-bounds->list interval)))
+                  (reversed-uppers (reverse (%%interval-upper-bounds->list interval)))
+                  (reversed-args   (reverse (%%interval-lower-bounds->list interval))))
+              (let loop ((reversed-args reversed-args)
+                         (result identity))
+             ;;; There's at least one element of the interval, so we can
+             ;;; use a do-until loop
+                (let ((result (operator result (apply f (reverse reversed-args))))
+                      (next-reversed-args (get-next-args reversed-args
+                                                         reversed-lowers
+                                                         reversed-uppers)))
+                  (if next-reversed-args
+                      (loop next-reversed-args result)
+                      result))))))))
+
   (if (%%interval-empty? interval) ;; handle (make-interval '#(10000000 10000000 0)) efficiently
       identity
-      (case (%%interval-dimension interval)
-        ((0) (operator identity (f)))
-        ((1) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (upper-i (%%interval-upper-bound interval 0)))
-               (let i-loop ((i lower-i) (result identity))
-                 (if (= i upper-i)
-                     result
-                     (i-loop (+ i 1) (operator result (f i)))))))
-        ((2) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (lower-j (%%interval-lower-bound interval 1))
-                   (upper-i (%%interval-upper-bound interval 0))
-                   (upper-j (%%interval-upper-bound interval 1)))
-               (let i-loop ((i lower-i) (result identity))
-                 (if (= i upper-i)
-                     result
-                     (let j-loop ((j lower-j) (result result))
-                       (if (= j upper-j)
-                           (i-loop (+ i 1) result)
-                           (j-loop (+ j 1) (operator result (f i j)))))))))
-        ((3) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (lower-j (%%interval-lower-bound interval 1))
-                   (lower-k (%%interval-lower-bound interval 2))
-                   (upper-i (%%interval-upper-bound interval 0))
-                   (upper-j (%%interval-upper-bound interval 1))
-                   (upper-k (%%interval-upper-bound interval 2)))
-               (let i-loop ((i lower-i) (result identity))
-                 (if (= i upper-i)
-                     result
-                     (let j-loop ((j lower-j) (result result))
-                       (if (= j upper-j)
-                           (i-loop (+ i 1) result)
-                           (let k-loop ((k lower-k) (result result))
-                             (if (= k upper-k)
-                                 (j-loop (+ j 1) result)
-                                 (k-loop (+ k 1) (operator result (f i j k)))))))))))
-        ((4) (let ((lower-i (%%interval-lower-bound interval 0))
-                   (lower-j (%%interval-lower-bound interval 1))
-                   (lower-k (%%interval-lower-bound interval 2))
-                   (lower-l (%%interval-lower-bound interval 3))
-                   (upper-i (%%interval-upper-bound interval 0))
-                   (upper-j (%%interval-upper-bound interval 1))
-                   (upper-k (%%interval-upper-bound interval 2))
-                   (upper-l (%%interval-upper-bound interval 3)))
-               (let i-loop ((i lower-i) (result identity))
-                 (if (= i upper-i)
-                     result
-                     (let j-loop ((j lower-j) (result result))
-                       (if (= j upper-j)
-                           (i-loop (+ i 1) result)
-                           (let k-loop ((k lower-k) (result result))
-                             (if (= k upper-k)
-                                 (j-loop (+ j 1) result)
-                                 (let l-loop ((l lower-l) (result result))
-                                   (if (= l upper-l)
-                                       (k-loop (+ k 1) result)
-                                       (l-loop (+ l 1) (operator result (f i j k l)))))))))))))
-        (else
-         (let* ((lower-bounds (%%interval-lower-bounds->list interval))
-                (upper-bounds (%%interval-upper-bounds->list interval))
-                (arg          (map values lower-bounds)))                ; copy lower-bounds
-
-           ;; I'm not particularly happy with set! here because f or operator might capture
-           ;; the continuation and then funny things might pursue ...
-           ;; But it seems that the only way to have this work efficiently without the set~
-           ;; is to have arrays with fortran-style numbering.
-           ;; blah
-
-           (define (iterate lower-bounds-tail
-                            upper-bounds-tail
-                            arg-tail
-                            result)
-             (let ((lower-bound (car lower-bounds-tail))
-                   (upper-bound (car upper-bounds-tail)))
-               (if (null? (cdr arg-tail))
-                   (let loop ((i lower-bound)
-                              (result result))
-                     (if (= i upper-bound)
-                         result
-                         (begin
-                           (set-car! arg-tail i)
-                           (loop (+ i 1)
-                                 (operator result (apply f arg))))))
-                   (let loop ((i lower-bound)
-                              (result result))
-                     (if (= i upper-bound)
-                         result
-                         (begin
-                           (set-car! arg-tail i)
-                           (loop (+ i 1)
-                                 (iterate (cdr lower-bounds-tail)
-                                          (cdr upper-bounds-tail)
-                                          (cdr arg-tail)
-                                          result))))))))
-
-           (iterate lower-bounds
-                    upper-bounds
-                    arg
-                    identity))))))
+      (generate-code)))
 
 ;; We'll use the same basic container for all types of arrays.
 
