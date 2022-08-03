@@ -1798,9 +1798,6 @@ OTHER DEALINGS IN THE SOFTWARE.
              (specialized-destination
               (make-specialized-array domain
                                       storage-class))
-             (source
-              (make-array domain
-                          (array-getter (array-reverse specialized-source))))
              (destination
               (make-array (array-domain specialized-destination)
                           (array-getter specialized-destination)
@@ -1812,24 +1809,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                   "Block copy"))
         (test (myarray= specialized-source specialized-destination)
               #t)
-        ;; copy to adjacent elements of destination, checking needed
-        (test (%%move-array-elements specialized-destination source "test: ")
-              (if (equal? storage-class generic-storage-class)
-                  "In order, no checks needed, generic-storage-class"
-                  "In order, checks needed"))
-        (test (myarray= source specialized-destination)
-              #t)
         ;; copy to non-adjacent elements of destination, no checking needed
         (test (%%move-array-elements (array-reverse specialized-destination) specialized-source "test: ")
               (if (array-packed? (array-reverse specialized-destination))
                   "In order, no checks needed"
                   "Out of order, no checks needed"))
         (test (myarray= specialized-source (array-reverse specialized-destination))
-              #t)
-        ;; copy to non-specialized array
-        (test (%%move-array-elements destination source "test: ")
-              "Destination not specialized array")
-        (test (myarray= destination source)
               #t)
         ))))
 
@@ -1880,9 +1865,16 @@ OTHER DEALINGS IN THE SOFTWARE.
               (array-copy (make-array domain
                                       source-initializer)
                           source-storage-class))
+             (generalized-source
+              (make-array (array-domain source)
+                          (array-getter source)))
              (destination
               (make-specialized-array domain
                                       destination-storage-class))
+             (generalized-destination
+              (make-array (array-domain destination)
+                          (array-getter destination)
+                          (array-setter destination)))
              (destination
               (if (zero? (random 2))
                   (array-reverse destination)
@@ -1890,33 +1882,70 @@ OTHER DEALINGS IN THE SOFTWARE.
              (destination-checker
               (storage-class-checker destination-storage-class)))
         (if (array-every destination-checker source)
-            (test (let ((%%move-result
-                         (%%move-array-elements destination source "test: ")))
-                    (and (equal? (if (array-packed? destination)
-                                     (cond ((and (eq? destination-storage-class source-storage-class)
-                                                 (storage-class-copier destination-storage-class))
-                                            "Block copy")
-                                           ((eq? destination-storage-class generic-storage-class)
-                                            "In order, no checks needed, generic-storage-class")
-                                           ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
-                                            "In order, no checks needed")
-                                           (else
-                                            "In order, checks needed"))
-                                     (cond ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
-                                            "Out of order, no checks needed")
-                                           (else
-                                            "Out of order, checks needed")))
-                                 %%move-result)
-                         (myarray= destination
-                                   source
-                                   (if (or (and (eq? source-storage-class c128-storage-class)
-                                                (eq? destination-storage-class c64-storage-class))
-                                           (and (eq? source-storage-class f64-storage-class)
-                                                (eq? destination-storage-class f32-storage-class)))
-                                       (lambda (x y)
-                                         (< (magnitude (- x y)) 1e-5))
-                                       equal?))))
-                  #t)
+            (begin
+              (test (let ((%%move-result
+                           (%%move-array-elements destination source "test: ")))
+                      (and (equal? (if (array-packed? destination)
+                                       (cond ((and (eq? destination-storage-class source-storage-class)
+                                                   (storage-class-copier destination-storage-class))
+                                              "Block copy")
+                                             ((eq? destination-storage-class generic-storage-class)
+                                              "In order, no checks needed, generic-storage-class")
+                                             ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
+                                              "In order, no checks needed")
+                                             (else
+                                              "In order, checks needed"))
+                                       (cond ((%%every destination-checker (cdr (assq source-storage-class extreme-values-alist)))
+                                              "Out of order, no checks needed")
+                                             (else
+                                              "Out of order, checks needed")))
+                                   %%move-result)
+                           (myarray= destination
+                                     source
+                                     (if (or (and (eq? source-storage-class c128-storage-class)
+                                                  (eq? destination-storage-class c64-storage-class))
+                                             (and (eq? source-storage-class f64-storage-class)
+                                                  (eq? destination-storage-class f32-storage-class)))
+                                         (lambda (x y)
+                                           (< (magnitude (- x y)) 1e-5))
+                                         equal?))))
+                    #t)
+              (test (let ((%%move-result
+                           (%%move-array-elements generalized-destination source "test: ")))
+                      (and (equal? "Destination not specialized array"
+                                   %%move-result)
+                           (myarray= generalized-destination
+                                     source
+                                     (if (or (and (eq? source-storage-class c128-storage-class)
+                                                  (eq? destination-storage-class c64-storage-class))
+                                             (and (eq? source-storage-class f64-storage-class)
+                                                  (eq? destination-storage-class f32-storage-class)))
+                                         (lambda (x y)
+                                           (< (magnitude (- x y)) 1e-5))
+                                         equal?))))
+                    #t)
+              (test (let ((ignore (array-assign! destination generalized-source)))
+                      (myarray= destination
+                                generalized-source
+                                (if (or (and (eq? source-storage-class c128-storage-class)
+                                             (eq? destination-storage-class c64-storage-class))
+                                        (and (eq? source-storage-class f64-storage-class)
+                                             (eq? destination-storage-class f32-storage-class)))
+                                    (lambda (x y)
+                                      (< (magnitude (- x y)) 1e-5))
+                                    equal?)))
+                    #t)
+              (test (let ((ignore (array-assign! generalized-destination generalized-source)))
+                      (myarray= generalized-destination
+                                 generalized-source
+                                 (if (or (and (eq? source-storage-class c128-storage-class)
+                                              (eq? destination-storage-class c64-storage-class))
+                                         (and (eq? source-storage-class f64-storage-class)
+                                              (eq? destination-storage-class f32-storage-class)))
+                                     (lambda (x y)
+                                       (< (magnitude (- x y)) 1e-5))
+                                     equal?)))
+                     #t))
             (test (array-assign! destination source)
                   "array-assign!: Not all elements of the source can be stored in destination: "))))))
 
@@ -6122,7 +6151,10 @@ that computes the componentwise products when we need them, the times are
                             #(1 1) #(1 -1) #(-1 1) #(-1 -1)))))
     ;; Returns a generalized array that contains the number
     ;; of 1s in the 8 cells surrounding each cell in the original array.
-    (apply array-map + translates)))
+    (apply array-map
+           (lambda (i0 i1 i2 i3 i4 i5 i6 i7)
+             (fx+ i0 i1 i2 i3 i4 i5 i6 i7))
+           translates)))
 
 (define (game-rules a neighbor-count)
   ;; a is a single cell, neighbor-count is the count of 1s in
