@@ -2922,7 +2922,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
-(pp "array-decurry tests")
+(pp "array-decurry and array-decurry! tests")
 
 (test (array-decurry 'a)
       "array-decurry: The first argument is not an array: ")
@@ -2950,6 +2950,33 @@ OTHER DEALINGS IN THE SOFTWARE.
                                            (make-array (make-interval '#(1)) list)))
                      u1-storage-class)
       "array-decurry: Not all elements of the source can be stored in destination: ")
+
+(test (array-decurry! 'a)
+      "array-decurry!: The first argument is not an array: ")
+
+(test (array-decurry! (make-array (make-interval '#(0)) list))
+      "array-decurry!: The first argument is an empty array: ")
+
+(test (array-decurry! (make-array (make-interval '#()) list) 'a)
+      "array-decurry!: The second argument is not a storage class: ")
+
+(test (array-decurry! (make-array (make-interval '#()) list) generic-storage-class 'a)
+      "array-decurry!: The third argument is not a boolean: ")
+
+(test (array-decurry! (make-array (make-interval '#()) list) generic-storage-class #f 'a)
+      "array-decurry!: The fourth argument is not a boolean: ")
+
+(test (array-decurry! (make-array (make-interval '#()) list))
+      "array-decurry!: Not all elements of the first argument (an array) are arrays: ")
+
+(test (array-decurry! (list*->array 1 (list (make-array (make-interval '#()) list)
+                                            (make-array (make-interval '#(1)) list))))
+      "array-decurry!: Not all elements of the first argument (an array) have the domain: ")
+
+(test (array-decurry! (list*->array 1 (list (make-array (make-interval '#(1)) list)
+                                            (make-array (make-interval '#(1)) list)))
+                      u1-storage-class)
+      "array-decurry!: Not all elements of the source can be stored in destination: ")
 
 (define (my-array-decurry  A)
   (let* ((A
@@ -2984,9 +3011,15 @@ OTHER DEALINGS IN THE SOFTWARE.
                       u1-storage-class))
          (A-curried
           (array-curry A (interval-dimension inner-domain)))
+         (A-curried
+          (array-map (lambda (A) (make-array (array-domain A) (array-getter A))) A-curried))
+         (A-decurried!
+          (array-decurry! A-curried u1-storage-class))
          (A-decurried
           (array-decurry A-curried u1-storage-class)))
     (test (myarray= A A-decurried)
+          #t)
+    (test (myarray= A A-decurried!)
           #t)))
 
 (next-test-random-source-state!)
@@ -5428,7 +5461,7 @@ that computes the componentwise products when we need them, the times are
         "array-inner-product: Attempting to reduce over an empty array: "))
 
 
-(pp "array-append tests")
+(pp "array-append and array-append! tests")
 
 (test (array-append 1 'a)
       "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
@@ -5475,7 +5508,7 @@ that computes the componentwise products when we need them, the times are
 (test (array-append 0
                     (list (make-array (make-interval '#(2 4)) list)
                           (make-array (make-interval '#(3 5)) list)))
-      "array-append: Expecting as the second argument arrays with the same upper and lower bounds (except for index 0): ")
+      "array-append: Expecting as the second argument a nonnull list of arrays with the same upper and lower bounds (except for index 0): ")
 
 (test (array-append 0
                     (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 1)) list))
@@ -5483,40 +5516,57 @@ that computes the componentwise products when we need them, the times are
       "array-append: Not all elements of the source can be stored in destination: ")
 
 
+(test (array-append! 1 'a)
+      "array-append!: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
-(test (array-storage-class
-       (array-append 0
-                     (list (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
-                           (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class))))
-      generic-storage-class)
+(test (array-append! 1 '())
+      "array-append!: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
-(test (myarray= (array-append
-                 0
-                 (list (list->array (make-interval '#(2 2))
-                                    '(1 2
-                                        3 4))
-                       (list->array (make-interval '#(2 2))
-                                    '(5 6
-                                        7 8))))
-                (list->array (make-interval '#(4 2))
-                             '(1 2
-                                 3 4
-                                 5 6
-                                 7 8)))
-      #t)
+(test (array-append! 1 '(a))
+      "array-append!: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
 
-(test (myarray= (array-append
-                 1
-                 (list (list->array (make-interval '#(2 2))
-                                    '(1 2
-                                        3 4))
-                       (list->array (make-interval '#(2 2))
-                                    '(5 6
-                                        7 8))))
-                (list->array (make-interval '#(2 4))
-                             '(1 2 5 6
-                                 3 4 7 8)))
-      #t)
+(test (array-append! 1 (list (make-array (make-interval '#(1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append!: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
+
+(test (array-append! 1 (list (make-array (make-interval '#(2 2)) list) 'a))
+      "array-append!: Expecting as the second argument a nonnull list of arrays with the same dimension: ")
+
+(test (array-append! 'a (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append!: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
+
+(test (array-append! -1 (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append!: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
+
+(test (array-append! 2 (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-append!: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
+
+(test (array-append! 0
+                     (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list))
+                     'a)
+      "array-append!: Expecting a storage class as the third argument: ")
+
+(test (array-append! 0
+                     (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list))
+                     u1-storage-class
+                     'a)
+      "array-append!: Expecting a boolean as the fourth argument: ")
+
+(test (array-append! 0
+                     (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 2)) list))
+                     u1-storage-class
+                     #t
+                     'a)
+      "array-append!: Expecting a boolean as the fifth argument: ")
+
+(test (array-append! 0
+                     (list (make-array (make-interval '#(2 4)) list)
+                           (make-array (make-interval '#(3 5)) list)))
+      "array-append!: Expecting as the second argument a nonnull list of arrays with the same upper and lower bounds (except for index 0): ")
+
+(test (array-append! 0
+                     (list (make-array (make-interval '#(1 1)) list) (make-array (make-interval '#(2 1)) list))
+                     u1-storage-class)
+      "array-append!: Not all elements of the source can be stored in destination: ")
 
 (define (my-array-append k . arrays)              ;; call with at least one array
   (call-with-values
@@ -5567,41 +5617,7 @@ that computes the componentwise products when we need them, the times are
                 (loop (cdr arrays)
                       (cdr subdividers)))))))))
 
-(test (myarray= (array-append
-                 0
-                 (list (list->array (make-interval '#(2 2))
-                                    '(1 2
-                                        3 4))
-                       (list->array (make-interval '#(2 2))
-                                    '(5 6
-                                        7 8))))
-                (my-array-append
-                 0
-                 (list->array (make-interval '#(2 2))
-                              '(1 2
-                                  3 4))
-                 (list->array (make-interval '#(2 2))
-                              '(5 6
-                                  7 8))))
-      #t)
 
-(test (myarray= (array-append
-                 1
-                 (list (list->array (make-interval '#(2 2))
-                                    '(1 2
-                                        3 4))
-                       (list->array (make-interval '#(2 2))
-                                    '(5 6
-                                        7 8))))
-                (my-array-append
-                 1
-                 (list->array (make-interval '#(2 2))
-                              '(1 2
-                                  3 4))
-                 (list->array (make-interval '#(2 2))
-                              '(5 6
-                                  7 8))))
-      #t)
 
 
 
@@ -5635,49 +5651,130 @@ that computes the componentwise products when we need them, the times are
                                 0)))
               (if (null? o) generic-storage-class (car o))))
 
-(test (myarray= (tensor '((4 7)
-                          (2 6)
-                          (1 0)
-                          (0 1)))
-                (array-append 0 (list (tensor '((4 7)
-                                                (2 6)))
-                                      (identity-array 2))))
-      #t)
+(for-each
+ (lambda (array-append)
 
-(test (myarray= (tensor '((4 7)
-                          (2 6)
-                          (1 0)
-                          (0 1)))
-                (array-append 0
-                              (list (list->array (make-interval '#(2 0) '#(4 2))
-                                                 '(4 7 2 6))
-                                    (identity-array 2))))
-      #t)
+   (define (->generalized-array array)
+     (make-array (array-domain array)
+                 (array-getter array)))
 
-(test (myarray= (tensor '((4 7 1 0)
-                          (2 6 0 1)))
-                (array-append 1 (list (tensor '((4 7)
-                                                (2 6)))
-                                      (identity-array 2))))
-      #t)
+   (test (array-storage-class
+          (array-append 0
+                        (list (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
+                              (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class))))
+         generic-storage-class)
 
-(test (myarray= (tensor '((4 7 2 1 0)
-                          (6 3 5 0 1)))
-                (array-append 1 (list (tensor '((4 7 2)
-                                                (6 3 5)))
-                                      (identity-array 2))))
-      #t)
+   (test (myarray= (array-append
+                    0
+                    (list (->generalized-array (list->array (make-interval '#(2 2))
+                                                            '(1 2
+                                                                3 4)))
+                          (->generalized-array (list->array (make-interval '#(2 2))
+                                                            '(5 6
+                                                                7 8)))))
+                   (list->array (make-interval '#(4 2))
+                                '(1 2
+                                    3 4
+                                    5 6
+                                    7 8)))
+         #t)
 
-(test (myarray= (tensor '((4 7 1 0 0 1 3)
-                          (2 6 0 1 5 8 9)))
-                (array-append
-                 1
-                 (list (list->array (make-interval '#(2 2))
-                                    '(4 7 2 6))
-                       (identity-array 2)
-                       (list->array (make-interval '#(2 3))
-                                    '(0 1 3 5 8 9)))))
-      #t)
+   (test (myarray= (array-append
+                    1
+                    (list (->generalized-array (list->array(list->array (make-interval '#(2 2))
+                                                                        '(1 2
+                                                                            3 4))))
+                          (list->array (make-interval '#(2 2))
+                                       '(5 6
+                                           7 8))))
+                   (list->array (make-interval '#(2 4))
+                                '(1 2 5 6
+                                    3 4 7 8)))
+         #t)
+
+   (test (myarray= (array-append
+                    0
+                    (list (->generalized-array (list->array (make-interval '#(2 2))
+                                                            '(1 2
+                                                                3 4)))
+                          (list->array (make-interval '#(2 2))
+                                       '(5 6
+                                           7 8))))
+                   (my-array-append
+                    0
+                    (list->array (make-interval '#(2 2))
+                                 '(1 2
+                                     3 4))
+                    (list->array (make-interval '#(2 2))
+                                 '(5 6
+                                     7 8))))
+         #t)
+
+   (test (myarray= (array-append
+                    1
+                    (list (->generalized-array (list->array (make-interval '#(2 2))
+                                                            '(1 2
+                                                                3 4)))
+                          (list->array (make-interval '#(2 2))
+                                       '(5 6
+                                           7 8))))
+                   (my-array-append
+                    1
+                    (list->array (make-interval '#(2 2))
+                                 '(1 2
+                                     3 4))
+                    (list->array (make-interval '#(2 2))
+                                 '(5 6
+                                     7 8))))
+         #t)
+
+   (test (myarray= (tensor '((4 7)
+                             (2 6)
+                             (1 0)
+                             (0 1)))
+                   (array-append 0 (list (tensor '((4 7)
+                                                   (2 6)))
+                                         (identity-array 2))))
+         #t)
+
+   (test (myarray= (tensor '((4 7)
+                             (2 6)
+                             (1 0)
+                             (0 1)))
+                   (array-append 0
+                                 (list (list->array (make-interval '#(2 0) '#(4 2))
+                                                    '(4 7 2 6))
+                                       (identity-array 2))))
+         #t)
+
+   (test (myarray= (tensor '((4 7 1 0)
+                             (2 6 0 1)))
+                   (array-append 1 (list (tensor '((4 7)
+                                                   (2 6)))
+                                         (identity-array 2))))
+         #t)
+
+   (test (myarray= (tensor '((4 7 2 1 0)
+                             (6 3 5 0 1)))
+                   (array-append 1 (list (tensor '((4 7 2)
+                                                   (6 3 5)))
+                                         (identity-array 2))))
+         #t)
+
+   (test (myarray= (tensor '((4 7 1 0 0 1 3)
+                             (2 6 0 1 5 8 9)))
+                   (array-append
+                    1
+                    (list (list->array (make-interval '#(2 2))
+                                       '(4 7 2 6))
+                          (identity-array 2)
+                          (list->array (make-interval '#(2 3))
+                                       '(0 1 3 5 8 9)))))
+         #t)
+
+   )
+ (list array-append array-append!))
+
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
@@ -5713,11 +5810,18 @@ that computes the componentwise products when we need them, the times are
          (arrays
           (array->list (array-tile A tiling-argument)))
          (A-reconstructed
-          (array-append cutting-axis arrays)))
+          (array-append cutting-axis arrays))
+         (A-reconstructed!
+          (array-append! cutting-axis arrays)))
     (test (myarray= (array-translate A (vector-map -
                                                    (interval-lower-bounds->vector (array-domain A-reconstructed))
                                                    (interval-lower-bounds->vector (array-domain A))))
                     A-reconstructed)
+          #t)
+    (test (myarray= (array-translate A (vector-map -
+                                                   (interval-lower-bounds->vector (array-domain A-reconstructed))
+                                                   (interval-lower-bounds->vector (array-domain A))))
+                    A-reconstructed!)
           #t)))
 
 (let* ((a (make-array (make-interval '#(4 6)) list))
@@ -5738,7 +5842,7 @@ that computes the componentwise products when we need them, the times are
 
 (next-test-random-source-state!)
 
-(pp "array-stack tests")
+(pp "array-stack and array-stack! tests")
 
 (test (array-stack 1 'a)
       "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: ")
@@ -5792,6 +5896,59 @@ that computes the componentwise products when we need them, the times are
        (array-stack 1 (list (make-array (make-interval '#(10)) list))))
       generic-storage-class)
 
+(test (array-stack! 1 'a)
+      "array-stack!: Expecting a nonnull list of arrays with the same domains as the second argument: ")
+
+(test (array-stack! 1 '())
+      "array-stack!: Expecting a nonnull list of arrays with the same domains as the second argument: ")
+
+(test (array-stack! 1 '(a))
+      "array-stack!: Expecting a nonnull list of arrays with the same domains as the second argument: ")
+
+(test (array-stack! 1 (list (make-array (make-interval '#(1)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack!: Expecting a nonnull list of arrays with the same domains as the second argument: ")
+
+(test (array-stack! 1 (list (make-array (make-interval '#(2 2)) list) 'a))
+      "array-stack!: Expecting a nonnull list of arrays with the same domains as the second argument: ")
+
+(test (array-stack! 'a (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack!: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
+
+(test (array-stack! -1 (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack!: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
+
+(test (array-stack! 3 (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list)))
+      "array-stack!: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
+
+(test (array-stack! 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    'a)
+      "array-stack!: Expecting a storage class as the third argument: ")
+
+(test (array-stack! 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class
+                    'a)
+      "array-stack!: Expecting a boolean as the fourth argument: ")
+
+(test (array-stack! 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class
+                    #t
+                    'a)
+      "array-stack!: Expecting a boolean as the fifth argument: ")
+
+
+(test (array-stack! 0
+                    (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                    u1-storage-class)
+      "array-stack!: Not all elements of the source can be stored in destination: ")
+
+(test (array-storage-class
+       (array-stack! 1 (list (make-array (make-interval '#(10)) list))))
+      generic-storage-class)
+
+
 ;;; zero-dimensional and empty arrays
 
 (let ()
@@ -5799,18 +5956,27 @@ that computes the componentwise products when we need them, the times are
   (define arrays (map (lambda (ignore) (array-copy (make-array (make-interval '#()) (lambda () (random-integer 10))))) (iota 4)))
 
   (define b  (array-stack 0 arrays))
+  (define c  (array-stack! 0 arrays))
 
   (test (map array-ref arrays)
-        (array->list b)))
+        (array->list b))
+  (test (map array-ref arrays)
+        (array->list c)))
 
 (let* ((arrays (map (lambda (ignore) (array-copy (make-array (make-interval '#(0)) error))) (iota 4)))
        (b (array-stack 0 arrays))
-       (c (array-stack 1 arrays)))
+       (c (array-stack 1 arrays))
+       (b! (array-stack! 0 arrays))
+       (c! (array-stack! 1 arrays)))
 
   (test (interval-upper-bounds->vector (array-domain b))
         '#(4 0))
-
   (test (interval-upper-bounds->vector (array-domain c))
+        '#(0 4))
+
+  (test (interval-upper-bounds->vector (array-domain b!))
+        '#(4 0))
+  (test (interval-upper-bounds->vector (array-domain c!))
         '#(0 4)))
 
 
@@ -5859,6 +6025,9 @@ that computes the componentwise products when we need them, the times are
               (random (+ d 1))))
         (test (myarray= (array-stack k arrays)
                         (apply myarray-stack k arrays))
+              #t)
+        (test (myarray= (array-stack! k arrays)
+                        (apply myarray-stack k arrays))
               #t)))))
 
 (next-test-random-source-state!)
@@ -5891,6 +6060,33 @@ that computes the componentwise products when we need them, the times are
                                      (identity-array 2))))
       #t)
 
+(test (array-storage-class
+       (array-stack! 1
+                     (list (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u8-storage-class)
+                           (array-copy (make-array (make-interval '#(10)) (lambda (i) (random-integer 10))) u16-storage-class))))
+      generic-storage-class)
+
+(test (myarray= (tensor '(((4 7) (2 6))
+                          ((1 0) (0 1))))
+                (array-stack! 0 (list (tensor '((4 7)
+                                                (2 6)))
+                                      (identity-array 2))))
+      #t)
+
+(test (myarray= (tensor '(((4 7) (1 0))
+                          ((2 6) (0 1))))
+                (array-stack! 1 (list (tensor '((4 7)
+                                                (2 6)))
+                                      (identity-array 2))))
+      #t)
+
+(test (myarray= (tensor '(((4 1) (7 0))
+                          ((2 0) (6 1))))
+                (array-stack! 2 (list (tensor '((4 7)
+                                                (2 6)))
+                                      (identity-array 2))))
+      #t)
+
 (let* ((A
         (make-array
          (make-interval '#(4 10))
@@ -5914,7 +6110,7 @@ that computes the componentwise products when we need them, the times are
         (array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))))
   (array-display B))
 
-(pp "array-block tests")
+(pp "array-block and array-block! tests")
 
 (test (array-block 'a)
       "array-block: The first argument is not an array: ")
@@ -5953,11 +6149,99 @@ that computes the componentwise products when we need them, the times are
                                 (list*->array 2 '((15 16 17)))))))
       "array-block: Cannot stack array elements of the first argument into result array: ")
 
+(test (array-block! 'a)
+      "array-block!: The first argument is not an array: ")
+
+(test (array-block! (make-array (make-interval '#(2 2)) list) 'a)
+      "array-block!: The second argument is not a storage class: ")
+
+(test (array-block! (make-array (make-interval '#(2 2)) list)
+                    u8-storage-class
+                    'a)
+      "array-block!: The third argument is not a boolean: ")
+
+(test (array-block! (make-array (make-interval '#(2 2)) list)
+                    u8-storage-class
+                    #f
+                    'a)
+      "array-block!: The fourth argument is not a boolean: ")
+
+(test (array-block! (make-array (make-interval '#(2 2)) list))
+      "array-block!: Not all elements of the first argument (an array) are arrays: ")
+
+(test (array-block! (vector*->array 1 (vector (vector*->array 1 '#(1 1))
+                                              (vector*->array 2 '#(#(1 2) #(3 4))))))
+      "array-block!: Not all elements of the first argument (an array) have the same dimension as the first argument itself: ")
+
+(test (array-block! (list*->array
+                     2
+                     (list (list (list*->array 2 '((0 1)
+                                                   (2 3)))
+                                 (list*->array 2 '((4)
+                                                   (5)))
+                                (list*->array 2 '((6 7)     ;; these should each have ...
+                                                  (9 10)))) ;; three elements
+                           (list (list*->array 2 '((12 13)))
+                                 (list*->array 2 '((14)))
+                                 (list*->array 2 '((15 16 17)))))))
+      "array-block!: Cannot stack array elements of the first argument into result array: ")
+
 (test (array? (array-block (list*->array
                             1
                             (list (make-array (make-interval '#(0)) list)
                                   (make-array (make-interval '#(0)) list)))))
       #t)
+
+(test (array? (array-block! (list*->array
+                             1
+                             (list (make-array (make-interval '#(0)) list)
+                                   (make-array (make-interval '#(0)) list)))))
+      #t)
+
+(for-each
+ (lambda (array-block)
+   (let* ((A (list*->array
+              2
+              (list (list (list*->array 2 '((0 1)
+                                            (2 3)))
+                          (list*->array 2 '((4)
+                                            (5)))
+                          (list*->array 2 '((6 7 8)
+                                            (9 10 11))))
+                    (list (list*->array 2 '((12 13)))
+                          (list*->array 2 '((14)))
+                          (list*->array 2 '((15 16 17)))))))
+          (A-appended
+           (array-block A))
+          (A-tiled
+           (array-tile A-appended '#(#(2 1) #(2 1 3)))))
+
+     (for-each (lambda (mutable?)
+                 (for-each (lambda (safe?)
+                             (let ((new-A (array-block A generic-storage-class mutable? safe?)))
+                               (test (array-safe? new-A)
+                                     safe?)
+                               (test (mutable-array? new-A)
+                                     mutable?)))
+                           '(#t #f)))
+               '(#t #f))
+     (for-each (lambda (mutable?)
+                 (for-each (lambda (safe?)
+                             (parameterize ((specialized-array-default-mutable? mutable?)
+                                            (specialized-array-default-safe?    safe?))
+                               (let ((new-A (array-block A generic-storage-class)))
+                                 (test (array-safe? new-A)
+                                       safe?)
+                                 (test (mutable-array? new-A)
+                                       mutable?))))
+                           '(#t #f)))
+               '(#t #f))
+
+     (test (array-every equal?            ;; we convert them to list*'s to ignore domains.
+                        (array-map array->list* A)
+                        (array-map array->list* A-tiled))
+           #t)))
+ (list array-block array-block!))
 
 (let* ((A (list*->array
            2
@@ -5969,40 +6253,12 @@ that computes the componentwise products when we need them, the times are
                                          (9 10 11))))
                  (list (list*->array 2 '((12 13)))
                        (list*->array 2 '((14)))
-                       (list*->array 2 '((15 16 17)))))))
-       (A-appended
-        (array-block A))
-       (A-tiled
-        (array-tile A-appended '#(#(2 1) #(2 1 3)))))
-
-  (test (array-every equal?            ;; we convert them to list*'s to ignore domains.
-                     (array-map array->list* A)
-                     (array-map array->list* A-tiled))
-        #t)
-
+                       (list*->array 2 '((15 16 17))))))))
   (test (array-block A u1-storage-class)
         "array-block: Not all elements of the source can be stored in destination: ")
 
-  (for-each (lambda (mutable?)
-              (for-each (lambda (safe?)
-                          (let ((new-A (array-block A generic-storage-class mutable? safe?)))
-                            (test (array-safe? new-A)
-                                  safe?)
-                            (test (mutable-array? new-A)
-                                  mutable?)))
-                        '(#t #f)))
-            '(#t #f))
-  (for-each (lambda (mutable?)
-              (for-each (lambda (safe?)
-                          (parameterize ((specialized-array-default-mutable? mutable?)
-                                         (specialized-array-default-safe?    safe?))
-                            (let ((new-A (array-block A generic-storage-class)))
-                              (test (array-safe? new-A)
-                                    safe?)
-                              (test (mutable-array? new-A)
-                                    mutable?))))
-                        '(#t #f)))
-            '(#t #f)))
+  (test (array-block! A u1-storage-class)
+        "array-block!: Not all elements of the source can be stored in destination: "))
 
 (do ((i 0 (+ i 1)))
     ((= i random-tests))
@@ -6078,13 +6334,24 @@ that computes the componentwise products when we need them, the times are
          (A-tiled
           (array-tile A side-lengths))
          (reconstructed-A
-          (array-block A-blocks u1-storage-class)))
+          (array-block A-blocks u1-storage-class))
+         (reconstructed-A!
+          (array-block! A-blocks u1-storage-class)))
     (test (array-every myarray= A-tiled A-blocks)
           #t)
     (test (array-every = A reconstructed-A)
           #t)
+    (test (array-every = A reconstructed-A!)
+          #t)
     (test (array-every = A
                        (array-block
+                        (array-tile A
+                                    (list->vector
+                                     (map (lambda (ignore) (random 1 5))
+                                          (iota dims))))))
+          #t)
+    (test (array-every = A
+                       (array-block!
                         (array-tile A
                                     (list->vector
                                      (map (lambda (ignore) (random 1 5))
@@ -6122,8 +6389,15 @@ that computes the componentwise products when we need them, the times are
           (array-copy (make-array domain (lambda args (random 10)))))
          (A-tiled
           (array-tile A tiling-argument))
+         (A-tiled
+          (array-map (lambda (A) (make-array (array-domain A) (array-getter A))) A-tiled))
+         (A-blocked!
+          (array-block! A-tiled))
          (A-blocked
           (array-block A-tiled)))
+    (test (myarray= (array-translate A (vector-map - (interval-lower-bounds->vector (array-domain A)))) ;; array-block returns an array based at the origin
+                    A-blocked!)
+          #t)
     (test (myarray= (array-translate A (vector-map - (interval-lower-bounds->vector (array-domain A)))) ;; array-block returns an array based at the origin
                     A-blocked)
           #t)))
