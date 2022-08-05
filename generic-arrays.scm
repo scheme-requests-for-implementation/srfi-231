@@ -1619,6 +1619,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                           (= increment
                                              (- (indexer (+ lower-0 1) lower-1 lower-2 lower-3)
                                                 (indexer    lower-0    lower-1 lower-2 lower-3)))))))))))))
+        ;; The next part is not call/cc safe, but the only function we call is indexer,
+        ;; and we calculate all specialized array indexers internally, and they don't call call/cc.
         (else (let ((global-lowers
                      ;; will use as an argument list
                      (%%interval-lower-bounds->list domain))
@@ -1994,14 +1996,15 @@ OTHER DEALINGS IN THE SOFTWARE.
              (if (not mutable?)
                  (%%array-freeze! result)
                  result))
-           (%%array-stack 0             ;; the new dimension is always the first
-                          (map (lambda (l)
-                                 (nested-list->array (fx- dimension 1) l))
-                               nested-data)
-                          storage-class
-                          mutable?
-                          safe?
-                          message)))))
+           (%%%array-stack 0             ;; the new dimension is always the first
+                           (map (lambda (l)
+                                  (nested-list->array (fx- dimension 1) l))
+                                nested-data)
+                           storage-class
+                           mutable?
+                           safe?
+                           message
+                           #f)))))   ;; already call/cc-safe
 
   (if (check-nested-list dimension nested-list)
       (nested-list->array dimension nested-list)
@@ -2075,14 +2078,15 @@ OTHER DEALINGS IN THE SOFTWARE.
              (if (not mutable?)
                  (%%array-freeze! result)
                  result))
-           (%%array-stack 0             ;; the new dimension is always the first
-                          (map (lambda (l)
-                                 (nested-vector->array (fx- dimension 1) l))
-                               (vector->list nested-data))
-                          storage-class
-                          mutable?
-                          safe?
-                          message)))))
+           (%%%array-stack 0             ;; the new dimension is always the first
+                           (map (lambda (l)
+                                  (nested-vector->array (fx- dimension 1) l))
+                                (vector->list nested-data))
+                           storage-class
+                           mutable?
+                           safe?
+                           message
+                           #f)))))   ;; already call/cc-safe
 
   (if (check-nested-vector dimension nested-vector)
       (nested-vector->array dimension nested-vector)
@@ -2278,27 +2282,28 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; We check that the elements we move to the destination are OK for the
   ;; destination because if we don't catch errors here they can be very tricky to find.
 
+  ;; We'll put this here temporarily because we know these
+  ;; algorithms are not call/cc safe.  We'll decide later
+  ;; whether there are some circumstances when we want to
+  ;; use these on generalized arrays.
+
+  #;(if (not (specialized-array? source))
+      #;(error (string-append
+              caller
+              "Attempting to move data from generalized array: ")
+             destination source)
+      (pp (string-append
+           caller
+           "Attempting to move data from generalized array: ")))
+
   (cond ((not (%%interval= (%%array-domain source)
                            (%%array-domain destination)))
          (error (string-append
                  caller
                  "Arrays must have the same domains: ")
                 destination source))
-
-        ;; We'll put this here temporarily because we know these
-        ;; algorithms are not call/cc safe.  We'll decide later
-        ;; whether there are some circumstances when we want to
-        ;; use these on generalized arrays.
-
-        ((not (specialized-array? source))
-         (error (string-append
-                 caller
-                 "Attempting to move data from generalized array: ")
-                destination source))
-
         ((%%interval-empty? (%%array-domain source))
          "Empty arrays")
-
         ((specialized-array? destination)
          (if (%%array-packed? destination)
              ;; Maybe we can do a block copy
@@ -4327,9 +4332,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; Refactored from array-stack to use in list*->array and vector*->array
 
-(define (%%array-stack k arrays storage-class mutable? safe? message)
+(define (%%%array-stack k arrays storage-class mutable? safe? message call/cc-safe?)
   (let* ((arrays
-          (map %%->specialized-array arrays))
+          (if call/cc-safe?
+              (map %%->specialized-array arrays)
+              arrays))
          (first-array
           (car arrays))
          (number-of-arrays
@@ -4374,23 +4381,41 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (storage-class generic-storage-class)
                      (mutable?      (specialized-array-default-mutable?))
                      (safe?         (specialized-array-default-safe?)))
+  (%%array-stack k arrays storage-class mutable? safe? #t))
+
+
+(define (array-stack! k
+                      arrays
+                      #!optional
+                      (storage-class generic-storage-class)
+                      (mutable?      (specialized-array-default-mutable?))
+                      (safe?         (specialized-array-default-safe?)))
+  (%%array-stack k arrays storage-class mutable? safe? #f))
+
+(define (%%array-stack k arrays storage-class mutable? safe? call/cc-safe?)
+
+  (define caller
+    (if call/cc-safe?
+        "array-stack: "
+        "array-stack!: "))
+
   (cond ((not (and (list? arrays)
                    (not (null? arrays))
                    (%%every array? arrays)
                    (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain (car arrays)))) (cdr arrays))))
-         (error "array-stack: Expecting a nonnull list of arrays with the same domains as the second argument: " k arrays))
+         (error (string-append caller "Expecting a nonnull list of arrays with the same domains as the second argument: ") k arrays))
         ((not (and (fixnum? k)
                    (fx<= 0 k (%%array-dimension (car arrays)))))
-         (error "array-stack: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:"
+         (error (string-append caller "Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (inclusive) as the first argument:")
                 k arrays))
         ((not (storage-class? storage-class))
-         (error "array-stack: Expecting a storage class as the third argument: " k arrays storage-class))
+         (error (string-append caller "Expecting a storage class as the third argument: ") k arrays storage-class))
         ((not (boolean? mutable?))
-         (error "array-stack: Expecting a boolean as the fourth argument: " k arrays storage-class mutable?))
+         (error (string-append caller "Expecting a boolean as the fourth argument: ") k arrays storage-class mutable?))
         ((not (boolean? safe?))
-         (error "array-stack: Expecting a boolean as the fifth argument: " k arrays storage-class mutable? safe?))
+         (error (string-append caller "Expecting a boolean as the fifth argument: ") k arrays storage-class mutable? safe?))
         (else
-         (%%array-stack k arrays storage-class mutable? safe? "array-stack: "))))
+         (%%%array-stack k arrays storage-class mutable? safe? caller call/cc-safe?))))
 
 (define (array-append k
                       arrays
@@ -4398,21 +4423,38 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (storage-class generic-storage-class)
                       (mutable?      (specialized-array-default-mutable?))
                       (safe?         (specialized-array-default-safe?)))
+  (%%array-append k arrays storage-class mutable? safe? #t))
+
+(define (array-append! k
+                       arrays
+                       #!optional
+                       (storage-class generic-storage-class)
+                       (mutable?      (specialized-array-default-mutable?))
+                       (safe?         (specialized-array-default-safe?)))
+  (%%array-append k arrays storage-class mutable? safe? #f))
+
+(define (%%array-append k arrays storage-class mutable? safe? call/cc-safe?)
+
+  (define caller
+    (if call/cc-safe?
+        "array-append: "
+        "array-append!: "))
+
   (cond ((not (and (list? arrays)
                    (not (null? arrays))
                    (%%every array? arrays)
                    (%%every (lambda (a) (= (%%array-dimension a) (%%array-dimension (car arrays)))) (cdr arrays))))
-         (error "array-append: Expecting as the second argument a nonnull list of arrays with the same dimension: " k arrays))
+         (error (string-append caller "Expecting as the second argument a nonnull list of arrays with the same dimension: ") k arrays))
         ((not (and (fixnum? k)
                    (fx< -1 k (%%array-dimension (car arrays)))))
-         (error "array-append: Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:"
+         (error (string-append caller "Expecting an exact integer between 0 (inclusive) and the dimension of the arrays (exclusive) as the first argument:")
                 k arrays))
         ((not (storage-class? storage-class))
-         (error "array-append: Expecting a storage class as the third argument: " k arrays storage-class))
+         (error (string-append caller "Expecting a storage class as the third argument: ") k arrays storage-class))
         ((not (boolean? mutable?))
-         (error "array-append: Expecting a boolean as the fourth argument: " k arrays storage-class mutable?))
+         (error (string-append caller "Expecting a boolean as the fourth argument: ") k arrays storage-class mutable?))
         ((not (boolean? safe?))
-         (error "array-append: Expecting a boolean as the fifth argument: " k arrays storage-class mutable? safe?))
+         (error (string-append caller "Expecting a boolean as the fifth argument: ") k arrays storage-class mutable? safe?))
         ((not (let ((first-domain (%%array-domain (car arrays))))
                 (%%every (lambda (d)
                            (%%every (lambda (i)
@@ -4423,7 +4465,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                   (%%interval-upper-bound d            i)))))
                                     (iota (%%interval-dimension first-domain))))
                          (cdr (map %%array-domain arrays)))))
-         (error (string-append "array-append: Expecting as the second argument arrays with the same upper and lower bounds (except for index "
+         (error (string-append caller "Expecting as the second argument a nonnull list of arrays with the same upper and lower bounds (except for index "
                                (number->string k)
                                "): ")
                 k arrays))
@@ -4442,8 +4484,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (cdr arrays))))))
            (lambda (axis-subdividers kth-size)
              (let* ((arrays
-                     ;; We ensure all arrays are specialized, to make it call/cc safe
-                     (map %%->specialized-array arrays))
+                     (if call/cc-safe?
+                         (map %%->specialized-array arrays)
+                         arrays))
                     (first-array
                      (car arrays))
                     (lowers
@@ -4480,7 +4523,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (%%move-array-elements
                         (%%array-extract result (%%finish-interval lowers uppers))
                         (%%array-translate array translation)
-                        "array-append: ")
+                        caller)
                        (loop (cdr arrays)
                              (cdr subdividers)))))))))))
 
@@ -4489,27 +4532,45 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (storage-class generic-storage-class)
                        (mutable?      (specialized-array-default-mutable?))
                        (safe?         (specialized-array-default-safe?)))
+  (%%array-decurry A-arg storage-class mutable? safe? #t))
+
+(define (array-decurry! A-arg
+                        #!optional
+                        (storage-class generic-storage-class)
+                        (mutable?      (specialized-array-default-mutable?))
+                        (safe?         (specialized-array-default-safe?)))
+  (%%array-decurry A-arg storage-class mutable? safe? #f))
+
+(define (%%array-decurry A-arg storage-class mutable? safe? call/cc-safe?)
+
+  (define caller
+    (if call/cc-safe?
+        "array-decurry: "
+        "array-decurry!: "))
+
   (cond ((not (array? A-arg))
-         (error "array-decurry: The first argument is not an array: " A-arg))
+         (error (string-append caller "The first argument is not an array: ") A-arg))
         ((%%array-empty? A-arg)
-         (error "array-decurry: The first argument is an empty array: " A-arg))
+         (error (string-append caller "The first argument is an empty array: ") A-arg))
         ((not (storage-class? storage-class))
-         (error "array-decurry: The second argument is not a storage class: " A-arg storage-class))
+         (error (string-append caller "The second argument is not a storage class: ") A-arg storage-class))
         ((not (boolean? mutable?))
-         (error "array-decurry: The third argument is not a boolean: " A-arg storage-class mutable?))
+         (error (string-append caller "The third argument is not a boolean: ") A-arg storage-class mutable?))
         ((not (boolean? safe?))
-         (error "array-decurry: The fourth argument is not a boolean: " A-arg storage-class mutable? safe?))
+         (error (string-append caller "The fourth argument is not a boolean: ") A-arg storage-class mutable? safe?))
         (else
          (let* ((A   (array-copy A-arg))
                 (A_  (%%array-getter A))
                 (A_D (%%array-domain A)))
            (if (not (%%array-every array? A '()))
-               (error "array-decurry: Not all elements of the first argument (an array) are arrays: " A-arg)
+               (error (string-append caller "Not all elements of the first argument (an array) are arrays: ") A-arg)
                (let* ((first-element (apply A_ (%%interval-lower-bounds->list A_D)))
                       (first-domain  (%%array-domain first-element)))
                  (if (not (%%array-every  (lambda (a) (%%interval= (%%array-domain a) first-domain)) A '()))
-                     (error "array-decurry: Not all elements of the first argument (an array) have the domain: " A-arg)
-                     (let* ((A (%%->specialized-array (array-map %%->specialized-array A)))
+                     (error (string-append caller "Not all elements of the first argument (an array) have the domain: ") A-arg)
+                     (let* ((A (if call/cc-safe?
+                                   (%%->specialized-array (array-map %%->specialized-array A))
+                                   A))
                             (result-domain  (%%interval-cartesian-product (list A_D first-domain)))
                             (result         (%%make-specialized-array result-domain
                                                                       storage-class
@@ -4519,7 +4580,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (array-for-each (lambda (result argument)
                                          (%%move-array-elements result
                                                                 argument
-                                                                "array-decurry: "))
+                                                                caller))
                                        curried-result A)
                        (if (not mutable?)
                            (%%array-freeze! result)
@@ -4530,16 +4591,32 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (storage-class generic-storage-class)
                      (mutable?      (specialized-array-default-mutable?))
                      (safe?         (specialized-array-default-safe?)))
+  (%%array-block A-arg storage-class mutable? safe? #t))
+
+(define (array-block! A-arg
+                      #!optional
+                      (storage-class generic-storage-class)
+                      (mutable?      (specialized-array-default-mutable?))
+                      (safe?         (specialized-array-default-safe?)))
+  (%%array-block A-arg storage-class mutable? safe? #f))
+
+(define (%%array-block A-arg storage-class mutable? safe? call/cc-safe?)
+
+  (define caller
+    (if call/cc-safe?
+        "array-block: "
+        "array-block!: "))
+
   (cond ((not (array? A-arg))
-         (error "array-block: The first argument is not an array: " A-arg))
+         (error (string-append caller "The first argument is not an array: ") A-arg))
         ((%%array-empty? A-arg)
-         (error "array-block: The first argument is an empty array: " A-arg))
+         (error (string-append caller "The first argument is an empty array: ") A-arg))
         ((not (storage-class? storage-class))
-         (error "array-block: The second argument is not a storage class: " A-arg storage-class))
+         (error (string-append caller "The second argument is not a storage class: ") A-arg storage-class))
         ((not (boolean? mutable?))
-         (error "array-block: The third argument is not a boolean: " A-arg storage-class mutable?))
+         (error (string-append caller "The third argument is not a boolean: ") A-arg storage-class mutable?))
         ((not (boolean? safe?))
-         (error "array-block: The fourth argument is not a boolean: " A-arg storage-class mutable? safe?))
+         (error (string-append caller "The fourth argument is not a boolean: ") A-arg storage-class mutable? safe?))
         (else
          (let* ((A                (%%array-translate     ;; make lower-bounds zero
                                    (array-copy A-arg)  ;; evaluate all (array) elements of A-arg
@@ -4548,9 +4625,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                 (A_dim            (%%interval-dimension A_D))
                 (ks               (list->vector (iota A_dim))))
            (cond ((not (%%array-every array? A '()))
-                  (error "array-block: Not all elements of the first argument (an array) are arrays: " A-arg))
+                  (error (string-append caller "Not all elements of the first argument (an array) are arrays: ") A-arg))
                  ((not (%%array-every (lambda (a) (fx= (%%array-dimension a) A_dim)) A '()))
-                  (error "array-block: Not all elements of the first argument (an array) have the same dimension as the first argument itself: " A-arg))
+                  (error (string-append caller "Not all elements of the first argument (an array) have the same dimension as the first argument itself: ") A-arg))
                  ((not (%%vector-every
                         (lambda (k)       ;; the direction
                           (let ((slices   ;; the slices in that direction
@@ -4566,7 +4643,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                      (%%every (lambda (w) (= (car kth-width-of-arrays-in-slice) w)) (cdr kth-width-of-arrays-in-slice)))))
                              slices)))
                         ks))
-                  (error "array-block: Cannot stack array elements of the first argument into result array: " A-arg))
+                  (error (string-append caller "Cannot stack array elements of the first argument into result array: ") A-arg))
                  (else
                   ;; Here we repeat some of the logic of array-append; otherwise, we could apply array-append
                   ;; iteratively in each coordinate direction, but that could incur more memory allocation.
@@ -4591,7 +4668,9 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                    (%%interval-width (%%array-domain (pencil_ i)) k))))))
                            ks))
                          (A
-                          (%%->specialized-array (array-map %%->specialized-array A)))
+                          (if call/cc-safe?
+                              (%%->specialized-array (array-map %%->specialized-array A))
+                              A))
                          (A_
                           (%%array-getter A))
                          (result
@@ -4624,7 +4703,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                             (%%interval-lower-bounds (%%array-domain subarray))))))
                          (%%move-array-elements (%%array-extract result (%%array-domain translated-subarray))
                                                 translated-subarray
-                                                "array-block: ")))
+                                                caller)))
                      A_D)
                     (if (not mutable?)
                         (%%array-freeze! result)
