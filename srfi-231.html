@@ -1765,7 +1765,7 @@ B:
                      (if (eq? id reduce-base)
                          entry
                          (sum id entry)))
-                   'ignore
+                   reduce-base
                    A))))</code></pre>
     <p>The implementation is allowed to use the associativity of <code><var>op</var></code> to reorder the computations in <code>array-reduce</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Example: </b>We consider the finite sum:
