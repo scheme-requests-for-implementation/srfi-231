@@ -1,5 +1,3 @@
-(define test-moves '())
-
 #|
 SRFI 231: Intervals and Generalized Arrays (Updated^2)
 
@@ -2522,7 +2520,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                              '()
                              parts)
                       (foldr cons '() list-of-60))))
-            (iota 5 1)))
+            (iota 6 1)))
 
 
 
@@ -6314,10 +6312,7 @@ that computes the componentwise products when we need them, the times are
                             #(1 1) #(1 -1) #(-1 1) #(-1 -1)))))
     ;; Returns a generalized array that contains the number
     ;; of 1s in the 8 cells surrounding each cell in the original array.
-    (apply array-map
-           (lambda (i0 i1 i2 i3 i4 i5 i6 i7)
-             (fx+ i0 i1 i2 i3 i4 i5 i6 i7))
-           translates)))
+    (apply array-map + translates)))
 
 (define (game-rules a neighbor-count)
   ;; a is a single cell, neighbor-count is the count of 1s in
@@ -6359,5 +6354,6 @@ that computes the componentwise products when we need them, the times are
 
 (generations glider 5)
 
+(pp test-moves)
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))

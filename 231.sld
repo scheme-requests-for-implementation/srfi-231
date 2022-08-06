@@ -103,11 +103,11 @@
     vector*->array
     array->vector*
     array-assign!
-    array-copy
-    array-append
-    array-block
-    array-stack
-    array-decurry
+    array-copy    array-copy!
+    array-append  array-append!
+    array-block   array-block!
+    array-stack   array-stack!
+    array-decurry array-decurry!
     specialized-array-reshape
     array-ref
     array-set!

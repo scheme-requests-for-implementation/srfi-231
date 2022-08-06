@@ -148,6 +148,13 @@ MathJax.Hub.Config({
                ", and "
                (<a> href: "#array-decurry" (<code>'array-decurry))
                ".")
+         (<li> "The sample implementation now provides call/cc-safe implementations of all procedures whose names do not end with "(<code>'!)".  We define new procedures "
+               (<a> href: "#array-copy!" (<code>'array-copy!))", "
+               (<a> href: "#array-stack!" (<code>'array-stack!))", "
+               (<a> href: "#array-decurry!" (<code>'array-decurry!))", "
+               (<a> href: "#array-append!" (<code>'array-append!))", and "
+               (<a> href: "#array-block!" (<code>'array-block!))
+               ", which are not guaranteed to be call/cc-safe but which may be faster or use less memory than the corresponding call/cc-safe versions.  See further discussion, with our definition of \"call/cc-safe\", in the notes below.")
          (<li> "A new set of \"Introductory remarks\" surveys some of the more important procedures in this SRFI.")
          )
 
@@ -161,23 +168,27 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#make-array" (<code>'make-array))": Takes as arguments a specification of the valid indices $i\\ j\\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere; the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a "(<i>"generalized array")".")
          (<li> (<a> href: "#make-specialized-array"(<code>'make-specialized-array))": Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a "(<i>"specialized array")".")
          )
-        (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affect the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array ("(<code>'array-curry)" and "(<code>'array-tile)") return a "(<i>"generalized array")".")
+        (<p> "In the next group of procedures, the new and old arrays share elements, so modifications to one affect the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element.")
         (<ul>
          (<li> (<a> href: "#array-extract" (<code>'array-extract))
                ": Constructs a rectangular \"window\" or \"view\" into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.")
-         (<li> (<a> href: "#array-tile" (<code>'array-tile))
-               ": Builds an array of subarrays of the original array, like breaking a large matrix into smaller matrices for block matrix operations.")
          (<li> (<a> href: "#array-translate" (<code>'array-translate))
                ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
          (<li> (<a> href: "#array-permute"(<code>'array-permute))
                ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations.")
-         (<li> (<a> href: "#array-curry"(<code>"array-curry"))
-               ": Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at a collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.")
          (<li> (<a> href:"#array-reverse" (<code>'array-reverse))
                ": Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.")
          (<li> (<a> href:"#array-sample" (<code>'array-sample))
                ": Accesses every second (or third, etc.) row or column, or both, of an array.")
          )
+        (<p> "The following two procedures decompose arrays in different ways.  They return "(<i>"generalized arrays")" whose elements are themselves arrays. Like the procedures described immediately above, the resulting subarrays share elements with their argument.")
+        (<ul>
+         (<li> (<a> href: "#array-curry"(<code>"array-curry"))
+               ": Represents a $d$-dimensional array as a $d'$ dimensional array whose entries are themselves arrays of dimension $d-d'$.  Like thinking of a three-dimensional CT scan as a one-dimensional array of two-dimensional slices, or thinking of a matrix as a one-dimensional array of one-dimensional rows.  You could combine this operation with "(<code>'array-permute)" to think of a matrix as am array of columns, or look at slices in different orientations of a three-dimensional CT scan.  Considering a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying. The subarrays share elements with the original array.  The procedures "(<code>'array-decurry)" and "(<code>'array-stack)", described below, reverse this process.")
+         (<li> (<a> href: "#array-tile" (<code>'array-tile))
+               ": Decomposes a $d$-dimensional array into $d$-dimensional sub-blocks with cuts parallel to the coordinate axes, and returns the subarrays in an array.  Like breaking a large matrix into smaller matrices for block matrix operations. The subarrays share elements with the original array.  The procedures "(<code>'array-block)" and "(<code>'array-append)", described below, reverse this process.")
+         )
+
         (<p> "The next few procedures set up operations to be executed in the future.  They build "(<i> "generalized")" arrays.")
         (<ul>
          (<li> (<a> href:"#array-map"(<code>'array-map))
@@ -333,6 +344,15 @@ they may have hash tables or databases behind an implementation, or may read the
         (<h2> "Notes")
         (<ul>
          (<li> (<b> "Empty and zero-dimensional arrays: ")"The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme "(<code>'box)".  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.")
+         (<li> (<b> "This SRFI and "(<code>'call-with-current-continuation)": ")"The Scheme procedure "(<code>'call-with-current-continuation)" captures and encapsulates as a procedure the continuation of the current computation, which, perforce, includes a certain amount of state that consists of the values of captured variables, some local, some global, at the point the continuation is captured. This captured procedure can be invoked multiple times, as any procedure can."
+               (<br>)
+               "No procedure in the sample implementation itself calls "(<code>'call-with-current-continuation)", but the procedural arguments to, e.g., "(<code>'make-array)", "(<code>'specialized-array-share)", "(<code>'array-map)", etc., may themselves call "(<code>'call-with-current-continuation)"."
+               (<br>)
+               "We say a procedure in this library  is "(<i>"call/cc safe")" if it is written in such a way that if captured continuations are invoked multiple times, then each invocation does not execute any library code that modifies any captured local variable state accessible to another invocation of a continuation (either itself or a different captured continuation).  Because procedures passed as arguments are not within the lexical scope of code in this library, these procedures cannot modify the state of these local variables, either."
+               (<br>)
+               "It is intended that all procedures in this library whose names do not end with an exclamation point (!) be implemented in a call/cc-safe way."
+               (<br>)
+               "Besides the procedures "(<code>'array-set!)" and "(<code>'array-assign!)", which explicitly mutate state and which, therefore, are "(<i>'not)" call/cc safe, we provide the procedures "(<code>'array-copy!)", "(<code>'array-stack!)", "(<code>'array-decurry!)", "(<code>'array-append!)", and "(<code>'array-block!)", which are not implemented in a call/cc-safe way, but which may be faster or use less memory than the corresponding call/cc-safe versions.")
          (<li> (<b> "Relationship to "(<a> href: "https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
                "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
          (<li> (<b> "Indexers. ")"The argument "(<code>(<var> "new-domain->old-domain"))" to "(<code> 'specialized-array-share)" is, conceptually, the getter of a multi-valued array.")
@@ -433,6 +453,7 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#array-packed?" "array-packed?") END
                  (<a> href: "#specialized-array-share" "specialized-array-share")END
                  (<a> href: "#array-copy" "array-copy")END
+                 (<a> href: "#array-copy!" "array-copy!")END
                  (<a> href: "#array-curry" "array-curry")END
                  (<a> href: "#array-extract" "array-extract") END
                  (<a> href: "#array-tile" "array-tile") END
@@ -459,9 +480,13 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#array-rarrow-vector*" "array->vector*") END
                  (<a> href: "#array-assign!" "array-assign!") END
                  (<a> href: "#array-stack" "array-stack") END
+                 (<a> href: "#array-stack!" "array-stack!") END
                  (<a> href: "#array-decurry" "array-decurry") END
+                 (<a> href: "#array-decurry!" "array-decurry!") END
                  (<a> href: "#array-append" "array-append") END
+                 (<a> href: "#array-append!" "array-append!") END
                  (<a> href: "#array-block" "array-block") END
+                 (<a> href: "#array-block!" "array-block!") END
                  (<a> href: "#array-ref" "array-ref") END
                  (<a> href: "#array-set!" "array-set!") END
                  (<a> href: "#specialized-array-reshape" "specialized-array-reshape")
@@ -1353,10 +1378,8 @@ indexer:       (lambda multi-index
   ))
 (<p> "This \"shearing\" operation cannot be achieved by combining the procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", "(<code>'array-translate)", "(<code>'array-curry)", "(<code>'array-reverse)", and "(<code>'array-sample)".")
 
-(format-lambda-list '(array-copy array
-                                 #\[ result-storage-class
-                                 #\[ mutable?
-                                 #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-copy array #\[ result-storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-copy! array #\[ result-storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "
      (<code>(<var> 'array))" is an array, "
      (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'array))", and "
@@ -2122,7 +2145,7 @@ calls")
 (<p> "Then conceptually "(<code>"(array-foldl op id array . arrays)")" returns ")
 (<pre>
  (<code>
-"(apply foldl op id array (map array->list (cons array arrays)))"))
+"(apply foldl op id (array->list (apply array-map list array arrays)))"))
 (<p> "It is an error if "(<code>"(cons "(<var> "array arrays")")")" is not a list of arrays with the same domains, or if "(<code>(<var>'op))" is not a procedure.")
 
 (<p>(<b>"Note: ")" One can fold over empty arrays, which returns "(<code>(<var>'id))", but it is an error to call "(<code>'array-reduce)" on an empty array, because "(<code>'array-reduce)" must evaluate at least one element of the argument array.")
@@ -2154,11 +2177,8 @@ calls")
 (<p> "Then conceptually "(<code>"(array-foldr op id array . arrays)")" returns ")
 (<pre>
  (<code>
-"(apply foldr op id array (map array->list (cons array arrays)))"))
+"(apply foldr op id (array->list (apply array-map list array arrays)))"))
 (<p> "It is an error if "(<code>"(cons "(<var> "array arrays")")")" is not a list of arrays with the same domain, or if "(<code>(<var>'op))" is not a procedure.")
-
-(<p> (<b>"Note: ")"Both "(<code>'array-foldl)" and "(<code>'array-foldr)" are implemented using tail-recursive algorithms in the sample implementation.")
-
 (<p> (<b>"Example: ")"If "(<code>(<var>'op))" is associative with two-sided identity "(<code>(<var>'id))", then "(<code>'array-foldl)" and "(<code>'array-foldr)" return the same results, but see:")
 (<pre>(<code>
 "(define a (make-array (make-interval '#(10)) (lambda (i) i)))
@@ -2175,20 +2195,18 @@ calls")
 (format-lambda-list '(array-reduce op A))
 
 (<p> "Assumes that "(<code>(<var>'A))" is a nonempty array and "(<code>(<var>'op))" is a procedure of two arguments that is associative, i.e., "(<code>"("(<var>'op)" ("(<var>'op)" "(<var>'x)" "(<var>'y)") "(<var>'z)")")" is the same as "(<code>"("(<var>'op)" "(<var>'x)" ("(<var>'op)"  "(<var>'y)" "(<var>'z)"))")".")
-(<p> "Then "(<code>"(array-reduce "(<var>'op)" "(<var>'A)")")" returns")
+(<p> "Then "(<code>"(array-reduce "(<var>'op)" "(<var>'A)")")" can be defined as")
 (<pre>
  (<code>
-"(let ((box '())
-      (A_ (array-getter A)))
-  (interval-for-each
-   (lambda multi-index
-     (if (null? box)
-         (set! box (list (apply A_ multi-index)))
-         (set-car! box (op (car box)
-                           (apply A_ multi-index)))))
-   (array-domain A))
-  (car box))
-"))
+"(define array-reduce
+  (let ((reduce-base (list 1))) ;; any unique object
+    (lambda (sum A)
+      (array-foldl (lambda (id entry)
+                     (if (eq? id reduce-base)
+                         entry
+                         (sum id entry)))
+                   'ignore
+                   A))))"))
 (<p> "The implementation is allowed to use the associativity of "(<code>(<var>'op))" to reorder the computations in "(<code>'array-reduce)". It is an error if the arguments do not satisfy these conditions.")
 (<p> (<b>"Example: ")"We consider the finite sum:
 $$
@@ -2544,6 +2562,7 @@ A after assignment:
  (0 4 100 100 100))"))
 
 (format-lambda-list '(array-stack k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-stack! k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
 (<p> "Returns a specialized array equivalent to")
 (<pre>(<code>"(array-copy
@@ -2590,6 +2609,7 @@ A after assignment:
 "(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))"))
 
 (format-lambda-list '(array-decurry A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-decurry! A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "(<code>(<var>'A))" is a nonempty array of arrays; the elements of "(<code>(<var>'A))" are assumed to all have the same (possibly empty) domain. Also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> (<code>'array-decurry)" evaluates each array element of "(<code>(<var>'A))" once, and evaluates each element of "(<code>'A)"'s array elements once.  "(<code>'array-decurry)" returns a specialized array containing the elements of "(<code>(<var>'A))"'s array elements; ignoring optional arguments, the result  is equivalent to: ")
 (<pre>(<code>
@@ -2645,6 +2665,7 @@ A after assignment:
 
 
 (format-lambda-list '(array-append k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-append! k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
 (<p> "This routine appends, or concatenates, the argument arrays along the "(<var>'k)"'th axis, with the lower bound of this axis set to 0.")
 (<p> "Returns a specialized array equivalent to the result of")
@@ -2730,6 +2751,7 @@ A after assignment:
 
 
 (format-lambda-list '(array-block A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-block! A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is a nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
 (<pre>(<code>"(every
@@ -3994,7 +4016,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 2
 "))
 (<h2> "Acknowledgments")
-(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, and Jens Axel Søgaard for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
+(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, Jens Axel Søgaard, and Marc Nieper-Wißkirchen for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
  (<li> (<a> id: 'bawden href: "https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ" "\"multi-dimensional arrays in R5RS?\"")
