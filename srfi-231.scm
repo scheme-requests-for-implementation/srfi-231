@@ -2205,7 +2205,7 @@ calls")
                      (if (eq? id reduce-base)
                          entry
                          (sum id entry)))
-                   'ignore
+                   reduce-base
                    A))))"))
 (<p> "The implementation is allowed to use the associativity of "(<code>(<var>'op))" to reorder the computations in "(<code>'array-reduce)". It is an error if the arguments do not satisfy these conditions.")
 (<p> (<b>"Example: ")"We consider the finite sum:
