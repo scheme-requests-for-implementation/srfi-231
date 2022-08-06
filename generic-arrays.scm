@@ -4959,14 +4959,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                         (fx* (vector-ref olddims    (fx+ ok 1))
                                              (vector-ref oldstrides (fx+ ok 1)))))
                               (if copy-on-failure?
-                                  (specialized-array-reshape
+                                  (%%specialized-array-reshape
                                    (%!array-copy array
                                                  (%%array-storage-class array)
                                                  (mutable-array? array)
                                                  (%%array-safe? array)
                                                  "specialized-array-reshape: "
                                                  #f)
-                                   new-domain)
+                                   new-domain
+                                   #f)
                                   (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
                               (loop-3 (fx+ ok 1)))
                           (begin
