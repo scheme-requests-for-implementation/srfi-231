@@ -1979,7 +1979,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                      storage-class
                      mutable?
                      safe?
-                     message))
+                     message
+                     #f))
       ((1)
        (%%list->array (make-interval (vector (length nested-data)))
                       nested-data
@@ -2060,7 +2061,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                      storage-class
                      mutable?
                      safe?
-                     message))
+                     message
+                     #f))
       ((1)
        (let ((generic-array
               (%%make-specialized-array-from-data nested-data generic-storage-class mutable? safe?))) ;; data is always a generic-vector
@@ -2068,7 +2070,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                        storage-class
                        mutable?
                        safe?
-                       message)))
+                       message
+                       #f)))
       (else
        (if (eqv? (vector-length nested-data) 0)
            (let ((result (make-specialized-array (make-interval (make-vector dimension 0))
@@ -2287,14 +2290,12 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; whether there are some circumstances when we want to
   ;; use these on generalized arrays.
 
-  #;(if (not (specialized-array? source))
-      #;(error (string-append
-              caller
-              "Attempting to move data from generalized array: ")
-             destination source)
-      (pp (string-append
-           caller
-           "Attempting to move data from generalized array: ")))
+  ;; TODO
+  ;; REMOVE BEFORE RELEASE
+
+  (if (not (or (specialized-array? source)
+               (member caller test-moves)))
+      (set! test-moves (cons caller test-moves)))
 
   (cond ((not (%%interval= (%%array-domain source)
                            (%%array-domain destination)))
@@ -2706,8 +2707,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                       result-storage-class
                       mutable?
                       safe?
-                      message)
-  (if (specialized-array? array)
+                      message
+                      call/cc-safe?)
+  (if (or (specialized-array? array)
+          (not call/cc-safe?))
       (let ((result (%%make-specialized-array (%%array-domain array)
                                               result-storage-class
                                               (storage-class-default result-storage-class)
@@ -2722,78 +2725,90 @@ OTHER DEALINGS IN THE SOFTWARE.
                                               safe?
                                               message)))
 
-(define array-copy
-  (let ()
+(define (%%make-array-copy call/cc-safe?)
 
-    (define (four-args array result-storage-class mutable? safe?)
-      (if (not (boolean? safe?))
-          (error "array-copy: The fourth argument is not a boolean: " safe?)
-          (three-args array
-                      result-storage-class
-                      mutable?
-                      safe?)))
+  (define message
+    (if call/cc-safe?
+        "array-copy: "
+        "array-copy!: "))
 
-    (define (three-args array result-storage-class mutable? safe?)
-      (if (not (boolean? mutable?))
-          (error "array-copy: The third argument is not a boolean: " mutable?)
-          (two-args array
+  (define (wrap error-reason)
+    (string-append message error-reason))
+
+  (define (four-args array result-storage-class mutable? safe?)
+    (if (not (boolean? safe?))
+        (error (wrap "The fourth argument is not a boolean: ") safe?)
+        (three-args array
                     result-storage-class
                     mutable?
                     safe?)))
 
-    (define (two-args array result-storage-class mutable? safe?)
-      (if (not (storage-class? result-storage-class))
-          (error "array-copy: The second argument is not a storage-class: " result-storage-class)
-          (one-arg array
-                   result-storage-class
-                   mutable?
-                   safe?)))
+  (define (three-args array result-storage-class mutable? safe?)
+    (if (not (boolean? mutable?))
+        (error (wrap "The third argument is not a boolean: ") mutable?)
+        (two-args array
+                  result-storage-class
+                  mutable?
+                  safe?)))
 
-    (define (one-arg array result-storage-class mutable? safe?)
-      (if (not (array? array))
-          (error "array-copy: The first argument is not an array: " array)
-          (%!array-copy array
-                        result-storage-class
-                        mutable?
-                        safe?
-                        "array-copy: ")))
-
-    (case-lambda
-     ((array)
-      (if (specialized-array? array)
-          (one-arg array
-                   (%%array-storage-class array)
-                   (mutable-array? array)
-                   (%%array-safe? array))
-          (one-arg array
-                   generic-storage-class
-                   (specialized-array-default-mutable?)
-                   (specialized-array-default-safe?))))
-     ((array storage-class)
-      (if (specialized-array? array)
-          (two-args array
-                    storage-class
-                    (mutable-array? array)
-                    (%%array-safe? array))
-          (two-args array
-                    storage-class
-                    (specialized-array-default-mutable?)
-                    (specialized-array-default-safe?))))
-     ((array storage-class mutable?)
-      (if (specialized-array? array)
-          (three-args array
-                      storage-class
-                      mutable?
-                      (%%array-safe? array))
-          (three-args array
-                      storage-class
-                      mutable?
-                      (specialized-array-default-safe?))))
-     ((array storage-class mutable? safe?)
-      (four-args array
-                 storage-class
+  (define (two-args array result-storage-class mutable? safe?)
+    (if (not (storage-class? result-storage-class))
+        (error (wrap "The second argument is not a storage-class: ") result-storage-class)
+        (one-arg array
+                 result-storage-class
                  mutable?
-                 safe?)))))
+                 safe?)))
+
+  (define (one-arg array result-storage-class mutable? safe?)
+    (if (not (array? array))
+        (error (wrap "The first argument is not an array: ") array)
+        (%!array-copy array
+                      result-storage-class
+                      mutable?
+                      safe?
+                      message
+                      call/cc-safe?)))
+
+  (case-lambda
+   ((array)
+    (if (specialized-array? array)
+        (one-arg array
+                 (%%array-storage-class array)
+                 (mutable-array? array)
+                 (%%array-safe? array))
+        (one-arg array
+                 generic-storage-class
+                 (specialized-array-default-mutable?)
+                 (specialized-array-default-safe?))))
+   ((array storage-class)
+    (if (specialized-array? array)
+        (two-args array
+                  storage-class
+                  (mutable-array? array)
+                  (%%array-safe? array))
+        (two-args array
+                  storage-class
+                  (specialized-array-default-mutable?)
+                  (specialized-array-default-safe?))))
+   ((array storage-class mutable?)
+    (if (specialized-array? array)
+        (three-args array
+                    storage-class
+                    mutable?
+                    (%%array-safe? array))
+        (three-args array
+                    storage-class
+                    mutable?
+                    (specialized-array-default-safe?))))
+   ((array storage-class mutable? safe?)
+    (four-args array
+               storage-class
+               mutable?
+               safe?))))
+
+(define array-copy (%%make-array-copy #t))
+
+(define array-copy! (%%make-array-copy #f))
 
 ;;;
 ;;; In the next function, old-indexer is an affine 1-1 mapping from an interval to [0,N), for some N.
@@ -4246,7 +4261,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                         result-storage-class
                         mutable?
                         safe?
-                        "vector->array: ")
+                        "vector->array: "
+                        #f)
           interval))))
 
 (define (array->list* array)
@@ -4948,7 +4964,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                  (%%array-storage-class array)
                                                  (mutable-array? array)
                                                  (%%array-safe? array)
-                                                 "specialized-array-reshape: ")
+                                                 "specialized-array-reshape: "
+                                                 #f)
                                    new-domain)
                                   (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
                               (loop-3 (fx+ ok 1)))
