@@ -2243,6 +2243,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; We consolidate all moving of array elements to the following procedure.
 
+(define test-moves '())    ;; TODO: REMOVE AFTER TESTING
+
 (define (%%move-array-elements destination source caller)
 
   ;; Here's the logic:
@@ -4093,6 +4095,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                            (%%array-domain array)))))
 
 (define (array-foldr op id array . arrays)
+
+  (define (foldr-on-reversed-list op id l)
+    (if (null? l)
+        id
+        (foldr-on-reversed-list op (op (car l) id) (cdr l))))
+
   (cond ((not (procedure? op))
          (apply error "array-foldr: The first argument is not a procedure: " op id array arrays))
         ((not (%%every array? (cons array arrays)))
@@ -4100,27 +4108,24 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
          (apply error "array-foldr: Not all arrays have the same domain: " op id array arrays))
         ((null? arrays)
-         ;; We let array-reverse do a redundant array? check to not generate
-         ;; a new vector of #t's.
-         (%%interval-foldl (%%array-getter (array-reverse array))
-                           (lambda (id new)
-                             (op new id))
-                           id
-                           (%%array-domain array)))  ;; same as (array-domain (array-reverse array))
+         (let ((reversed-list (%%array->reversed-list array)))
+           (foldr-on-reversed-list op id reversed-list)))
         (else
-         (%%interval-foldl (%%array-getter (array-reverse (%%array-map list array arrays)))
-                           (case (length arrays)
-                             ((1) (lambda (id elements)
-                                    (op (car elements) (cadr elements) id)))
-                             ((2) (lambda (id elements)
-                                    (op (car elements) (cadr elements) (caddr elements) id)))
-                             ((3) (lambda (id elements)
-                                    (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
-                             (else
-                              (lambda (id elements)
-                                (apply op (append elements (list id))))))
-                           id
-                           (%%array-domain array)))))
+         (let ((reversed-lists   ;; a list of lists
+                (%%array->reversed-list (%%array-map list array arrays))))
+           (foldr-on-reversed-list
+            (case (length arrays)
+              ((1) (lambda (elements id)
+                     (op (car elements) (cadr elements) id)))
+              ((2) (lambda (elements id)
+                     (op (car elements) (cadr elements) (caddr elements) id)))
+              ((3) (lambda (elements id)
+                     (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
+              (else
+               (lambda (elements id)
+                 (apply op (append elements (list id))))))
+            id
+            reversed-lists)))))
 
 (define %%array-reduce
   (let ((%%array-reduce-base (list 'base)))
@@ -4296,6 +4301,7 @@ OTHER DEALINGS IN THE SOFTWARE.
            (a->v array)))))
 
 (define (array-assign! destination source)
+  ;; This procedure is intrinsically not call/cc safe.
   (cond ((not (mutable-array? destination))
          (error "array-assign!: The destination is not a mutable array: " destination source))
         ((not (array? source))
@@ -4305,7 +4311,7 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "array-assign: The destination and source do not have the same domains: " destination source))
         (else
          (%%move-array-elements destination
-                                (%%->specialized-array source)
+                                source
                                 "array-assign!: ")
          destination)))
 

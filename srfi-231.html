@@ -65,6 +65,7 @@
       <li><code>interval-cartesian-product</code> can now take zero arguments, in which case it returns <code>(make-interval '#())</code>.</li>
       <li><code>char-storage-class</code> is provided.</li>
       <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, <a href="#array-freeze!"><code>array-freeze!</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
+      <li>The sample implementation now provides call/cc-safe implementations of all procedures whose names do not end with <code>!</code>.  We define new procedures <a href="#array-copy!"><code>array-copy!</code></a>, <a href="#array-stack!"><code>array-stack!</code></a>, <a href="#array-decurry!"><code>array-decurry!</code></a>, <a href="#array-append!"><code>array-append!</code></a>, and <a href="#array-block!"><code>array-block!</code></a>, which are not guaranteed to be call/cc-safe but which may be faster or use less memory than the corresponding call/cc-safe versions.  See further discussion, with our definition of &quot;call/cc-safe&quot;, in the notes below.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
     <h2>Overview</h2>
@@ -75,15 +76,18 @@
       <li><a href="#make-array"><code>make-array</code></a>: Takes as arguments a specification of the valid indices $i\ j\ k$ etc. of the array, together with a Scheme procedure, which, when presented with indices in the valid range, computes the array element.   The elements of the array are not precomputed and stored somewhere; the specified procedure is recalculated each time that element is needed.  A procedure that modifies which element is returned at a given set of indices is allowed as a third argument.  See the sparse matrix example below to see how this is useful.  We call the result a <i>generalized array</i>.</li>
       <li><a href="#make-specialized-array"><code>make-specialized-array</code></a>: Takes as an argument a specification of a valid range of indices and reserves a block of memory in which to store elements of the matrix; optionally,  one can restrict which objects can be stored as elements in the array or generate code to precheck that all the indices are in range on each access, and to precheck that values stored as array elements actually comply with any given restrictions. Elements are stored in row-major order, as in C.  We call the result a <i>specialized array</i>.</li>
     </ul>
-    <p>In the next group of procedures, the new and old arrays share elements, so modifications to one affect the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element. The procedures that build a new array (<code>array-curry</code> and <code>array-tile</code>) return a <i>generalized array</i>.</p>
+    <p>In the next group of procedures, the new and old arrays share elements, so modifications to one affect the others.  Also, none of these procedures move any data: for specialized arrays they just change how the data are indexed, while for generalized arrays they manipulate the arguments of the getter and setter.  For specialized arrays, these procedures can be combined in any way without increasing unreasonably the number of operations required to access an array element.</p>
     <ul>
       <li><a href="#array-extract"><code>array-extract</code></a>: Constructs a rectangular &quot;window&quot; or &quot;view&quot; into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.</li>
-      <li><a href="#array-tile"><code>array-tile</code></a>: Builds an array of subarrays of the original array, like breaking a large matrix into smaller matrices for block matrix operations.</li>
       <li><a href="#array-translate"><code>array-translate</code></a>: Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.</li>
       <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures <code>index-rotate</code>, <code>index-first</code>,  and <code>index-last</code> create commonly used permutations.</li>
-      <li><a href="#array-curry"><code>array-curry</code></a>: Slices an array into a collection of arrays of smaller dimension; returns a new array containing those slices.  Like looking at a collection of two-dimensional slices of a three dimensional CT scan or thinking of a matrix as a collection of rows.  You could combine this operation with array-permute to think of a matrix as a collection of columns, or look at slices in different orientations of a three-dimensional CT scan.  Thinking of a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying.</li>
       <li><a href="#array-reverse"><code>array-reverse</code></a>: Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.</li>
       <li><a href="#array-sample"><code>array-sample</code></a>: Accesses every second (or third, etc.) row or column, or both, of an array.</li>
+    </ul>
+    <p>The following two procedures decompose arrays in different ways.  They return <i>generalized arrays</i> whose elements are themselves arrays. Like the procedures described immediately above, the resulting subarrays share elements with their argument.</p>
+    <ul>
+      <li><a href="#array-curry"><code>array-curry</code></a>: Represents a $d$-dimensional array as a $d'$ dimensional array whose entries are themselves arrays of dimension $d-d'$.  Like thinking of a three-dimensional CT scan as a one-dimensional array of two-dimensional slices, or thinking of a matrix as a one-dimensional array of one-dimensional rows.  You could combine this operation with <code>array-permute</code> to think of a matrix as am array of columns, or look at slices in different orientations of a three-dimensional CT scan.  Considering a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying. The subarrays share elements with the original array.  The procedures <code>array-decurry</code> and <code>array-stack</code>, described below, reverse this process.</li>
+      <li><a href="#array-tile"><code>array-tile</code></a>: Decomposes a $d$-dimensional array into $d$-dimensional sub-blocks with cuts parallel to the coordinate axes, and returns the subarrays in an array.  Like breaking a large matrix into smaller matrices for block matrix operations. The subarrays share elements with the original array.  The procedures <code>array-block</code> and <code>array-append</code>, described below, reverse this process.</li>
     </ul>
     <p>The next few procedures set up operations to be executed in the future.  They build <i>generalized</i> arrays.</p>
     <ul>
@@ -153,6 +157,11 @@
     <h2>Notes</h2>
     <ul>
       <li><b>Empty and zero-dimensional arrays: </b>The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme <code>box</code>.  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.</li>
+      <li><b>This SRFI and <code>call-with-current-continuation</code>: </b>The Scheme procedure <code>call-with-current-continuation</code> captures and encapsulates as a procedure the continuation of the current computation, which, perforce, includes a certain amount of state that consists of the values of captured variables, some local, some global, at the point the continuation is captured. This captured procedure can be invoked multiple times, as any procedure can.
+        <br>No procedure in the sample implementation itself calls <code>call-with-current-continuation</code>, but the procedural arguments to, e.g., <code>make-array</code>, <code>specialized-array-share</code>, <code>array-map</code>, etc., may themselves call <code>call-with-current-continuation</code>.
+        <br>We say a procedure in this library  is <i>call/cc safe</i> if it is written in such a way that if captured continuations are invoked multiple times, then each invocation does not execute any library code that modifies any captured local variable state accessible to another invocation of a continuation (either itself or a different captured continuation).  Because procedures passed as arguments are not within the lexical scope of code in this library, these procedures cannot modify the state of these local variables, either.
+        <br>It is intended that all procedures in this library whose names do not end with an exclamation point (!) be implemented in a call/cc-safe way.
+        <br>Besides the procedures <code>array-set!</code> and <code>array-assign!</code>, which explicitly mutate state and which, therefore, are <i>not</i> call/cc safe, we provide the procedures <code>array-copy!</code>, <code>array-stack!</code>, <code>array-decurry!</code>, <code>array-append!</code>, and <code>array-block!</code>, which are not implemented in a call/cc-safe way, but which may be faster or use less memory than the corresponding call/cc-safe versions.</li>
       <li><b>Relationship to <a href="https://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
       <li><b>Indexers. </b>The argument <code><var>new-domain-&gt;old-domain</var></code> to <code>specialized-array-share</code> is, conceptually, the getter of a multi-valued array.</li>
       <li><b>Source of procedure names. </b>The procedure <code>array-curry</code> gets its name from the
@@ -246,6 +255,7 @@
         <a href="#array-packed?">array-packed?</a>,
         <a href="#specialized-array-share">specialized-array-share</a>,
         <a href="#array-copy">array-copy</a>,
+        <a href="#array-copy!">array-copy!</a>,
         <a href="#array-curry">array-curry</a>,
         <a href="#array-extract">array-extract</a>,
         <a href="#array-tile">array-tile</a>,
@@ -272,9 +282,13 @@
         <a href="#array-rarrow-vector*">array-&gt;vector*</a>,
         <a href="#array-assign!">array-assign!</a>,
         <a href="#array-stack">array-stack</a>,
+        <a href="#array-stack!">array-stack!</a>,
         <a href="#array-decurry">array-decurry</a>,
+        <a href="#array-decurry!">array-decurry!</a>,
         <a href="#array-append">array-append</a>,
+        <a href="#array-append!">array-append!</a>,
         <a href="#array-block">array-block</a>,
+        <a href="#array-block!">array-block!</a>,
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
         <a href="#specialized-array-reshape">specialized-array-reshape</a>.</dd></dl>
@@ -1048,6 +1062,7 @@ indexer:       (lambda multi-index
 </code></pre>
     <p>This &quot;shearing&quot; operation cannot be achieved by combining the procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-translate</code>, <code>array-curry</code>, <code>array-reverse</code>, and <code>array-sample</code>.</p>
     <p><b>Procedure: </b><code><a id="array-copy">array-copy</a> <var>array</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-copy!">array-copy!</a> <var>array</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>array</var></code> is an array, <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>array</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>The specialized array returned by <code>array-copy</code> can be defined conceptually by:</p>
     <pre><code>(list-&gt;array (array-domain array)
@@ -1705,7 +1720,7 @@ B:
       id
       (apply foldl op (apply op id (map car lsts)) (map cdr lsts))))</code></pre>
     <p>Then conceptually <code>(array-foldl op id array . arrays)</code> returns </p>
-    <pre><code>(apply foldl op id array (map array-&gt;list (cons array arrays)))</code></pre>
+    <pre><code>(apply foldl op id (array-&gt;list (apply array-map list array arrays)))</code></pre>
     <p>It is an error if <code>(cons <var>array arrays</var>)</code> is not a list of arrays with the same domains, or if <code><var>op</var></code> is not a procedure.</p>
     <p><b>Note: </b> One can fold over empty arrays, which returns <code><var>id</var></code>, but it is an error to call <code>array-reduce</code> on an empty array, because <code>array-reduce</code> must evaluate at least one element of the argument array.</p>
     <p><b>Example: </b> One can define an APL-style <code>array-depth</code> by:</p>
@@ -1727,9 +1742,8 @@ B:
       id
       (apply fold op (apply op (append (map car lsts) (list id))) (map cdr lsts))))</code></pre>
     <p>Then conceptually <code>(array-foldr op id array . arrays)</code> returns </p>
-    <pre><code>(apply foldr op id array (map array-&gt;list (cons array arrays)))</code></pre>
+    <pre><code>(apply foldr op id (array-&gt;list (apply array-map list array arrays)))</code></pre>
     <p>It is an error if <code>(cons <var>array arrays</var>)</code> is not a list of arrays with the same domain, or if <code><var>op</var></code> is not a procedure.</p>
-    <p><b>Note: </b>Both <code>array-foldl</code> and <code>array-foldr</code> are implemented using tail-recursive algorithms in the sample implementation.</p>
     <p><b>Example: </b>If <code><var>op</var></code> is associative with two-sided identity <code><var>id</var></code>, then <code>array-foldl</code> and <code>array-foldr</code> return the same results, but see:</p>
     <pre><code>(define a (make-array (make-interval '#(10)) (lambda (i) i)))
 (array-foldl cons '() a)
@@ -1743,18 +1757,16 @@ B:
 </code></pre>
     <p><b>Procedure: </b><code><a id="array-reduce">array-reduce</a> <var>op</var> <var>A</var></code></p>
     <p>Assumes that <code><var>A</var></code> is a nonempty array and <code><var>op</var></code> is a procedure of two arguments that is associative, i.e., <code>(<var>op</var> (<var>op</var> <var>x</var> <var>y</var>) <var>z</var>)</code> is the same as <code>(<var>op</var> <var>x</var> (<var>op</var>  <var>y</var> <var>z</var>))</code>.</p>
-    <p>Then <code>(array-reduce <var>op</var> <var>A</var>)</code> returns</p>
-    <pre><code>(let ((box '())
-      (A_ (array-getter A)))
-  (interval-for-each
-   (lambda multi-index
-     (if (null? box)
-         (set! box (list (apply A_ multi-index)))
-         (set-car! box (op (car box)
-                           (apply A_ multi-index)))))
-   (array-domain A))
-  (car box))
-</code></pre>
+    <p>Then <code>(array-reduce <var>op</var> <var>A</var>)</code> can be defined as</p>
+    <pre><code>(define array-reduce
+  (let ((reduce-base (list 1))) ;; any unique object
+    (lambda (sum A)
+      (array-foldl (lambda (id entry)
+                     (if (eq? id reduce-base)
+                         entry
+                         (sum id entry)))
+                   'ignore
+                   A))))</code></pre>
     <p>The implementation is allowed to use the associativity of <code><var>op</var></code> to reorder the computations in <code>array-reduce</code>. It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Example: </b>We consider the finite sum:
       $$
@@ -2081,6 +2093,7 @@ A after assignment:
  (0 3 100 100 100)
  (0 4 100 100 100))</code></pre>
     <p><b>Procedure: </b><code><a id="array-stack">array-stack</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-stack!">array-stack!</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>arrays</var></code> is a nonnull list of arrays with identical domains,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
     <p>Returns a specialized array equivalent to</p>
     <pre><code>(array-copy
@@ -2125,6 +2138,7 @@ A after assignment:
     <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one line:</p>
     <pre><code>(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
     <p><b>Procedure: </b><code><a id="array-decurry">array-decurry</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-decurry!">array-decurry!</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>A</var></code> is a nonempty array of arrays; the elements of <code><var>A</var></code> are assumed to all have the same (possibly empty) domain. Also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p><code>array-decurry</code> evaluates each array element of <code><var>A</var></code> once, and evaluates each element of <code>A</code>'s array elements once.  <code>array-decurry</code> returns a specialized array containing the elements of <code><var>A</var></code>'s array elements; ignoring optional arguments, the result  is equivalent to: </p>
     <pre><code>(let* ((A
@@ -2178,6 +2192,7 @@ A after assignment:
  3 1 =&gt; 11
  3 2 =&gt; 12</code></pre>
     <p><b>Procedure: </b><code><a id="array-append">array-append</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-append!">array-append!</a> <var>k</var> <var>arrays</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>arrays</var></code> is a nonnull list of arrays with domains that differ at most in the <code><var>k</var></code>'th axis,  <code><var>k</var></code> is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, <code><var>storage-class</var></code> is a storage class, <code><var>mutable?</var></code> is a boolean, and <code><var>safe?</var></code> is a boolean.</p>
     <p>This routine appends, or concatenates, the argument arrays along the <var>k</var>'th axis, with the lower bound of this axis set to 0.</p>
     <p>Returns a specialized array equivalent to the result of</p>
@@ -2260,6 +2275,7 @@ A after assignment:
  ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))</code></pre>
     <p>Because this SRFI supports empty arrays, the same code works when $k=0$ (when the second extracted array is empty) or $k=m-1$ (when the third extracted array is empty).</p>
     <p><b>Procedure: </b><code><a id="array-block">array-block</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-block!">array-block!</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>A</var></code> is a nonempty array of arrays, all of which have the same dimension as <code><var>A</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together in the configuration given by their indices in <code><var>A</var></code>.  We can always do this when <code>(array-dimension <var>A</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>A</var></code> are zero, we require: </p>
     <pre><code>(every
@@ -3467,7 +3483,7 @@ Reconstructed image:
 2
 </code></pre>
     <h2>Acknowledgments</h2>
-    <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, and Jens Axel S&#248;gaard for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.</p>
+    <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, Jens Axel S&#248;gaard, and Marc Nieper-Wi&#223;kirchen for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.</p>
     <h2>References</h2>
     <ol>
       <li><a id="bawden" href="https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
