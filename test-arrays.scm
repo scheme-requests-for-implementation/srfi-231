@@ -2500,26 +2500,44 @@ OTHER DEALINGS IN THE SOFTWARE.
               ;; Break up list-of-60 into equivalence classes modulo divisor
               ;; Convert these to arrays.
               ;; Do a simple test on array-foldl and array-foldr with cons and '()
-              (let ((parts
-                     (map (lambda (remainder)
-                            (list*->array
-                             1
-                             (filter (lambda (j)
-                                       (eqv? (modulo j divisor) remainder))
-                                     list-of-60)))
-                          (iota divisor))))
+              (let* ((specialized-parts
+                      (map (lambda (remainder)
+                             (list*->array
+                              1
+                              (filter (lambda (j)
+                                        (eqv? (modulo j divisor) remainder))
+                                      list-of-60)))
+                           (iota divisor)))
+                     (generalized-parts
+                      (map (lambda (a)
+                             (make-array (array-domain a)
+                                         (array-getter a)))
+                           specialized-parts)))
                 (test (apply array-foldl
                              (lambda (id . lst)
                                (foldl cons id lst))
                              '()
-                             parts)
+                             specialized-parts)
                       (foldl cons '() list-of-60))
                 (test (apply array-foldr
                              (lambda args
                                (foldr cons (list-ref args divisor) (take args divisor)))
                              '()
-                             parts)
-                      (foldr cons '() list-of-60))))
+                             specialized-parts)
+                      (foldr cons '() list-of-60))
+                (test (apply array-foldl
+                             (lambda (id . lst)
+                               (foldl cons id lst))
+                             '()
+                             generalized-parts)
+                      (foldl cons '() list-of-60))
+                (test (apply array-foldr
+                             (lambda args
+                               (foldr cons (list-ref args divisor) (take args divisor)))
+                             '()
+                             generalized-parts)
+                      (foldr cons '() list-of-60))
+                ))
             (iota 6 1)))
 
 
