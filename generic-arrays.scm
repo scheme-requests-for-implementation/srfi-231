@@ -4107,25 +4107,50 @@ OTHER DEALINGS IN THE SOFTWARE.
          (apply error "array-foldr: Not all arguments after the first two are arrays: " op id array arrays))
         ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
          (apply error "array-foldr: Not all arrays have the same domain: " op id array arrays))
-        ((null? arrays)
-         (let ((reversed-list (%%array->reversed-list array)))
-           (foldr-on-reversed-list op id reversed-list)))
         (else
-         (let ((reversed-lists   ;; a list of lists
-                (%%array->reversed-list (%%array-map list array arrays))))
-           (foldr-on-reversed-list
-            (case (length arrays)
-              ((1) (lambda (elements id)
-                     (op (car elements) (cadr elements) id)))
-              ((2) (lambda (elements id)
-                     (op (car elements) (cadr elements) (caddr elements) id)))
-              ((3) (lambda (elements id)
-                     (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
-              (else
-               (lambda (elements id)
-                 (apply op (append elements (list id))))))
-            id
-            reversed-lists)))))
+         (if (%%every specialized-array? (cons array arrays))
+             ;; Here the array elements are pre-calculated and pre-stored
+             ;; so we don't have to worry about call/cc.
+             (if (null? arrays)
+                 (let ((reversed-array (array-reverse array)))
+                   (%%interval-foldl (%%array-getter reversed-array)
+                                     (lambda (id element)
+                                       (op element id))
+                                     id
+                                     (%%array-domain reversed-array)))
+                 (let ((reversed-arrays (array-reverse (apply array-map list array arrays))))
+                   (%%interval-foldl (%%array-getter reversed-arrays)
+                                     (case (length arrays)
+                                       ((1) (lambda (id elements)
+                                              (op (car elements) (cadr elements) id)))
+                                       ((2) (lambda (id elements)
+                                              (op (car elements) (cadr elements) (caddr elements) id)))
+                                       ((3) (lambda (id elements)
+                                              (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
+                                       (else
+                                        (lambda (id elements)
+                                          (apply op (append elements (list id))))))
+                                     id
+                                     (%%array-domain reversed-arrays))))
+             ;; Here the array getters might invoke call/cc so more care is needed.
+             (if (null? arrays)
+                 (let ((reversed-list (%%array->reversed-list array)))
+                   (foldr-on-reversed-list op id reversed-list))
+                 (let ((reversed-lists   ;; a list of lists
+                        (%%array->reversed-list (%%array-map list array arrays))))
+                   (foldr-on-reversed-list
+                    (case (length arrays)
+                      ((1) (lambda (elements id)
+                             (op (car elements) (cadr elements) id)))
+                      ((2) (lambda (elements id)
+                             (op (car elements) (cadr elements) (caddr elements) id)))
+                      ((3) (lambda (elements id)
+                             (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
+                      (else
+                       (lambda (elements id)
+                         (apply op (append elements (list id))))))
+                    id
+                    reversed-lists)))))))
 
 (define %%array-reduce
   (let ((%%array-reduce-base (list 'base)))
