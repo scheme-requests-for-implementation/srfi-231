@@ -1949,7 +1949,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 safe?
                                 #t)))         ;; this array is in order by definition
 
-(define (%%list*->array dimension nested-list storage-class mutable? safe? message)
+(define (%%list*->array dimension nested-list storage-class mutable? safe? caller)
 
   (define (check-nested-list dimension nested-data)
     (or (eqv? dimension 0)  ;; anything goes in dimension 0
@@ -1979,7 +1979,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                      storage-class
                      mutable?
                      safe?
-                     message
+                     caller
                      #f))
       ((1)
        (%%list->array (make-interval (vector (length nested-data)))
@@ -1987,7 +1987,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       storage-class
                       mutable?
                       safe?
-                      message))
+                      caller))
       (else
        (if (null? nested-data)
            (let ((result (%%make-specialized-array (make-interval (make-vector dimension 0))
@@ -2004,12 +2004,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                            storage-class
                            mutable?
                            safe?
-                           message
+                           caller
                            #f)))))   ;; already call/cc-safe
 
   (if (check-nested-list dimension nested-list)
       (nested-list->array dimension nested-list)
-      (error (string-append message
+      (error (string-append caller
                             "The second argument is not the right shape to be converted to an array of the given dimension: ")
              dimension nested-list)))
 
@@ -2031,7 +2031,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%list*->array dimension nested-data storage-class mutable? safe? "list*->array: "))))
 
-(define (%%vector*->array dimension nested-vector storage-class mutable? safe? message)
+(define (%%vector*->array dimension nested-vector storage-class mutable? safe? caller)
 
   (define (check-nested-vector dimension nested-data)
     (or (eqv? dimension 0)  ;; anything goes in dimension 0
@@ -2061,7 +2061,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                      storage-class
                      mutable?
                      safe?
-                     message
+                     caller
                      #f))
       ((1)
        (let ((generic-array
@@ -2070,7 +2070,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        storage-class
                        mutable?
                        safe?
-                       message
+                       caller
                        #f)))
       (else
        (if (eqv? (vector-length nested-data) 0)
@@ -2088,12 +2088,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                            storage-class
                            mutable?
                            safe?
-                           message
+                           caller
                            #f)))))   ;; already call/cc-safe
 
   (if (check-nested-vector dimension nested-vector)
       (nested-vector->array dimension nested-vector)
-      (error (string-append message "The second argument is not the right shape to be converted to an array of the given dimension: ") dimension nested-vector)))
+      (error (string-append caller "The second argument is not the right shape to be converted to an array of the given dimension: ") dimension nested-vector)))
 
 (define (vector*->array dimension
                         nested-data
@@ -2659,7 +2659,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; Builds a new specialized-array and populates the body of the result with
 ;;; (array-getter array) applied to the elements of (array-domain array)
 
-(define (%%generalized-array->specialized-array array storage-class mutable? safe? message)
+(define (%%generalized-array->specialized-array array storage-class mutable? safe? caller)
   (let* ((domain            (%%array-domain array))
          (reversed-elements (%%array->reversed-list array))
          (n                 (%%interval-volume domain))
@@ -2690,7 +2690,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     (setter body i (car l))
                     (loop (fx- i 1)
                           (cdr l)))
-                  (error (string-append message "Not all elements of the source can be stored in destination: ") array storage-class mutable? safe?))
+                  (error (string-append caller "Not all elements of the source can be stored in destination: ") array storage-class mutable? safe?))
               (%%finish-specialized-array domain
                                           storage-class
                                           body
@@ -2699,17 +2699,16 @@ OTHER DEALINGS IN THE SOFTWARE.
                                           safe?
                                           #t))))))
 
-(define (%%->specialized-array array)
-  ;; always generic-storage-class
+(define (%%->specialized-array array storage-class caller)
   (if (specialized-array? array)
       array
-      (%%generalized-array->specialized-array array generic-storage-class #f #f "")))
+      (%%generalized-array->specialized-array array storage-class #f #f caller)))
 
 (define (%!array-copy array
                       result-storage-class
                       mutable?
                       safe?
-                      message
+                      caller
                       call/cc-safe?)
   (if (or (specialized-array? array)
           (not call/cc-safe?))
@@ -2717,7 +2716,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                               result-storage-class
                                               (storage-class-default result-storage-class)
                                               safe?)))
-        (%%move-array-elements result array message)
+        (%%move-array-elements result array caller)
         (if (not mutable?)            ;; set the setter to #f if the final array is not mutable
             (%%array-freeze! result)
             result))
@@ -2725,17 +2724,17 @@ OTHER DEALINGS IN THE SOFTWARE.
                                               result-storage-class
                                               mutable?
                                               safe?
-                                              message)))
+                                              caller)))
 
 (define (%%make-array-copy call/cc-safe?)
 
-  (define message
+  (define caller
     (if call/cc-safe?
         "array-copy: "
         "array-copy!: "))
 
   (define (wrap error-reason)
-    (string-append message error-reason))
+    (string-append caller error-reason))
 
   (define (four-args array result-storage-class mutable? safe?)
     (if (not (boolean? safe?))
@@ -2768,7 +2767,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       result-storage-class
                       mutable?
                       safe?
-                      message
+                      caller
                       call/cc-safe?)))
 
   (case-lambda
@@ -3590,7 +3589,7 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-outer-product combiner array1 array2))))
 
-(define (%%make-safe-immutable-array domain getter message)
+(define (%%make-safe-immutable-array domain getter caller)
   (make-array
    domain
    (case (%%interval-dimension domain)
@@ -3598,26 +3597,26 @@ OTHER DEALINGS IN THE SOFTWARE.
             (getter)))
      ((1) (lambda (i)
             (cond ((not (exact-integer? i))
-                   (error (string-append message "multi-index component is not an exact integer: ") i))
+                   (error (string-append caller "multi-index component is not an exact integer: ") i))
                   ((not (%%interval-contains-multi-index?-1 domain i))
-                   (error (string-append message "domain does not contain multi-index: ") domain i))
+                   (error (string-append caller "domain does not contain multi-index: ") domain i))
                   (else
                    (getter i)))))
      ((2) (lambda (i j)
             (cond ((not (and (exact-integer? i)
                              (exact-integer? j)))
-                   (error (string-append message "multi-index component is not an exact integer: ") i j))
+                   (error (string-append caller "multi-index component is not an exact integer: ") i j))
                   ((not (%%interval-contains-multi-index?-2 domain i j))
-                   (error (string-append message "domain does not contain multi-index: ") domain i j))
+                   (error (string-append caller "domain does not contain multi-index: ") domain i j))
                   (else
                    (getter i j)))))
      ((3) (lambda (i j k)
             (cond ((not (and (exact-integer? i)
                              (exact-integer? j)
                              (exact-integer? k)))
-                   (error (string-append message "multi-index component is not an exact integer: ") i j k))
+                   (error (string-append caller "multi-index component is not an exact integer: ") i j k))
                   ((not (%%interval-contains-multi-index?-3 domain i j k))
-                   (error (string-append message "domain does not contain multi-index: ") domain i j k))
+                   (error (string-append caller "domain does not contain multi-index: ") domain i j k))
                   (else
                    (getter i j k)))))
      ((4) (lambda (i j k l)
@@ -3625,18 +3624,18 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (exact-integer? j)
                              (exact-integer? k)
                              (exact-integer? l)))
-                   (error (string-append message "multi-index component is not an exact integer: ") i j k l))
+                   (error (string-append caller "multi-index component is not an exact integer: ") i j k l))
                   ((not (%%interval-contains-multi-index?-4 domain i j k l))
-                   (error (string-append message "domain does not contain multi-index: ") domain i j k l))
+                   (error (string-append caller "domain does not contain multi-index: ") domain i j k l))
                   (else
                    (getter i j k l)))))
      (else (lambda multi-index
              (cond ((not (%%every exact-integer? multi-index))
-                    (apply error (string-append message "multi-index component is not an exact integer: ") multi-index))
+                    (apply error (string-append caller "multi-index component is not an exact integer: ") multi-index))
                    ((not (= (length multi-index) (%%interval-dimension domain)))
-                    (apply error (string-append message "multi-index is not the correct dimension: ") domain multi-index))
+                    (apply error (string-append caller "multi-index is not the correct dimension: ") domain multi-index))
                    ((not (%%interval-contains-multi-index?-general domain multi-index))
-                    (apply error (string-append message "domain does not contain multi-index: ") domain multi-index))
+                    (apply error (string-append caller "domain does not contain multi-index: ") domain multi-index))
                    (else
                     (apply getter multi-index))))))))
 
@@ -4154,9 +4153,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define %%array-reduce
   (let ((%%array-reduce-base (list 'base)))
-    (lambda (sum A message)
+    (lambda (sum A caller)
       (if (%%array-empty? A)
-          (error (string-append message "Attempting to reduce over an empty array: ") sum A)
+          (error (string-append caller "Attempting to reduce over an empty array: ") sum A)
           (%%interval-foldl (%%array-getter A)
                             (lambda (id a)
                               (if (eq? id %%array-reduce-base)
@@ -4212,7 +4211,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        result-storage-class
                        mutable?
                        safe?
-                       message)
+                       caller)
   (let* ((checker
           (storage-class-checker  result-storage-class))
          (setter
@@ -4233,14 +4232,14 @@ OTHER DEALINGS IN THE SOFTWARE.
               (if (not mutable?)
                     (%%array-freeze! result)
                     result)
-              (error (string-append message "The volume of the first argument does not equal the length of the second: ") interval l))
+              (error (string-append caller "The volume of the first argument does not equal the length of the second: ") interval l))
           (let ((item (car local)))
             (if (checker item)
                 (begin
                   (setter body i item)
                   (loop (fx+ i 1)
                         (cdr local)))
-                (error (string-append message "Not all elements of the source can be stored in destination: ") interval l item)))))))
+                (error (string-append caller "Not all elements of the source can be stored in destination: ") interval l item)))))))
 
 (define (list->array interval
                      l
@@ -4379,10 +4378,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; Refactored from array-stack to use in list*->array and vector*->array
 
-(define (%%%array-stack k arrays storage-class mutable? safe? message call/cc-safe?)
+(define (%%%array-stack k arrays storage-class mutable? safe? caller call/cc-safe?)
   (let* ((arrays
           (if call/cc-safe?
-              (map %%->specialized-array arrays)
+              (map (lambda (A)
+                     (%%->specialized-array A storage-class caller))
+                   arrays)
               arrays))
          (first-array
           (car arrays))
@@ -4414,7 +4415,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                          domain-dimension)))
     ;; copy each array argument to the associated place in stack
     (array-for-each (lambda (destination source)
-                      (%%move-array-elements destination source message))
+                      (%%move-array-elements destination source caller))
                     permuted-and-curried-result
                     (list->array (make-interval (vector number-of-arrays))
                                  arrays))
@@ -4532,7 +4533,9 @@ OTHER DEALINGS IN THE SOFTWARE.
            (lambda (axis-subdividers kth-size)
              (let* ((arrays
                      (if call/cc-safe?
-                         (map %%->specialized-array arrays)
+                         (map (lambda (A)
+                                (%%->specialized-array A storage-class caller))
+                              arrays)
                          arrays))
                     (first-array
                      (car arrays))
@@ -4615,8 +4618,14 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (first-domain  (%%array-domain first-element)))
                  (if (not (%%array-every  (lambda (a) (%%interval= (%%array-domain a) first-domain)) A '()))
                      (error (string-append caller "Not all elements of the first argument (an array) have the domain: ") A-arg)
-                     (let* ((A (if call/cc-safe?
-                                   (%%->specialized-array (array-map %%->specialized-array A))
+                     (let* ((A (if (and call/cc-safe?
+                                        (not (%%array-every specialized-array? A '())))
+                                   (%%->specialized-array (%%array-map (lambda (A)
+                                                                         (%%->specialized-array A storage-class caller))
+                                                                       A
+                                                                       '())
+                                                          generic-storage-class
+                                                          caller)
                                    A))
                             (result-domain  (%%interval-cartesian-product (list A_D first-domain)))
                             (result         (%%make-specialized-array result-domain
@@ -4715,8 +4724,14 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                    (%%interval-width (%%array-domain (pencil_ i)) k))))))
                            ks))
                          (A
-                          (if call/cc-safe?
-                              (%%->specialized-array (array-map %%->specialized-array A))
+                          (if (and call/cc-safe?
+                                   (not (%%array-every specialized-array? A '())))
+                              (%%->specialized-array (%%array-map (lambda (A)
+                                                                    (%%->specialized-array A storage-class caller))
+                                                                  A
+                                                                  '())
+                                                     generic-storage-class
+                                                     caller)
                               A))
                          (A_
                           (%%array-getter A))
