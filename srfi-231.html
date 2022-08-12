@@ -1062,17 +1062,17 @@ indexer:       (lambda multi-index
 ;; ((4 4) (4 5) (4 6) (4 7) (4 8))
 </code></pre>
     <p>This &quot;shearing&quot; operation cannot be achieved by combining the procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>, <code>array-translate</code>, <code>array-curry</code>, <code>array-reverse</code>, and <code>array-sample</code>.</p>
-    <p><b>Procedure: </b><code><a id="array-copy">array-copy</a> <var>array</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p><b>Procedure: </b><code><a id="array-copy!">array-copy!</a> <var>array</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p>Assumes that <code><var>array</var></code> is an array, <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>array</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p><b>Procedure: </b><code><a id="array-copy">array-copy</a> <var>array</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-copy!">array-copy!</a> <var>array</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>array</var></code> is an array, <code><var>storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>array</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>The specialized array returned by <code>array-copy</code> can be defined conceptually by:</p>
     <pre><code>(list-&gt;array (array-domain array)
              (array-&gt;list array)
-             result-storage-class
+             storage-class
              mutable?
              safe?)
 </code></pre>
-    <p>If <code><var>array</var></code> is a specialized array, then if any of <code><var>result-storage-class</var></code>, <code><var>mutable?</var></code>, <code><var>safe?</var></code> are omitted,  their values are assigned <code>(array-storage-class <var>array</var>)</code>, <code>(mutable-array? <var>array</var>)</code>, and <code>(array-safe? <var>array</var>)</code>, respectively.</p>
+    <p>If <code><var>array</var></code> is a specialized array, then if any of <code><var>storage-class</var></code>, <code><var>mutable?</var></code>, <code><var>safe?</var></code> are omitted,  their values are assigned <code>(array-storage-class <var>array</var>)</code>, <code>(mutable-array? <var>array</var>)</code>, and <code>(array-safe? <var>array</var>)</code>, respectively.</p>
     <p>Otherwise, omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Example: </b></p>
@@ -1833,11 +1833,11 @@ B:
     <p>displays:</p>
     <pre><code>(2 4 6 8)
 (8 6 4 2)</code></pre>
-    <p><b>Procedure: </b><code><a id="list-rarrow-array">list-&gt;array</a> <var>interval</var> <var>list</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p>Assumes that <code><var>list</var></code> is a list, <code><var>interval</var></code> is an interval with volume the same as the length of <code><var>list</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>list</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p><b>Procedure: </b><code><a id="list-rarrow-array">list-&gt;array</a> <var>interval</var> <var>list</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>list</var></code> is a list, <code><var>interval</var></code> is an interval with volume the same as the length of <code><var>list</var></code>,  <code><var>storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>list</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized array with domain <code><var>interval</var></code> whose elements are the elements of the list <code><var>list</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>Any missing optional arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
-    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>list</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>list</var></code> cannot be stored in the body of <code><var>storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Example: </b></p>
     <pre><code>(let* ((l (iota 12))
        (A (list-&gt;array (make-interval '#(2 2 3)) l))
@@ -1873,7 +1873,7 @@ B:
  9 =&gt; 9
  10 =&gt; 10
  11 =&gt; 11</code></pre>
-    <p><b>Procedure: </b><code><a id="list*-rarrow-array">list*-&gt;array</a> <var>d</var> <var>nested-list</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="list*-rarrow-array">list*-&gt;array</a> <var>d</var> <var>nested-list</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>d</var></code> is a nonnegative exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>This routine builds a specialized array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-list</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-list</var></code> and <code><var>d</var></code> as arguments:</p>
     <pre><code>(define (check-nested-list dimension nested-data)
@@ -1959,11 +1959,11 @@ B:
     <p>displays:</p>
     <pre><code>#(2 4 6 8)
 #(8 6 4 2)</code></pre>
-    <p><b>Procedure: </b><code><a id="vector-rarrow-array">vector-&gt;array</a> <var>interval</var> <var>vector</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p>Assumes that <code><var>vector</var></code> is a vector, <code><var>interval</var></code> is an interval with volume the same as the length of <code><var>v</var></code>,  <code><var>result-storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>vector</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p><b>Procedure: </b><code><a id="vector-rarrow-array">vector-&gt;array</a> <var>interval</var> <var>vector</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>vector</var></code> is a vector, <code><var>interval</var></code> is an interval with volume the same as the length of <code><var>v</var></code>,  <code><var>storage-class</var></code> is a storage class that can manipulate all the elements of <code><var>vector</var></code>, and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>Returns a specialized array with domain <code><var>interval</var></code> whose elements are the elements of the vector <code><var>vector</var></code> stored in lexicographical order.  The result is mutable or safe depending on the values of <code><var>mutable?</var></code> and <code><var>safe?</var></code>.</p>
     <p>Any missing optional arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
-    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>vector</var></code> cannot be stored in the body of <code><var>result-storage-class</var></code>, and this last error shall be detected and raised.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions, or if any element of  <code><var>vector</var></code> cannot be stored in the body of <code><var>storage-class</var></code>, and this last error shall be detected and raised.</p>
     <p><b>Example: </b></p>
     <pre><code>(let* ((v (list-&gt;vector (iota 12)))
        (A (vector-&gt;array (make-interval '#(2 2 3)) v))
@@ -1999,7 +1999,7 @@ B:
  9 =&gt; 9
  10 =&gt; 10
  11 =&gt; 11</code></pre>
-    <p><b>Procedure: </b><code><a id="vector*-rarrow-array">vector*-&gt;array</a> <var>d</var> <var>nested-vector</var> [ <var>result-storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="vector*-rarrow-array">vector*-&gt;array</a> <var>d</var> <var>nested-vector</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
     <p>Assumes that <code><var>d</var></code> is a nonnegative exact integer and, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
     <p>This routine builds a specialized array of dimension <code><var>d</var></code>, storage class <code><var>storage-class</var></code>, mutability <code><var>mutable?</var></code>, and safety <code><var>safe?</var></code> from <code><var>nested-vector</var></code>.  It is assumed that following predicate does not return <code>#f</code> when passed <code><var>nested-vector</var></code> and <code><var>d</var></code> as arguments:</p>
     <pre><code>(define (check-nested-vector dimension nested-data)

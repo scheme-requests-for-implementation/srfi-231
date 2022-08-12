@@ -1373,22 +1373,22 @@ indexer:       (lambda multi-index
   ))
 (<p> "This \"shearing\" operation cannot be achieved by combining the procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", "(<code>'array-translate)", "(<code>'array-curry)", "(<code>'array-reverse)", and "(<code>'array-sample)".")
 
-(format-lambda-list '(array-copy array #\[ result-storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(format-lambda-list '(array-copy! array #\[ result-storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-copy array #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-copy! array #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (<p> "Assumes that "
      (<code>(<var> 'array))" is an array, "
-     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'array))", and "
+     (<code>(<var> 'storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'array))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "The specialized array returned by "(<code> 'array-copy)" can be defined conceptually by:")
 (<pre>
  (<code>
 "(list->array (array-domain array)
              (array->list array)
-             result-storage-class
+             storage-class
              mutable?
              safe?)
 "))
-(<p> "If "(<code>(<var>'array))" is a specialized array, then if any of "(<code>(<var>'result-storage-class))", "(<code>(<var>'mutable?))", "(<code>(<var>'safe?))" are omitted,  their values are assigned "(<code>"(array-storage-class "(<var>'array)")")", "(<code>"(mutable-array? "(<var>'array)")")", and "(<code>"(array-safe? "(<var>'array)")")", respectively.")
+(<p> "If "(<code>(<var>'array))" is a specialized array, then if any of "(<code>(<var>'storage-class))", "(<code>(<var>'mutable?))", "(<code>(<var>'safe?))" are omitted,  their values are assigned "(<code>"(array-storage-class "(<var>'array)")")", "(<code>"(mutable-array? "(<var>'array)")")", and "(<code>"(array-safe? "(<var>'array)")")", respectively.")
 (<p> "Otherwise, omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
 (<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(2 2)) list))
@@ -2276,16 +2276,16 @@ We attempt to compute this in floating-point arithmetic in two ways. In the firs
 (<pre>(<code>"(2 4 6 8)
 (8 6 4 2)"))
 
-(format-lambda-list '(list->array interval list #\[ result-storage-class #\[ mutable? #\[ safe? #\] #\] #\]) 'list-rarrow-array)
+(format-lambda-list '(list->array interval list #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]) 'list-rarrow-array)
 (<p> "Assumes that "
      (<code>(<var> 'list))" is a list, "
      (<code>(<var> 'interval))" is an interval with volume the same as the length of "(<code>(<var> 'list))",  "
-     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'list))", and "
+     (<code>(<var> 'storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'list))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "Returns a specialized array with domain "(<code>(<var>'interval))" whose elements are the elements of the list "(<code>(<var>'list))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
-(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'list))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'list))" cannot be stored in the body of "(<code>(<var>'storage-class))", and this last error shall be detected and raised.")
 (<p> (<b> "Example: "))(<pre>(<code>"(let* ((l (iota 12))
        (A (list->array (make-interval '#(2 2 3)) l))
        (B (list->array (make-interval '#(12)) l)))
@@ -2321,7 +2321,7 @@ B:
  10 => 10
  11 => 11"))
 
-(format-lambda-list '(list*->array d nested-list #\[ result-storage-class #\[ mutable? #\[ safe?  #\] #\] #\]) 'list*-rarrow-array)
+(format-lambda-list '(list*->array d nested-list #\[ storage-class #\[ mutable? #\[ safe?  #\] #\] #\]) 'list*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a nonnegative exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-list))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-list))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>
@@ -2412,16 +2412,16 @@ B:
 (<pre>(<code>"#(2 4 6 8)
 #(8 6 4 2)"))
 
-(format-lambda-list '(vector->array interval vector #\[ result-storage-class  #\[ mutable?  #\[ safe? #\] #\] #\]) 'vector-rarrow-array)
+(format-lambda-list '(vector->array interval vector #\[ storage-class  #\[ mutable?  #\[ safe? #\] #\] #\]) 'vector-rarrow-array)
 (<p> "Assumes that "
      (<code>(<var> 'vector))" is a vector, "
      (<code>(<var> 'interval))" is an interval with volume the same as the length of "(<code>(<var> 'v))",  "
-     (<code>(<var> 'result-storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'vector))", and "
+     (<code>(<var> 'storage-class))" is a storage class that can manipulate all the elements of "(<code>(<var> 'vector))", and "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "Returns a specialized array with domain "(<code>(<var>'interval))" whose elements are the elements of the vector "(<code>(<var>'vector))" stored in lexicographical order.  The result is mutable or safe depending on the values of "
      (<code>(<var> 'mutable?))" and "(<code>(<var>'safe?))".")
 (<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
-(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'vector))" cannot be stored in the body of "(<code>(<var>'result-storage-class))", and this last error shall be detected and raised.")
+(<p> "It is an error if the arguments do not satisfy these assumptions, or if any element of  "(<code>(<var>'vector))" cannot be stored in the body of "(<code>(<var>'storage-class))", and this last error shall be detected and raised.")
 (<p> (<b> "Example: "))(<pre>(<code>"(let* ((v (list->vector (iota 12)))
        (A (vector->array (make-interval '#(2 2 3)) v))
        (B (vector->array (make-interval '#(12)) v)))
@@ -2458,7 +2458,7 @@ B:
  11 => 11"))
 
 
-(format-lambda-list '(vector*->array d nested-vector #\[ result-storage-class  #\[ mutable? #\[ safe?  #\] #\] #\]) 'vector*-rarrow-array)
+(format-lambda-list '(vector*->array d nested-vector #\[ storage-class  #\[ mutable? #\[ safe?  #\] #\] #\]) 'vector*-rarrow-array)
 (<p> "Assumes that "(<code>(<var>'d))" is a nonnegative exact integer and, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
 (<p> "This routine builds a specialized array of dimension "(<code>(<var>'d))", storage class "(<code>(<var>'storage-class))", mutability "(<code>(<var>'mutable?))", and safety "(<code>(<var>'safe?))" from "(<code>(<var>'nested-vector))".  It is assumed that following predicate does not return "(<code>'#f)" when passed "(<code>(<var>'nested-vector))" and "(<code>(<var>'d))" as arguments:")
 (<pre>(<code>

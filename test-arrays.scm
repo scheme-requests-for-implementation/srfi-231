@@ -49,6 +49,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (##namespace
    ("srfi/231#"
     ;; Internal SRFI 231 procedures that are either tested or called here.
+    test-moves           ;; TODO: Remove after testing
     %%compose-indexers
     make-%%array
     %%every
