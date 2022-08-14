@@ -821,6 +821,98 @@ OTHER DEALINGS IN THE SOFTWARE.
       identity
       (generate-code)))
 
+(define (%%interval-foldr f operator identity interval)
+
+  (define (wrap error-reason)
+    (string-append message error-reason))
+
+  (define-macro (generate-code)
+
+    (define (symbol-append . args)
+      (string->symbol
+       (apply string-append (map (lambda (x)
+                                   (cond ((symbol? x) (symbol->string x))
+                                         ((number? x) (number->string x))
+                                         ((string? x) x)
+                                         (else (error "Arghh!"))))
+                                 args))))
+
+
+      (define (make-lower k)
+        (symbol-append 'lower- k))
+
+      (define (make-upper k)
+        (symbol-append 'upper- k))
+
+      (define (make-arg k)
+        (symbol-append 'i_ k))
+
+      (define (make-loop-name k)
+        (symbol-append 'loop- k))
+
+      (define (make-loop index depth k)
+        `(let ,(make-loop-name index) ((,(make-arg index) ,(make-lower index)))
+              (if (= ,(make-arg index) ,(make-upper index))
+                  ,(if (= index 0)
+                       `identity
+                       `(,(make-loop-name (- index 1)) (+ ,(make-arg (- index 1)) 1)))
+                  ,(if (= depth 0)
+                       `(let* ((item (f ,@(map (lambda (i) (make-arg i)) (iota k))))
+                               (result (,(make-loop-name index) (+ ,(make-arg index) 1))))
+                          (operator item result))
+                       (make-loop (+ index 1) (- depth 1) k)))))
+
+      (define (do-one-case k)
+        (let ((result
+               `((,k)
+                 (let (,@(map (lambda (j)
+                                `(,(make-lower j) (%%interval-lower-bound interval ,j)))
+                              (iota k))
+                       ,@(map (lambda (j)
+                                `(,(make-upper j) (%%interval-upper-bound interval ,j)))
+                              (iota k))
+                       (i 0))
+                   ,(make-loop 0 (- k 1) k)))))
+          ;; (pp result)
+          result))
+
+      (let ((result
+             `(case (%%interval-dimension interval)
+                ((0) (operator (f) identity))
+                ,@(map do-one-case (iota 8 1))
+                (else
+                 (let ()
+
+                   (define (get-next-args reversed-args
+                                          reversed-lowers
+                                          reversed-uppers)
+                     (let ((next-index (+ (car reversed-args) 1)))
+                       (if (< next-index (car reversed-uppers))
+                           (cons next-index (cdr reversed-args))
+                           (and (not (null? (cdr reversed-args)))
+                                (let ((tail-result (get-next-args (cdr reversed-args)
+                                                                  (cdr reversed-lowers)
+                                                                  (cdr reversed-uppers))))
+                                  (and tail-result
+                                       (cons (car reversed-lowers) tail-result)))))))
+
+                     (let ((reversed-lowers (reverse (%%interval-lower-bounds->list interval)))
+                           (reversed-uppers (reverse (%%interval-upper-bounds->list interval))))
+                       (let loop ((reversed-args reversed-lowers))
+                         (if reversed-args
+                             (let* ((item (apply f (reverse reversed-args)))
+                                    (result (loop (get-next-args reversed-args
+                                                               reversed-lowers
+                                                               reversed-uppers))))
+                               (operator item result))
+                             identity))))))))
+        ;;(pp result)
+        result))
+
+  (if (%%interval-empty? interval)
+      identity
+      (generate-code)))
+
 ;; We'll use the same basic container for all types of arrays.
 
 (declare (inline))
@@ -4094,62 +4186,28 @@ OTHER DEALINGS IN THE SOFTWARE.
                            (%%array-domain array)))))
 
 (define (array-foldr op id array . arrays)
-
-  (define (foldr-on-reversed-list op id l)
-    (if (null? l)
-        id
-        (foldr-on-reversed-list op (op (car l) id) (cdr l))))
-
   (cond ((not (procedure? op))
          (apply error "array-foldr: The first argument is not a procedure: " op id array arrays))
         ((not (%%every array? (cons array arrays)))
          (apply error "array-foldr: Not all arguments after the first two are arrays: " op id array arrays))
         ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
          (apply error "array-foldr: Not all arrays have the same domain: " op id array arrays))
+        ((null? arrays)
+         (%%interval-foldr (%%array-getter array) op id (%%array-domain array)))
         (else
-         (if (%%every specialized-array? (cons array arrays))
-             ;; Here the array elements are pre-calculated and pre-stored
-             ;; so we don't have to worry about call/cc.
-             (if (null? arrays)
-                 (let ((reversed-array (array-reverse array)))
-                   (%%interval-foldl (%%array-getter reversed-array)
-                                     (lambda (id element)
-                                       (op element id))
-                                     id
-                                     (%%array-domain reversed-array)))
-                 (let ((reversed-arrays (array-reverse (apply array-map list array arrays))))
-                   (%%interval-foldl (%%array-getter reversed-arrays)
-                                     (case (length arrays)
-                                       ((1) (lambda (id elements)
-                                              (op (car elements) (cadr elements) id)))
-                                       ((2) (lambda (id elements)
-                                              (op (car elements) (cadr elements) (caddr elements) id)))
-                                       ((3) (lambda (id elements)
-                                              (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
-                                       (else
-                                        (lambda (id elements)
-                                          (apply op (append elements (list id))))))
-                                     id
-                                     (%%array-domain reversed-arrays))))
-             ;; Here the array getters might invoke call/cc so more care is needed.
-             (if (null? arrays)
-                 (let ((reversed-list (%%array->reversed-list array)))
-                   (foldr-on-reversed-list op id reversed-list))
-                 (let ((reversed-lists   ;; a list of lists
-                        (%%array->reversed-list (%%array-map list array arrays))))
-                   (foldr-on-reversed-list
-                    (case (length arrays)
-                      ((1) (lambda (elements id)
-                             (op (car elements) (cadr elements) id)))
-                      ((2) (lambda (elements id)
-                             (op (car elements) (cadr elements) (caddr elements) id)))
-                      ((3) (lambda (elements id)
-                             (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
-                      (else
-                       (lambda (elements id)
-                         (apply op (append elements (list id))))))
-                    id
-                    reversed-lists)))))))
+         (%%interval-foldr (%%array-getter (%%array-map list array arrays))
+                           (case (length arrays)
+                             ((1) (lambda (elements id)
+                                    (op (car elements) (cadr elements) id)))
+                             ((2) (lambda (elements id)
+                                    (op (car elements) (cadr elements) (caddr elements) id)))
+                             ((3) (lambda (elements id)
+                                    (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
+                             (else
+                              (lambda (elements id)
+                                (apply op (append elements (list id))))))
+                           id
+                           (%%array-domain array)))))
 
 (define %%array-reduce
   (let ((%%array-reduce-base (list 'base)))
