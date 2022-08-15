@@ -734,6 +734,16 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;;
 ;;; where multi-index_1, multi-index_2, ... are the elements of interval in lexicographical order
 
+(define (interval-foldl f operator identity interval)
+  (cond ((not (interval? interval))
+         (error "interval-foldl: The fourth argument is not an interval: " f operator identity interval))
+        ((not (procedure? operator))
+         (error "interval-foldl: The second argument is not a procedure: " f operator identity interval))
+        ((not (procedure? f))
+         (error "interval-foldl: The first argument is not a procedure: " f operator identity interval))
+        (else
+         (%%interval-foldl f operator identity interval))))
+
 (define (%%interval-foldl f operator identity interval)
 
   (define-macro (generate-code)
@@ -820,6 +830,16 @@ OTHER DEALINGS IN THE SOFTWARE.
   (if (%%interval-empty? interval) ;; handle (make-interval '#(10000000 10000000 0)) efficiently
       identity
       (generate-code)))
+
+(define (interval-foldr f operator identity interval)
+  (cond ((not (interval? interval))
+         (error "interval-foldr: The fourth argument is not an interval: " f operator identity interval))
+        ((not (procedure? operator))
+         (error "interval-foldr: The second argument is not a procedure: " f operator identity interval))
+        ((not (procedure? f))
+         (error "interval-foldr: The first argument is not a procedure: " f operator identity interval))
+        (else
+         (%%interval-foldr f operator identity interval))))
 
 (define (%%interval-foldr f operator identity interval)
 
@@ -2335,7 +2355,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; We consolidate all moving of array elements to the following procedure.
 
-(define test-moves '())    ;; TODO: REMOVE AFTER TESTING
+(define %%test-moves '())    ;; TODO: REMOVE AFTER TESTING
 
 (define (%%move-array-elements destination source caller)
 
@@ -2388,8 +2408,8 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; REMOVE BEFORE RELEASE
 
   (if (not (or (specialized-array? source)
-               (member caller test-moves)))
-      (set! test-moves (cons caller test-moves)))
+               (member caller %%test-moves)))
+      (set! %%test-moves (cons caller %%test-moves)))
 
   (cond ((not (%%interval= (%%array-domain source)
                            (%%array-domain destination)))

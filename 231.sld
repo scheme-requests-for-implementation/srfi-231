@@ -20,6 +20,7 @@
     interval-contains-multi-index?
     interval-projections
     interval-for-each
+    interval-foldl interval-foldr
     interval-dilate
     interval-intersect
     interval-translate

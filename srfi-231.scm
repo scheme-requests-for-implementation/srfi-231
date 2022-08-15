@@ -87,6 +87,7 @@ MathJax.Hub.Config({
          (<li> "Draft #12 published: 2022-06-20")
          (<li> "Draft #13 published: 2022-06-24")
          (<li> "Draft #14 published: 2022-07-19")
+         (<li> "Draft #15 published: 2022-08-12")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -130,6 +131,8 @@ MathJax.Hub.Config({
                (<a> href: "#interval-width" (<code>'interval-width))", "
                (<a> href: "#interval-widths" (<code>'interval-widths))", "
                (<a> href: "#interval-empty?" (<code>'interval-empty?))", "
+               (<a> href: "#interval-foldl" (<code>'interval-foldl))", "
+               (<a> href: "#interval-foldr" (<code>'interval-foldr))", "
                (<a> href: "#storage-class-data?" (<code>'storage-class-data?))", "
                (<a> href: "#storage-class-data-rarrow-body" (<code>'storage-class-data->body))", "
                (<a> href: "#array-empty?" (<code>'array-empty?))", "
@@ -394,6 +397,8 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#interval-contains-multi-index?" "interval-contains-multi-index?")END
                  (<a> href: "#interval-projections" "interval-projections")END
                  (<a> href: "#interval-for-each" "interval-for-each")END
+                 (<a> href: "#interval-foldl" "interval-foldl")END
+                 (<a> href: "#interval-foldr" "interval-foldr")END
                  (<a> href: "#interval-dilate" "interval-dilate")END
                  (<a> href: "#interval-intersect" "interval-intersect")END
                  (<a> href: "#interval-translate" "interval-translate")END
@@ -751,6 +756,13 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
 1 1 => #f
 2 0 => #t
 2 1 => #f"))
+
+        (format-lambda-list '(interval-foldl f operator identity interval))
+        (format-lambda-list '(interval-foldr f operator identity interval))
+        (<p> "These procedures assume that "(<code>(<var>'f))" is a procedure whose domain includes elements of "(<code>(<var>'interval))", that "(<code>(<var>'operator))" is a procedure of two arguments, and that "(<code>(<var>'interval))" is an interval.")
+        (<p> "They return "(<code>"(array-foldl "(<var>" operator identity ")"(make-array "(<var>"f interval")"))")" and "(<code>"(array-foldr "(<var>" operator identity ")"(make-array "(<var>"f interval")"))")", respectively.")
+        (<p> "Please see the examples for "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))".")
+        (<p> "It is an error if the arguments do not satisfy these assumptions.")
 
         (format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
         (<p> "Assumes that "(<code>(<var> 'interval))" is an interval with

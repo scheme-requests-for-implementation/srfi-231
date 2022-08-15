@@ -65,7 +65,7 @@
       <li><code>array-elements-in-order?</code> has been renamed <code>array-packed?</code>.</li>
       <li><code>interval-cartesian-product</code> can now take zero arguments, in which case it returns <code>(make-interval '#())</code>.</li>
       <li><code>char-storage-class</code> is provided.</li>
-      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, <a href="#array-freeze!"><code>array-freeze!</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
+      <li>Introduced new procedures <a href="#interval-width"><code>interval-width</code></a>, <a href="#interval-widths"><code>interval-widths</code></a>, <a href="#interval-empty?"><code>interval-empty?</code></a>, <a href="#interval-foldl"><code>interval-foldl</code></a>, <a href="#interval-foldr"><code>interval-foldr</code></a>, <a href="#storage-class-data?"><code>storage-class-data?</code></a>, <a href="#storage-class-data-rarrow-body"><code>storage-class-data-&gt;body</code></a>, <a href="#array-empty?"><code>array-empty?</code></a>, <a href="#make-specialized-array-from-data"><code>make-specialized-array-from-data</code></a>, <a href="#vector-rarrow-array"><code>vector-&gt;array</code></a>, <a href="#array-rarrow-vector"><code>array-&gt;vector</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, <a href="#array-inner-product"><code>array-inner-product</code></a>, <a href="#array-stack"><code>array-stack</code></a>, <a href="#array-append"><code>array-append</code></a>, <a href="#array-block"><code>array-block</code></a>, <a href="#array-freeze!"><code>array-freeze!</code></a>, and <a href="#array-decurry"><code>array-decurry</code></a>.</li>
       <li>The sample implementation now provides call/cc-safe implementations of all procedures whose names do not end with <code>!</code>.  We define new procedures <a href="#array-copy!"><code>array-copy!</code></a>, <a href="#array-stack!"><code>array-stack!</code></a>, <a href="#array-decurry!"><code>array-decurry!</code></a>, <a href="#array-append!"><code>array-append!</code></a>, and <a href="#array-block!"><code>array-block!</code></a>, which are not guaranteed to be call/cc-safe but which may be faster or use less memory than the corresponding call/cc-safe versions.  See further discussion, with our definition of &quot;call/cc-safe&quot;, in the notes below.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
@@ -199,6 +199,8 @@
         <a href="#interval-contains-multi-index?">interval-contains-multi-index?</a>,
         <a href="#interval-projections">interval-projections</a>,
         <a href="#interval-for-each">interval-for-each</a>,
+        <a href="#interval-foldl">interval-foldl</a>,
+        <a href="#interval-foldr">interval-foldr</a>,
         <a href="#interval-dilate">interval-dilate</a>,
         <a href="#interval-intersect">interval-intersect</a>,
         <a href="#interval-translate">interval-translate</a>,
@@ -531,6 +533,12 @@
 1 1 =&gt; #f
 2 0 =&gt; #t
 2 1 =&gt; #f</code></pre>
+    <p><b>Procedure: </b><code><a id="interval-foldl">interval-foldl</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a id="interval-foldr">interval-foldr</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
+    <p>These procedures assume that <code><var>f</var></code> is a procedure whose domain includes elements of <code><var>interval</var></code>, that <code><var>operator</var></code> is a procedure of two arguments, and that <code><var>interval</var></code> is an interval.</p>
+    <p>They return <code>(array-foldl <var> operator identity </var>(make-array <var>f interval</var>))</code> and <code>(array-foldr <var> operator identity </var>(make-array <var>f interval</var>))</code>, respectively.</p>
+    <p>Please see the examples for <a href="#array-foldl"><code>array-foldl</code></a> and <a href="#array-foldr"><code>array-foldr</code></a>.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Procedure: </b><code><a id="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
     <p>Assumes that <code><var>interval</var></code> is an interval with
       lower bounds $\ell_0,\dots,\ell_{d-1}$ and
