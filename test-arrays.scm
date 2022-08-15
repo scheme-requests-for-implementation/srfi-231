@@ -49,7 +49,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (##namespace
    ("srfi/231#"
     ;; Internal SRFI 231 procedures that are either tested or called here.
-    test-moves           ;; TODO: Remove after testing
+    %%test-moves           ;; TODO: Remove after testing
     %%compose-indexers
     make-%%array
     %%every
@@ -641,6 +641,27 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
+(pp "interval-foldl and interval-foldr error tests")
+
+(test (interval-foldl 1 2 3 4)
+      "interval-foldl: The fourth argument is not an interval: ")
+
+(test (interval-foldl 1 2 3 (make-interval '#(2 2)))
+      "interval-foldl: The second argument is not a procedure: ")
+
+(test (interval-foldl 1 values 3 (make-interval '#(2 2)))
+      "interval-foldl: The first argument is not a procedure: ")
+
+(test (interval-foldr 1 2 3 4)
+      "interval-foldr: The fourth argument is not an interval: ")
+
+(test (interval-foldr 1 2 3 (make-interval '#(2 2)))
+      "interval-foldr: The second argument is not a procedure: ")
+
+(test (interval-foldr 1 values 3 (make-interval '#(2 2)))
+      "interval-foldr: The first argument is not a procedure: ")
+
+;;; We'll rely on tests for array-fold[lr] to test interval-fold[lr]
 
 (pp "interval-dilate error tests")
 
@@ -6373,6 +6394,6 @@ that computes the componentwise products when we need them, the times are
 
 (generations glider 5)
 
-(pp test-moves)
+(pp (reverse %%test-moves))
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))
