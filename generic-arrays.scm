@@ -843,9 +843,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%interval-foldr f operator identity interval)
 
-  (define (wrap error-reason)
-    (string-append message error-reason))
-
   (define-macro (generate-code)
 
     (define (symbol-append . args)
@@ -893,7 +890,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (iota k))
                        (i 0))
                    ,(make-loop 0 (- k 1) k)))))
-          ;; (pp result)
           result))
 
       (let ((result
@@ -926,7 +922,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                                reversed-uppers))))
                                (operator item result))
                              identity))))))))
-        ;;(pp result)
         result))
 
   (if (%%interval-empty? interval)
