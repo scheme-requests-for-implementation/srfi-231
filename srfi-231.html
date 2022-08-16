@@ -2151,12 +2151,12 @@ A after assignment:
 (3 1)   (3 2)   (3 5)   (3 8)</code></pre>
     <p>In fact, because <code><var>A</var></code> is a generalized array, the only elements of <code><var>A</var></code> that are generated are the ones that are assigned as elements of <code><var>B</var></code>. The result could also be computed in one line:</p>
     <pre><code>(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))</code></pre>
-    <p><b>Procedure: </b><code><a id="array-decurry">array-decurry</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p><b>Procedure: </b><code><a id="array-decurry!">array-decurry!</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p>Assumes that <code><var>A</var></code> is a nonempty array of arrays; the elements of <code><var>A</var></code> are assumed to all have the same (possibly empty) domain. Also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
-    <p><code>array-decurry</code> evaluates each array element of <code><var>A</var></code> once, and evaluates each element of <code>A</code>'s array elements once.  <code>array-decurry</code> returns a specialized array containing the elements of <code><var>A</var></code>'s array elements; ignoring optional arguments, the result  is equivalent to: </p>
+    <p><b>Procedure: </b><code><a id="array-decurry">array-decurry</a> <var>AofA</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-decurry!">array-decurry!</a> <var>AofA</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>Assumes that <code><var>AofA</var></code> is a nonempty array of arrays; the elements of <code><var>AofA</var></code> are assumed to all have the same (possibly empty) domain. Also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p><code>array-decurry</code> evaluates each array element of <code><var>AofA</var></code> once, and evaluates each element of <code>AofA</code>'s array elements once.  <code>array-decurry</code> returns a specialized array containing the elements of <code><var>AofA</var></code>'s array elements; ignoring optional arguments, the result  is equivalent to: </p>
     <pre><code>(let* ((A
-        (array-copy A))      ;; evaluate all elements of A once
+        (array-copy AofA))      ;; evaluate all elements of A once
        (A_dim
         (array-dimension A))
        (A_
@@ -2174,7 +2174,7 @@ A after assignment:
   (array-for-each array-assign! curried-result A)
   result-array)</code></pre>
     <p>Any missing optional arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
-    <p>It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of <code><var>A</var></code>'s array elements.</p>
+    <p>It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of <code><var>AofA</var></code>'s array elements.</p>
     <p><b>Example: </b></p>
     <pre><code>(let* ((A (list*-&gt;array 1 '(1 2 3)))
        (B (list*-&gt;array 1 '(4 5 6)))
@@ -2288,16 +2288,16 @@ A after assignment:
  ((1 0) (1 1) (1 2) (1 3) (1 4) (1 5))
  ((3 0) (3 1) (3 2) (3 3) (3 4) (3 5)))</code></pre>
     <p>Because this SRFI supports empty arrays, the same code works when $k=0$ (when the second extracted array is empty) or $k=m-1$ (when the third extracted array is empty).</p>
-    <p><b>Procedure: </b><code><a id="array-block">array-block</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p><b>Procedure: </b><code><a id="array-block!">array-block!</a> <var>A</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
-    <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>A</var></code> is a nonempty array of arrays, all of which have the same dimension as <code><var>A</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
-    <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together in the configuration given by their indices in <code><var>A</var></code>.  We can always do this when <code>(array-dimension <var>A</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>A</var></code> are zero, we require: </p>
+    <p><b>Procedure: </b><code><a id="array-block">array-block</a> <var>AofA</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p><b>Procedure: </b><code><a id="array-block!">array-block!</a> <var>AofA</var> [ <var>storage-class</var> [ <var>mutable?</var> [ <var>safe?</var> ] ] ]</code></p>
+    <p>This procedure is an inverse to <code>array-tile</code>.  It assumes that <code><var>AofA</var></code> is a nonempty array of arrays, all of which have the same dimension as <code><var>AofA</var></code> itself. It also assumes that, if given, <code><var>storage-class</var></code> is a storage class and <code><var>mutable?</var></code> and <code><var>safe?</var></code> are booleans.</p>
+    <p>While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by <code>interval-widths</code>) that allow them to be packed together in the configuration given by their indices in <code><var>AofA</var></code>.  We can always do this when <code>(array-dimension <var>AofA</var>)</code> is 1.  Otherwise, assuming that the lower bounds of <code><var>AofA</var></code> are zero, we require: </p>
     <pre><code>(every
  (lambda (k)                                        ;; for each coordinate direction
    (let ((slices                                    ;; the &quot;slices&quot;
                                                     ;; perpendicular to that direction
-          (array-curry (array-permute A (index-first (array-dimension A) k))
-                       (- (array-dimension A) 1))))
+          (array-curry (array-permute AofA (index-first (array-dimension AofA) k))
+                       (- (array-dimension AofA) 1))))
      (array-every
       (lambda (slice)                               ;; for every slice perpendicular
                                                     ;; to direction k
@@ -2306,7 +2306,7 @@ A after assignment:
                (interval-width
                 (array-domain
                  (apply (array-getter slice)
-                        (make-list (- (array-dimension A) 1) 0)))
+                        (make-list (- (array-dimension AofA) 1) 0)))
                 k)))
           (array-every
            (lambda (a)                              ;; all arrays within that slice
@@ -2315,11 +2315,11 @@ A after assignment:
                 slice-kth-width))
            slice)))
       slices)))
- (iota (array-dimension A)))</code></pre>
-    <p>This procedure then returns a specialized array with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>A</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>A</var></code> successively along each coordinate axis of <code><var>A</var></code>, in any order of the axes.  Each element of <code><var>A</var></code> is accessed once, and each element of <code><var>A</var></code>'s array elements is accessed once.</p>
-    <p>Each element of <code><var>A</var></code> is itself an array; one can copy the contents of each array element of <code><var>A</var></code> to the result array with the following algorithm:</p>
+ (iota (array-dimension AofA)))</code></pre>
+    <p>This procedure then returns a specialized array with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of <code><var>AofA</var></code> itself. In principle, one could compute the result by appending all the array elements of <code><var>AofA</var></code> successively along each coordinate axis of <code><var>AofA</var></code>, in any order of the axes.  Each element of <code><var>AofA</var></code> is accessed once, and each element of <code><var>AofA</var></code>'s array elements is accessed once.</p>
+    <p>Each element of <code><var>AofA</var></code> is itself an array; one can copy the contents of each array element of <code><var>AofA</var></code> to the result array with the following algorithm:</p>
     <pre><code>(let* ((A_dim
-        (array-dimension A))
+        (array-dimension AofA))
        (ks
         (list-&gt;vector (iota A_dim)))
        (corner-multi-index
@@ -2328,7 +2328,7 @@ A after assignment:
         (vector-map
          (lambda (k)        ;; the direction
            (let* ((pencil   ;; a pencil in that direction
-                   (apply (array-getter (array-curry (array-permute A (index-last A_dim k)) 1))
+                   (apply (array-getter (array-curry (array-permute AofA (index-last A_dim k)) 1))
                           corner-multi-index))
                   (pencil_
                    (array-getter pencil))
@@ -2364,7 +2364,7 @@ A after assignment:
                          vector-multi-index
                          ks))
             (subarray
-             (apply A_ multi-index))
+             (apply array-ref AofA multi-index))
             (translated-subarray  ;; translate the subarray to corner
              (array-translate
               subarray
@@ -2373,7 +2373,7 @@ A after assignment:
                           (interval-lower-bounds (array-domain subarray))))))
        (array-assign! (array-extract result (array-domain translated-subarray))
                       translated-subarray)))
-   (array-domain A))
+   (array-domain AofA))
   (if (not mutable?)
       (array-freeze! result)
       result))</code></pre>
