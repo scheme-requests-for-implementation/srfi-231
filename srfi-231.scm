@@ -2619,13 +2619,13 @@ A after assignment:
 (<pre>(<code>
 "(array-stack 1 (map (array-getter (array-curry (array-permute A '#(1 0)) 1)) '(1 2 5 8)))"))
 
-(format-lambda-list '(array-decurry A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(format-lambda-list '(array-decurry! A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(<p> "Assumes that "(<code>(<var>'A))" is a nonempty array of arrays; the elements of "(<code>(<var>'A))" are assumed to all have the same (possibly empty) domain. Also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> (<code>'array-decurry)" evaluates each array element of "(<code>(<var>'A))" once, and evaluates each element of "(<code>'A)"'s array elements once.  "(<code>'array-decurry)" returns a specialized array containing the elements of "(<code>(<var>'A))"'s array elements; ignoring optional arguments, the result  is equivalent to: ")
+(format-lambda-list '(array-decurry AofA #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-decurry! AofA #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(<p> "Assumes that "(<code>(<var>'AofA))" is a nonempty array of arrays; the elements of "(<code>(<var>'AofA))" are assumed to all have the same (possibly empty) domain. Also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> (<code>'array-decurry)" evaluates each array element of "(<code>(<var>'AofA))" once, and evaluates each element of "(<code>'AofA)"'s array elements once.  "(<code>'array-decurry)" returns a specialized array containing the elements of "(<code>(<var>'AofA))"'s array elements; ignoring optional arguments, the result  is equivalent to: ")
 (<pre>(<code>
 "(let* ((A
-        (array-copy A))      ;; evaluate all elements of A once
+        (array-copy AofA))      ;; evaluate all elements of A once
        (A_dim
         (array-dimension A))
        (A_
@@ -2643,7 +2643,7 @@ A after assignment:
   (array-for-each array-assign! curried-result A)
   result-array)"))
 (<p> "Any missing optional arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
-(<p> "It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of "(<code>(<var>'A))"'s array elements.")
+(<p> "It is an error if any of these assumptions are not met, or if the given storage class cannot manipulate the elements of "(<code>(<var>'AofA))"'s array elements.")
 (<p> (<b> "Example: "))(<pre>(<code>"(let* ((A (list*->array 1 '(1 2 3)))
        (B (list*->array 1 '(4 5 6)))
        (C (list*->array 1 '(7 8 9)))
@@ -2761,16 +2761,16 @@ A after assignment:
 (<p> "Because this SRFI supports empty arrays, the same code works when $k=0$ (when the second extracted array is empty) or $k=m-1$ (when the third extracted array is empty).")
 
 
-(format-lambda-list '(array-block A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(format-lambda-list '(array-block! A #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'A))" is a nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'A))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
-(<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together in the configuration given by their indices in "(<code>(<var>'A))".  We can always do this when "(<code>"(array-dimension "(<var>'A)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'A))" are zero, we require: ")
+(format-lambda-list '(array-block AofA #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(format-lambda-list '(array-block! AofA #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
+(<p> "This procedure is an inverse to "(<code>'array-tile)".  It assumes that "(<code>(<var>'AofA))" is a nonempty array of arrays, all of which have the same dimension as "(<code>(<var>'AofA))" itself. It also assumes that, if given, "(<code>(<var>'storage-class))" is a storage class and "(<code>(<var>'mutable?))" and "(<code>(<var>'safe?))" are booleans.")
+(<p> "While ignoring the lower and upper bounds of the element arrays, it assumes that those element arrays have widths (as defined by "(<code>'interval-widths)") that allow them to be packed together in the configuration given by their indices in "(<code>(<var>'AofA))".  We can always do this when "(<code>"(array-dimension "(<var>'AofA)")")" is 1.  Otherwise, assuming that the lower bounds of "(<code>(<var>'AofA))" are zero, we require: ")
 (<pre>(<code>"(every
  (lambda (k)                                        ;; for each coordinate direction
    (let ((slices                                    ;; the \"slices\"
                                                     ;; perpendicular to that direction
-          (array-curry (array-permute A (index-first (array-dimension A) k))
-                       (- (array-dimension A) 1))))
+          (array-curry (array-permute AofA (index-first (array-dimension AofA) k))
+                       (- (array-dimension AofA) 1))))
      (array-every
       (lambda (slice)                               ;; for every slice perpendicular
                                                     ;; to direction k
@@ -2779,7 +2779,7 @@ A after assignment:
                (interval-width
                 (array-domain
                  (apply (array-getter slice)
-                        (make-list (- (array-dimension A) 1) 0)))
+                        (make-list (- (array-dimension AofA) 1) 0)))
                 k)))
           (array-every
            (lambda (a)                              ;; all arrays within that slice
@@ -2788,11 +2788,11 @@ A after assignment:
                 slice-kth-width))
            slice)))
       slices)))
- (iota (array-dimension A)))"))
-(<p> "This procedure then returns a specialized array with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'A))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'A))" successively along each coordinate axis of "(<code>(<var>'A))", in any order of the axes.  Each element of "(<code>(<var>'A))" is accessed once, and each element of "(<code>(<var>'A))"'s array elements is accessed once.")
-(<p> "Each element of "(<code>(<var>'A))" is itself an array; one can copy the contents of each array element of "(<code>(<var>'A))" to the result array with the following algorithm:")
+ (iota (array-dimension AofA)))"))
+(<p> "This procedure then returns a specialized array with lower bounds all zero and with the specified storage class, mutability, and safety, whose elements are taken from the array elements of "(<code>(<var>'AofA))" itself. In principle, one could compute the result by appending all the array elements of "(<code>(<var>'AofA))" successively along each coordinate axis of "(<code>(<var>'AofA))", in any order of the axes.  Each element of "(<code>(<var>'AofA))" is accessed once, and each element of "(<code>(<var>'AofA))"'s array elements is accessed once.")
+(<p> "Each element of "(<code>(<var>'AofA))" is itself an array; one can copy the contents of each array element of "(<code>(<var>'AofA))" to the result array with the following algorithm:")
 (<pre>(<code>"(let* ((A_dim
-        (array-dimension A))
+        (array-dimension AofA))
        (ks
         (list->vector (iota A_dim)))
        (corner-multi-index
@@ -2801,7 +2801,7 @@ A after assignment:
         (vector-map
          (lambda (k)        ;; the direction
            (let* ((pencil   ;; a pencil in that direction
-                   (apply (array-getter (array-curry (array-permute A (index-last A_dim k)) 1))
+                   (apply (array-getter (array-curry (array-permute AofA (index-last A_dim k)) 1))
                           corner-multi-index))
                   (pencil_
                    (array-getter pencil))
@@ -2837,7 +2837,7 @@ A after assignment:
                          vector-multi-index
                          ks))
             (subarray
-             (apply A_ multi-index))
+             (apply array-ref AofA multi-index))
             (translated-subarray  ;; translate the subarray to corner
              (array-translate
               subarray
@@ -2846,7 +2846,7 @@ A after assignment:
                           (interval-lower-bounds (array-domain subarray))))))
        (array-assign! (array-extract result (array-domain translated-subarray))
                       translated-subarray)))
-   (array-domain A))
+   (array-domain AofA))
   (if (not mutable?)
       (array-freeze! result)
       result))"))
