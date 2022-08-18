@@ -39,7 +39,7 @@
       <li>Bradley Lucier's <a href="https://github.com/gambiteer/srfi-231">personal Git repo for this SRFI</a> for reference while the SRFI is in <em>draft</em> status.</li>
     </ul>
     <h2>Abstract</h2>
-    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <i>intervals</i>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays provide portable programs with efficient representations for common use cases.</p>
+    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <a href="https://en.wikipedia.org/w/index.php?title=Interval_(mathematics)&amp;oldid=1091935326"><i>intervals</i></a>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays provide portable programs with efficient representations for common use cases.</p>
     <p>This is a revised version of <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a>.</p>
     <h2>Rationale</h2>
     <p>This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.</p>
@@ -540,6 +540,31 @@
     <p>They return <code>(array-foldl <var> operator identity </var>(make-array <var>f interval</var>))</code> and <code>(array-foldr <var> operator identity </var>(make-array <var>f interval</var>))</code>, respectively.</p>
     <p>Please see the examples for <a href="#array-foldl"><code>array-foldl</code></a> and <a href="#array-foldr"><code>array-foldr</code></a>.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
+    <p><b>Example: </b>One can compute the <a href="https://en.wikipedia.org/w/index.php?title=Sieve_of_Eratosthenes&amp;oldid=1101704798">Sieve of Eratosthenes</a> with </p>
+    <pre><code>(define (eratosthenes n)
+  ;; Compute all primes &lt;= n
+  (let* ((sqrt-n (exact (floor (sqrt n))))
+         (A (make-specialized-array (make-interval '#(2)
+                                                   (vector (+ n 1)))
+                                    u1-storage-class
+                                    1))
+         (A_ (array-getter A))
+         (A! (array-setter A)))
+    (do ((i 2 (+ i 1)))
+        ((&gt; i sqrt-n)
+         (interval-foldr identity
+                         (lambda (i result)
+                           (if (eqv? (A_ i) 1)
+                               (cons i result)
+                               result))
+                         '()
+                         (array-domain A)))
+      (if (eqv? (A_ i) 1)
+          (do ((j (square i) (+ j i)))
+              ((&gt; j n))
+            (A! 0 j))))))
+
+(length (eratosthenes 1000000)) =&gt; 78498</code></pre>
     <p><b>Procedure: </b><code><a id="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
     <p>Assumes that <code><var>interval</var></code> is an interval with
       lower bounds $\ell_0,\dots,\ell_{d-1}$ and
@@ -2113,7 +2138,7 @@ A after assignment:
     <p>Returns a specialized array equivalent to</p>
     <pre><code>(array-copy
  (make-array
-  (let ((<var>lowers</var> (interval-lower-bounds-&gt;list (array-domain (car <var>arraya</var>))))
+  (let ((<var>lowers</var> (interval-lower-bounds-&gt;list (array-domain (car <var>arrays</var>))))
         (<var>uppers</var> (interval-upper-bounds-&gt;list (array-domain (car <var>arrays</var>))))
         (<var>N</var> (length <var>arrays</var>)))
     (make-interval (list-&gt;vector (append (take <var>lowers k</var>) (cons 0 (drop <var>lowers k</var>))))
