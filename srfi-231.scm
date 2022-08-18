@@ -34,7 +34,7 @@
        lang: 'en
        (<head>
         (<meta> charset: "utf-8")
-        (<title> (string-append "SRFI " SRFI ": Intervals and Generalized Arrays (Updated^2)"))
+        (<title> (string-append "SRFI " SRFI ": Intervals and Generalized Arrays"))
         (<link>
          rel: "icon"
          sizes: "192x192"
@@ -55,7 +55,7 @@ MathJax.Hub.Config({
                   src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
         )
        (<body>
-        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Intervals and Generalized Arrays (Updated^2)")
+        (<h1> (<a> href: "https://srfi.schemers.org/" (<img> class: 'srfi-logo src: "https://srfi.schemers.org/srfi-logo.svg" alt: "SRFI logo")) SRFI ": Intervals and Generalized Arrays")
 
         (<p> " by Bradley J. Lucier")
 
@@ -88,6 +88,7 @@ MathJax.Hub.Config({
          (<li> "Draft #13 published: 2022-06-24")
          (<li> "Draft #14 published: 2022-07-19")
          (<li> "Draft #15 published: 2022-08-12")
+         (<li> "Draft #16 published: 2022-08-16")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -98,7 +99,7 @@ MathJax.Hub.Config({
          "$i_0,\\ldots,i_{d-1}$ that are valid for a given array form the "(<i>'domain)" of the array.  In this SRFI, each array's domain consists "
          " of the cross product of intervals of exact integers $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ of $\\mathbb Z^d$, $d$-tuples of "
          "integers.  Thus, we introduce a data type "
-         "called $d$-"(<i> 'intervals)", or more briefly "(<i>'intervals)", that encapsulates this notion. (We borrow this terminology from, e.g., "
+         "called $d$-"(<i> 'intervals)", or more briefly "(<a> href: "https://en.wikipedia.org/w/index.php?title=Interval_(mathematics)&oldid=1091935326" (<i>'intervals))", that encapsulates this notion. (We borrow this terminology from, e.g., "
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
          "Specialized variants of arrays provide portable programs with efficient representations for common use cases.")
         (<p> "This is a revised version of "(<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")".")
@@ -763,6 +764,30 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
         (<p> "They return "(<code>"(array-foldl "(<var>" operator identity ")"(make-array "(<var>"f interval")"))")" and "(<code>"(array-foldr "(<var>" operator identity ")"(make-array "(<var>"f interval")"))")", respectively.")
         (<p> "Please see the examples for "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))".")
         (<p> "It is an error if the arguments do not satisfy these assumptions.")
+        (<p> (<b> "Example: ")"One can compute the "(<a> href: "https://en.wikipedia.org/w/index.php?title=Sieve_of_Eratosthenes&oldid=1101704798" "Sieve of Eratosthenes")" with ")(<pre>(<code>"(define (eratosthenes n)
+  ;; Compute all primes <= n
+  (let* ((sqrt-n (exact (floor (sqrt n))))
+         (A (make-specialized-array (make-interval '#(2)
+                                                   (vector (+ n 1)))
+                                    u1-storage-class
+                                    1))
+         (A_ (array-getter A))
+         (A! (array-setter A)))
+    (do ((i 2 (+ i 1)))
+        ((> i sqrt-n)
+         (interval-foldr identity
+                         (lambda (i result)
+                           (if (eqv? (A_ i) 1)
+                               (cons i result)
+                               result))
+                         '()
+                         (array-domain A)))
+      (if (eqv? (A_ i) 1)
+          (do ((j (square i) (+ j i)))
+              ((> j n))
+            (A! 0 j))))))
+
+(length (eratosthenes 1000000)) => 78498"))
 
         (format-lambda-list '(interval-dilate interval lower-diffs upper-diffs))
         (<p> "Assumes that "(<code>(<var> 'interval))" is an interval with
@@ -2578,7 +2603,7 @@ A after assignment:
 (<p> "Returns a specialized array equivalent to")
 (<pre>(<code>"(array-copy
  (make-array
-  (let (("(<var>'lowers)" (interval-lower-bounds->list (array-domain (car "(<var>'arraya)"))))
+  (let (("(<var>'lowers)" (interval-lower-bounds->list (array-domain (car "(<var>'arrays)"))))
         ("(<var>'uppers)" (interval-upper-bounds->list (array-domain (car "(<var>'arrays)"))))
         ("(<var>'N)" (length "(<var>"arrays")")))
     (make-interval (list->vector (append (take "(<var>"lowers k")") (cons 0 (drop "(<var>"lowers k")"))))
