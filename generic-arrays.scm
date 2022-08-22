@@ -2350,7 +2350,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; We consolidate all moving of array elements to the following procedure.
 
-(define %%test-moves '())    ;; TODO: REMOVE AFTER TESTING
+#;(define %%test-moves '())    ;; TODO: REMOVE AFTER TESTING
 
 (define (%%move-array-elements destination source caller)
 
@@ -2402,7 +2402,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; TODO
   ;; REMOVE BEFORE RELEASE
 
-  (if (not (or (specialized-array? source)
+  #;(if (not (or (specialized-array? source)
                (member caller %%test-moves)))
       (set! %%test-moves (cons caller %%test-moves)))
 
