@@ -6394,6 +6394,6 @@ that computes the componentwise products when we need them, the times are
 
 (generations glider 5)
 
-(pp (reverse %%test-moves))
+#;(pp (reverse %%test-moves))
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))
