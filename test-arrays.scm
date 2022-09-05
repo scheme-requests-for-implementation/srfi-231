@@ -1,5 +1,5 @@
 #|
-SRFI 231: Intervals and Generalized Arrays (Updated^2)
+SRFI 231: Intervals and Generalized Arrays
 
 Copyright 2016, 2018, 2020, 2021, 2022 Bradley J Lucier.
 All Rights Reserved.
@@ -30,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 |#
 
 ;;; A test program for SRFI 231:
-;;; Intervals and Generalized Arrays (Updated^2)
+;;; Intervals and Generalized Arrays
 
 (begin
   ;; Uncomment this line to run test-arrays.scm in Gambit.

@@ -1,5 +1,5 @@
 #|
-SRFI 231: Intervals and Generalized Arrays (Updated)
+SRFI 231: Intervals and Generalized Arrays
 
 Copyright 2016, 2018, 2020, 2021, 2022 Bradley J Lucier.
 All Rights Reserved.
