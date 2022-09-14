@@ -720,7 +720,7 @@
 
 (define-tag tfoot start-newline?: #t attributes: (align char charoff valign))
 
-(define-tag th attributes: (abbr align axis bgcolor char charoff colspan headers height rowspan scope valign width) single-attributes: (nowrap))
+(define-tag th start-newline?: #t attributes: (abbr align axis bgcolor char charoff colspan headers height rowspan scope valign width) single-attributes: (nowrap))
 
 (define-tag thead start-newline?: #t attributes: (align char charoff valign))
 

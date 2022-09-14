@@ -2641,6 +2641,77 @@ A after assignment:
       in the implementation are <code>define-structure</code>, <code>define-macro</code>, and DSSSL optional arguments.  The sample implementation open codes specialized versions of algorithms for intervals and arrays of dimension no greater than 4, but a simple implementation could employ only the general algorithms that are used for dimensions greater than 4.</p>
     <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-231">git repository</a> of this document, a sample implementation, a test file, and other materials.</p>
     <h2>Relationship to other array libraries</h2>
+    <h3>NumPy Arrays</h3>
+    <p><a href="https://numpy.org/doc/stable/">NumPy</a> has a popular <a href="https://numpy.org/doc/stable/reference/index.html">array library</a>, upon which  <a href="https://pytorch.org/">PyTorch</a>, a machine-learning tensor library, is built.</p>
+    <p>We list some of the correspondences between the routines of this SRFI and the array routines of NumPy.  As we are in no way experienced NumPy programmers, we do not claim any level of completeness in this correspondence.</p>
+    <table cellspacing="2" cellpadding="10" border="1">
+      <tr>
+        <th>SRFI 231</th>
+        <th>NumPy</th></tr>
+      <tr>
+        <td>array-assign!</td>
+        <td>copyto</td></tr>
+      <tr>
+        <td>array-domain</td>
+        <td>shape</td></tr>
+      <tr>
+        <td>specialized-array-reshape</td>
+        <td>reshape</td></tr>
+      <tr>
+        <td>array-permute with index-first, index-last, index-rotate, index-swap</td>
+        <td>move-axis, transpose, swap-axes</td></tr>
+      <tr>
+        <td>array-tile</td>
+        <td>split, array-split, dsplit, hsplit, vsplit, array slicing notation</td></tr>
+      <tr>
+        <td>array-reverse</td>
+        <td>flip, fliplr, flipud</td></tr>
+      <tr>
+        <td>Combine array-reverse and array-permute</td>
+        <td>rot90</td></tr>
+      <tr>
+        <td>array-append</td>
+        <td>concatenate</td></tr>
+      <tr>
+        <td>array-stack, array-decurry</td>
+        <td>stack, vstack, hstack, dstack, column_stack, row_stack</td></tr>
+      <tr>
+        <td>array-block</td>
+        <td>block</td></tr>
+      <tr>
+        <td>array-map with array-copy, array-copy!, or array-assign!</td>
+        <td>Elementwise array operations</td></tr>
+      <tr>
+        <td>array-translate</td>
+        <td>No correspondence (array indices always start at 0)</td></tr>
+      <tr>
+        <td>array-sample</td>
+        <td>array slicing notation</td></tr>
+      <tr>
+        <td>array-extract</td>
+        <td>array slicing notation</td></tr>
+      <tr>
+        <td>array-copy and array-copy!</td>
+        <td>Use the copy method</td></tr>
+      <tr>
+        <td>array-reduce</td>
+        <td>Use the reduce method</td></tr>
+      <tr>
+        <td>array-outer-product</td>
+        <td>Use the outer method</td></tr>
+      <tr>
+        <td>Combine array-curry, array-permute, and array-map</td>
+        <td>Operations specifying the axes along which they will be performed</td></tr>
+      <tr>
+        <td>make-array and array-copy or array-copy!</td>
+        <td>fromfunction</td></tr>
+      <tr>
+        <td>make-specialized-array-from-data</td>
+        <td>frombuffer, fromstring</td></tr>
+      <tr>
+        <td>list-&gt;array, list*-&gt;array, vector-&gt;array, vector*-&gt;array</td>
+        <td>asarray, asanyarray</td></tr>
+    </table>
     <h3>Other SRFIs</h3>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
