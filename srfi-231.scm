@@ -3175,6 +3175,8 @@ in the implementation are "(<code>"define-structure")", "(<code>"define-macro")"
        (<td> "frombuffer, fromstring"))
  (<tr> (<td> "list->array, list*->array, vector->array, vector*->array")
        (<td> "asarray, asanyarray"))
+ (<tr> (<td> "array->list*")
+       (<td> "tolist"))
  )
 
 (<h3> "Other SRFIs")
