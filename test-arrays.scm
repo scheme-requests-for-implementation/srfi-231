@@ -3483,7 +3483,7 @@ OTHER DEALINGS IN THE SOFTWARE.
     (test (index-last n i)
           (my-index-last n i))
     (test (index-rotate n i)
-          (index-rotate n i))
+          (my-index-rotate n i))
     (do ((j 0 (+ j 1)))
         ((= j n))
       (test (index-swap n i j)
