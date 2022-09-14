@@ -6,6 +6,7 @@
     index-rotate
     index-first
     index-last
+    index-swap
 
     ;; Intervals
     make-interval

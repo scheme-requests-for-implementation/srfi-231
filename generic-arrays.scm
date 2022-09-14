@@ -302,6 +302,20 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     (drop identity-permutation (fx+ k 1))
                                     (list k)))))
                        (iota n))))
+               (iota 5))))
+     (define %%index-swaps
+       `,(list->vector
+          (map (lambda (n)
+                 (list->vector
+                  (map (lambda (i)
+                         (list->vector
+                          (map (lambda (j)
+                                 (let ((result (list->vector (iota n))))
+                                   (vector-set! result i j)
+                                   (vector-set! result j i)
+                                   result))
+                               (iota n))))
+                       (iota n))))
                (iota 5))))))
 
 (macro-make-index-tables)
@@ -328,6 +342,14 @@ OTHER DEALINGS IN THE SOFTWARE.
         (list->vector (append (take identity-permutation k)
                               (drop identity-permutation (fx+ k 1))
                               (list k))))))
+
+(define (%%index-swap n i j)
+  (if (fx< n 5)
+      (vector-ref (vector-ref (vector-ref %%index-swaps n) i) j)
+      (let ((result (list->vector (iota n))))
+        (vector-set! result i j)
+        (vector-set! result j i)
+        result)))
 
 (define (%%interval-empty? interval)
   (eqv? (%%interval-volume interval) 0))
@@ -384,6 +406,17 @@ OTHER DEALINGS IN THE SOFTWARE.
          (error "index-last: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n k))
         (else
          (%%index-last n k))))
+
+(define (index-swap n i j)
+  (cond ((not (and (fixnum? n)
+                   (fxpositive? n)))
+         (error "index-swap: The first argument is not a positive fixnum: " n i j))
+        ((not (and (fixnum? i) (fx<= 0 i) (fx< i n)))
+         (error "index-swap: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n i j))
+        ((not (and (fixnum? j) (fx<= 0 j) (fx< j n)))
+         (error "index-swap: The third argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): " n i j))
+        (else
+         (%%index-swap n i j))))
 
 (define (interval-dimension interval)
   (cond ((not (interval? interval))

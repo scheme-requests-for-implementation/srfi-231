@@ -122,7 +122,7 @@ MathJax.Hub.Config({
          (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
-         (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", and "(<a> href: "#index-last" (<code>'index-last))".")
+         (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", "(<a> href: "#index-last" (<code>'index-last))", and "(<a> href: "#index-swap" (<code>'index-swap))".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> (<code>'array-tile)" is now more flexible in how you can decompose an array.")
          (<li> (<code>'array-elements-in-order?)" has been renamed "(<code>'array-packed?)".")
@@ -179,7 +179,7 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#array-translate" (<code>'array-translate))
                ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
          (<li> (<a> href: "#array-permute"(<code>'array-permute))
-               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations.")
+               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures "(<code>'index-rotate)", "(<code>'index-first)",  "(<code>'index-last)", and "(<code>'index-swap)" create commonly used permutations.")
          (<li> (<a> href:"#array-reverse" (<code>'array-reverse))
                ": Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.")
          (<li> (<a> href:"#array-sample" (<code>'array-sample))
@@ -288,7 +288,7 @@ MathJax.Hub.Config({
          (<li> (<b> "Permuting the coordinates of an array: ")
                "If $\\pi$ "(<a> href: "https://en.wikipedia.org/wiki/Permutation" 'permutes)" the coordinates of a multi-index $\\vec i$, and $\\pi^{-1}$ is the inverse of $\\pi$, then "
                "$T_{BA}(\\vec i)=\\pi (\\vec i)$ is a one-to-one affine map from $D_B=\\{\\pi^{-1}(\\vec i)\\mid \\vec i\\in D_A\\}$ onto $D_A$.  We provide "(<code>'array-permute)" for this operation. "
-               "Several procedures build commonly used permutations: "(<code>"(index-rotate "(<var>'n)" "(<var>'k)")")" rotates "(<code>(<var>'n))" indices "(<code>(<var>'k))" places to the left; "(<code>"(index-first "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the first index, leaving the others in order; and "(<code>"(index-last "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the last index, again leaving the others in order.")
+               "Several procedures build commonly used permutations: "(<code>"(index-rotate "(<var>'n)" "(<var>'k)")")" rotates "(<code>(<var>'n))" indices "(<code>(<var>'k))" places to the left; "(<code>"(index-first "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the first index, leaving the others in order;  "(<code>"(index-last "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the last index, again leaving the others in order; "(<code>"(index-swap "(<var>"n i j")")")" swaps the $i$th and $j$th of $n$ indices, again leaving the others in order.")
          (<li> (<b> "Currying an array: ")
                "Let's denote the cross product of two intervals $\\text{Int}_1$ and $\\text{Int}_2$ by $\\text{Int}_1\\times\\text{Int}_2$; "
                "if $\\vec j=(j_0,\\ldots,j_{r-1})\\in \\text{Int}_1$ and $\\vec i=(i_0,\\ldots,i_{s-1})\\in \\text{Int}_2$, then "
@@ -377,7 +377,8 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#permutation?" "permutation?") END
                  (<a> href: "#index-rotate" "index-rotate") END
                  (<a> href: "#index-first" "index-first") END
-                 (<a> href: "#index-last" "index-last")
+                 (<a> href: "#index-last" "index-last") END
+                 (<a> href: "#index-swap" "index-swap")
                  ".")
            (<dt> "Intervals")
            (<dd> (<a> href: "#make-interval" "make-interval")END
@@ -536,6 +537,9 @@ We provide three procedures that return useful permutations.")
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))"))
         (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 2 4 3)")". It is an error if the arguments do not satisfy these conditions.")
+        (format-lambda-list '(index-swap n i j))
+        (<p> "Assumes that "(<code>(<var>'n))" is a positive exact integer and that "(<code>(<var>'i))" and "(<code>(<var>'j))" are exact integers between 0 (inclusive) and "(<code>(<var>'n))" (exclusive). Returns a permuation of length "(<code>(<var>'n))" that swaps index "(<code>(<var>'i))" and index "(<code>(<var>'j))" and leaves the other indices in order.")
+        (<p> "For example, "(<code>"(index-swap 5 3 0)")" returns "(<code>"#(3 1 2 0 4)")". It is an error if the arguments do not satisfy these assumptions.")
 
 (<h2> "Intervals")
         (<p> "An interval represents the set of all multi-indices of exact integers
