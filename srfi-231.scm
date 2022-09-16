@@ -103,6 +103,7 @@ MathJax.Hub.Config({
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
          "Specialized variants of arrays provide portable programs with efficient representations for common use cases.")
         (<p> "This is a revised version of "(<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")".")
+        (<h2> "Contents")
         (<ul>
          (<li> (<a> href: "#Rationale" "Rationale"))
          (<li> (<a> href: "#Overview" "Overview")
