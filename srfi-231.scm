@@ -103,7 +103,46 @@ MathJax.Hub.Config({
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
          "Specialized variants of arrays provide portable programs with efficient representations for common use cases.")
         (<p> "This is a revised version of "(<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")".")
-        (<h2> "Rationale")
+        (<h2> "Contents")
+        (<ul>
+         (<li> (<a> href: "#Rationale" "Rationale"))
+         (<li> (<a> href: "#Overview" "Overview")
+               (<ul>
+                (<li> (<a> href: "#Introductory" "Introductory remarks"))
+                (<li> (<a> href: "#Bawden" "Bawden-style arrays"))
+                (<li> (<a> href: "#extension" "Our extensions of Bawden-style arrays"))
+                (<li> (<a> href: "#transformations" "Common transformations on Bawden-style arrays"))
+                (<li> (<a> href: "#generalized" "Generalized arrays"))
+                (<li> (<a> href: "#sharing" "Sharing generalized arrays"))
+                (<li> (<a> href: "#convention" "Notational convention"))))
+         (<li> (<a> href: "#Notes" "Notes"))
+         (<li> (<a> href: "#Specification" "Specification"))
+         (<li> (<a> href: "#Preliminary" "Preliminary notes"))
+         (<li> (<a> href: "#Miscellaneous" "Miscellaneous procedures")
+               (<ul>
+                (<li> (<a> href: "#miscprocedures" "Procedures"))))
+         (<li> (<a> href: "#Intervals" "Intervals")
+               (<ul>
+                (<li> (<a> href: "#intervalprocedures" "Procedures"))))
+         (<li> (<a> href: "#Storage" "Storage classes")
+               (<ul>
+                (<li> (<a> href: "#storageprocedures" "Procedures"))
+                (<li> (<a> href: "#storageglobals" "Global variables"))))
+         (<li> (<a> href: "#Arrays" "Arrays")
+               (<ul>
+                (<li> (<a> href: "#parameters" "Parameters"))
+                (<li>(<a>  href: "#arrayprocedures" "Procedures"))))
+         (<li> (<a> href: "#Implementation" "Implementation"))
+         (<li> (<a> href: "#relationship" "Relationship to other array libraries")
+               (<ul>
+                (<li> (<a> href: "#NumPy" "NumPy arrays"))
+                (<li> (<a> href:"#othersrfis" "Other SRFIs"))
+                (<li>  (<a> href: "#Racket" "Racket's array library"))))
+         (<li> (<a> href: "#otherexamples" "Other examples"))
+         (<li> (<a> href: "#Acknowledgments" "Acknowledgments"))
+         (<li> (<a> href: "#References" "References"))
+         (<li> (<a> href: "#Copyright" "Copyright")))
+        (<h2> (<a> id: "Rationale" "Rationale"))
         (<p> "This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.")
         (<ul>
          (<li> "Provide a "(<b> "general API")" (Application Program Interface) that specifies the minimal required properties of any given array, without requiring any specific implementation strategy from the programmer for that array.")
@@ -122,7 +161,7 @@ MathJax.Hub.Config({
          (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
-         (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", and "(<a> href: "#index-last" (<code>'index-last))".")
+         (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", "(<a> href: "#index-last" (<code>'index-last))", and "(<a> href: "#index-swap" (<code>'index-swap))".")
          (<li> (<code>'interval-rotate)" and "(<code>'array-rotate)" have been removed; use "(<code>"(array-permute A (index-rotate (array-dimension A) k))")" instead of "(<code>"(array-rotate A k)")".")
          (<li> (<code>'array-tile)" is now more flexible in how you can decompose an array.")
          (<li> (<code>'array-elements-in-order?)" has been renamed "(<code>'array-packed?)".")
@@ -162,9 +201,9 @@ MathJax.Hub.Config({
          (<li> "A new set of \"Introductory remarks\" surveys some of the more important procedures in this SRFI.")
          )
 
-        (<h2> "Overview")
+        (<h2> (<a> id: "Overview" "Overview"))
 
-        (<h3> "Introductory remarks")
+        (<h3> (<a> id: "Introductory" "Introductory remarks"))
 
         (<p> "The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.")
         (<p> "There are two procedures that simply create new arrays:")
@@ -179,7 +218,7 @@ MathJax.Hub.Config({
          (<li> (<a> href: "#array-translate" (<code>'array-translate))
                ": Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.")
          (<li> (<a> href: "#array-permute"(<code>'array-permute))
-               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures "(<code>'index-rotate)", "(<code>'index-first)",  and "(<code>'index-last)" create commonly used permutations.")
+               ": Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures "(<code>'index-rotate)", "(<code>'index-first)",  "(<code>'index-last)", and "(<code>'index-swap)" create commonly used permutations.")
          (<li> (<a> href:"#array-reverse" (<code>'array-reverse))
                ": Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.")
          (<li> (<a> href:"#array-sample" (<code>'array-sample))
@@ -237,7 +276,7 @@ MathJax.Hub.Config({
                (<a> href: "#vector*-rarrow-array" (<code>'vector*->array))": Either transfer the elements of an array to a nested list or vector, or construct a specialized array from the elements of a nested list or vector."))
         (<p>"I hope this brief discussion gives a flavor for the design of this SRFI.")
 
-        (<h3> "Bawden-style arrays")
+        (<h3> (<a> id: "Bawden" "Bawden-style arrays"))
         (<p>  "In a "(<a> href: "https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ" "1993 post")
               " to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. "
               "The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives "
@@ -266,14 +305,14 @@ MathJax.Hub.Config({
              (<i>'linear)" (in a linear algebra sense) in $\\vec i-\\vec j$.  The new indexer of $B$ satisfies $I_B(\\vec i)=I_A(T_{BA}(\\vec i))$.")
         (<p> "A fact Bawden exploits in the code, but doesn't point out in the short post, is that $I_B$ is again an affine map, and indeed, the composition "
              "of "(<i>'any)" two affine maps is again affine.")
-        (<h3> "Our extensions of Bawden-style arrays")
+        (<h3> (<a> id: "extension" "Our extensions of Bawden-style arrays"))
         (<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in one minor way that we find useful.")
         (<p> "We introduce the notion of a "(<i>"storage class")", an object that contains procedures that manipulate, store, check, etc., different types of values. "
              "The "(<code>'generic-storage-class)" can manipulate any Scheme value, "
              "whereas, e.g., a "(<code>'u1-storage-class)" can store only the values 0 and 1 in each element of a body.")
         (<p> "We also require that our affine maps be one-to-one, so that if $\\vec i\\neq\\vec j$ then $T(\\vec i)\\neq T(\\vec j)$.  Without this property, modifying "
              "the $\\vec i$th component of $A$ would cause the $\\vec j$th component to change.")
-        (<h3> "Common transformations on Bawden-style arrays")
+        (<h3> (<a> id: "transformations" "Common transformations on Bawden-style arrays"))
         (<p> "Requiring the transformations $T_{BA}:D_B\\to D_A$ to be affine may seem  esoteric and restricting, but in fact many common and useful array transformations "
              "can be expressed in this way.  We give several examples below: ")
         (<ul>
@@ -288,7 +327,7 @@ MathJax.Hub.Config({
          (<li> (<b> "Permuting the coordinates of an array: ")
                "If $\\pi$ "(<a> href: "https://en.wikipedia.org/wiki/Permutation" 'permutes)" the coordinates of a multi-index $\\vec i$, and $\\pi^{-1}$ is the inverse of $\\pi$, then "
                "$T_{BA}(\\vec i)=\\pi (\\vec i)$ is a one-to-one affine map from $D_B=\\{\\pi^{-1}(\\vec i)\\mid \\vec i\\in D_A\\}$ onto $D_A$.  We provide "(<code>'array-permute)" for this operation. "
-               "Several procedures build commonly used permutations: "(<code>"(index-rotate "(<var>'n)" "(<var>'k)")")" rotates "(<code>(<var>'n))" indices "(<code>(<var>'k))" places to the left; "(<code>"(index-first "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the first index, leaving the others in order; and "(<code>"(index-last "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the last index, again leaving the others in order.")
+               "Several procedures build commonly used permutations: "(<code>"(index-rotate "(<var>'n)" "(<var>'k)")")" rotates "(<code>(<var>'n))" indices "(<code>(<var>'k))" places to the left; "(<code>"(index-first "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the first index, leaving the others in order;  "(<code>"(index-last "(<var>'n)" "(<var>'k)")")" moves the $k$th of $n$ indices to be the last index, again leaving the others in order; "(<code>"(index-swap "(<var>"n i j")")")" swaps the $i$th and $j$th of $n$ indices, again leaving the others in order.")
          (<li> (<b> "Currying an array: ")
                "Let's denote the cross product of two intervals $\\text{Int}_1$ and $\\text{Int}_2$ by $\\text{Int}_1\\times\\text{Int}_2$; "
                "if $\\vec j=(j_0,\\ldots,j_{r-1})\\in \\text{Int}_1$ and $\\vec i=(i_0,\\ldots,i_{s-1})\\in \\text{Int}_2$, then "
@@ -317,7 +356,7 @@ MathJax.Hub.Config({
              "one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
              "Examples are given below.")
 
-        (<h3> "Generalized arrays")
+        (<h3> (<a> id: "generalized" "Generalized arrays"))
         (<p> "Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. "
              "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers
 in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$, $l_k<u_k$ — the "(<i>'domain)" of the array — to Scheme objects.
@@ -332,7 +371,7 @@ by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)
 they may have hash tables or databases behind an implementation, or may read the values from a file, etc.")
         (<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array may be either mutable or immutable.")
 
-        (<h3> "Sharing generalized arrays")
+        (<h3> (<a> id: "sharing" "Sharing generalized arrays"))
         (<p> "Even if an array $A$ is not a specialized array, it could be \"shared\" by specifying a new interval $D_B$ as the domain of "
              "a new array $B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ would then be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
         (<p> "One could again \"share\" $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ could be computed with the overhead of computing a single affine transformation.")
@@ -342,10 +381,10 @@ they may have hash tables or databases behind an implementation, or may read the
              (<code>"(lambda (i j) ("(<var>'A_)" j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>(<var>'A_))", at least for arrays of small dimension.")
         (<p> "Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)",  "
              (<code>'array-curry)",  "(<code>'array-reverse)", "(<code>'array-tile)", and "(<code>'array-sample)",  and we provide relatively efficient implementations of these procedures for arrays of dimension no greater than four.")
-        (<h3> "Notational convention")
+        (<h3> (<a> id: "convention" "Notational convention"))
         (<p> "If "(<code>(<var>'A))" is an array, then we generally define "(<code>(<var>'A_))" to be "(<code>"(array-getter "(<var>'A)")")" and  "(<code>(<var>'A!))" to be "(<code>"(array-setter "(<var>'A)")")".  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in "(<code>(<var>"!"))", while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the "(<a> href: "#Haar" "Haar transform")" example.")
 
-        (<h2> "Notes")
+        (<h2> (<a> id: "Notes" "Notes"))
         (<ul>
          (<li> (<b> "Empty and zero-dimensional arrays: ")"The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme "(<code>'box)".  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.")
          (<li> (<b> "This SRFI and "(<code>'call-with-current-continuation)": ")"The Scheme procedure "(<code>'call-with-current-continuation)" captures and encapsulates as a procedure the continuation of the current computation, which, perforce, includes a certain amount of state that consists of the values of captured variables at the point the continuation is captured. This captured procedure can be invoked multiple times, as any procedure can."
@@ -368,7 +407,7 @@ they may have hash tables or databases behind an implementation, or may read the
          (<li> (<b> "Choice of procedures on intervals. ")"The choice of procedures for both arrays and intervals was motivated almost solely by what I needed for arrays.")
          (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.")
          )
-        (<h2> "Specification")
+        (<h2> (<a> id: "Specification" "Specification"))
         (let ((END ",\n"))
           (<p> "Names defined in this SRFI:")
           (<dl>
@@ -377,7 +416,8 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#permutation?" "permutation?") END
                  (<a> href: "#index-rotate" "index-rotate") END
                  (<a> href: "#index-first" "index-first") END
-                 (<a> href: "#index-last" "index-last")
+                 (<a> href: "#index-last" "index-last") END
+                 (<a> href: "#index-swap" "index-swap")
                  ".")
            (<dt> "Intervals")
            (<dd> (<a> href: "#make-interval" "make-interval")END
@@ -498,14 +538,14 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#specialized-array-reshape" "specialized-array-reshape")
                  "."
                  )))
-        (<h2> "Preliminary notes")
+        (<h2> (<a> id: "Preliminary" "Preliminary notes"))
         (<p> "We use "(<code>'take)" and "(<code>'drop)" from "(<a> href: "https://srfi.schemers.org/srfi-1/srfi-1.html" "SRFI 1")" to define various procedures.")
-        (<h2> "Miscellaneous Procedures")
+        (<h2> (<a> id: "Miscellaneous" "Miscellaneous procedures"))
         (<p> "This document refers to "(<i> 'translations)" and "(<i> 'permutations)".
  A translation is a vector of exact integers.  A permutation of dimension $n$
 is a vector whose entries are the exact integers $0,1,\\ldots,n-1$, each occurring once, in any order.
 We provide three procedures that return useful permutations.")
-        (<h3> "Procedures")
+        (<h3> (<a> id: "miscprocedures" "Procedures"))
         (format-lambda-list '(translation? object))
         (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a translation, and "(<code> '#f)" otherwise.")
         (format-lambda-list '(permutation? object))
@@ -536,8 +576,11 @@ We provide three procedures that return useful permutations.")
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))"))
         (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 2 4 3)")". It is an error if the arguments do not satisfy these conditions.")
+        (format-lambda-list '(index-swap n i j))
+        (<p> "Assumes that "(<code>(<var>'n))" is a positive exact integer and that "(<code>(<var>'i))" and "(<code>(<var>'j))" are exact integers between 0 (inclusive) and "(<code>(<var>'n))" (exclusive). Returns a permuation of length "(<code>(<var>'n))" that swaps index "(<code>(<var>'i))" and index "(<code>(<var>'j))" and leaves the other indices in order.")
+        (<p> "For example, "(<code>"(index-swap 5 3 0)")" returns "(<code>"#(3 1 2 0 4)")". It is an error if the arguments do not satisfy these assumptions.")
 
-(<h2> "Intervals")
+(<h2> (<a> id: "Intervals" "Intervals"))
         (<p> "An interval represents the set of all multi-indices of exact integers
 $i_0,\\ldots,i_{d-1}$
 satisfying
@@ -551,7 +594,7 @@ of the interval.")
         (<p> "If $l_k=u_k$ for some $k$ then the interval is "(<i>'empty)"; if $d=0$ then the interval is "(<i>'zero-dimensional)".  So rather than mathematical objects, it is perhaps better to think of intervals as pairs of vectors $L$ and $U$ for which $L_k\\leq U_k$; $L$ or $U$ could be empty (hence $d=0$).")
         (<p> "Intervals are a data type distinct from other Scheme data types.")
 
-        (<h3> "Procedures")
+        (<h3> (<a> id: "intervalprocedures" "Procedures"))
         (format-lambda-list '(make-interval arg1 #!optional arg2))
         (<p> "Create a new interval. Assumes that "(<code> (<var>"arg1"))" and "(<code> (<var>"arg2"))" (if given) are vectors (of the same length) of exact integers.")
         (<p> "If "(<code> (<var>"arg2"))" is not given, then the entries of "(<code> (<var>"arg1"))", if any, must be nonnegative, and they are taken as the "(<code>(<var>"upper-bounds"))" of the interval, and  "(<code> (<var>"lower-bounds"))" is set to a vector of the same length with exact zero entries.")
@@ -887,10 +930,10 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
       (C (make-interval '#(0 0 1 2 3) '#(3 4 7 8 9))))
   (interval= (interval-cartesian-product A B) C))  ;; => #t"))
 
-(<h2> "Storage classes")
+(<h2> (<a> id: "Storage" "Storage classes"))
 (<p> "Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
 The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, to specify a default value for initial elements of the backing store, to recognize which data can be converted to a backing store of this storage class, and to convert data to a backing store of this storage class.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
-(<h3> "Procedures")
+(<h3> (<a> id: "storageprocedures" "Procedures"))
 
 (format-lambda-list '(make-storage-class getter setter checker maker copier length default data? data->body))
 (<p> "Here we assume the following relationships between the arguments of "(<code> 'make-storage-class)".  Assume that the \"elements\" of
@@ -938,7 +981,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
      (<code> 'storage-class-data->body)" returns "(<code>(<var> 'data->body))
      ".  Otherwise, it is an error to call any of these procedures.")
 
-(<h3> "Global Variables")
+(<h3> (<a> id: "storageglobals" "Global variables"))
 (format-global-variable 'generic-storage-class)
 (format-global-variable 'char-storage-class)
 (format-global-variable 's8-storage-class)
@@ -992,7 +1035,7 @@ manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 "(<code> "c"(<var> 'X)"-storage-class")" for "(<code>(<var> 'X))"= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively, 32- and 64-bit floating-point numbers as real and imaginary parts).")
 (<p> "Implementations with an appropriate homogeneous vector type should define the associated global variable using "(<code>'make-storage-class)".  Otherwise, they shall define the associated global variable to "(<code>'#f)".")
 
-(<h2> "Arrays")
+(<h2> (<a> id: "Arrays" "Arrays"))
 (<p> "Arrays are a data type distinct from other Scheme data types.")
 (<p> "In the examples we use a procedure "(<code>'array-unveil)" that lists the multi-indices and elements of an array in lexicographical order: ")
 (<pre>(<code>"(define (array-unveil A)
@@ -1020,7 +1063,7 @@ manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
  1 2 0 => (1 2 0)
  1 2 1 => (1 2 1)"))
 
-(<h3> "Parameters")
+(<h3> (<a> id: "parameters" "Parameters"))
 
 (format-parameter 'specialized-array-default-safe?)
 (<p> "A parameter as specified in "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")". Initially, "(<code> "(specialized-array-default-safe?)")" returns "(<code>'#f)". It is an error to call "(<code> "(specialized-array-default-safe? "(<var>'arg)")")" if "(<code>(<var>'arg))" is not a boolean.")
@@ -1028,7 +1071,7 @@ manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 (format-parameter 'specialized-array-default-mutable?)
 (<p> "A parameter as specified in "(<a> href: "https://srfi.schemers.org/srfi-39/" "SRFI 39")". Initially, "(<code> "(specialized-array-default-mutable?)")" returns "(<code>'#t)". It is an error to call "(<code> "(specialized-array-default-mutable? "(<var>'arg)")")" if "(<code>(<var>'arg))" is not a boolean.")
 
-(<h3> "Procedures")
+(<h3> (<a> id: "arrayprocedures" "Procedures"))
 
 (format-lambda-list '(make-array interval getter #\[ setter #\]))
 (<p> "Assume first that the optional argument "(<code>'setter)" is not given.")
@@ -3114,12 +3157,68 @@ A after assignment:
 ;;;    no major faults
 "))
 
-(<h2> "Implementation")
+(<h2> (<a> id: "Implementation" "Implementation"))
 (<p> "We provide a "(<a> href: (string-append "https://github.com/scheme-requests-for-implementation/srfi-" SRFI) "sample implementation")" in "(<a> href: "https://github.com/gambit/gambit" "Gambit Scheme")"; the nonstandard techniques used
 in the implementation are "(<code>"define-structure")", "(<code>"define-macro")", and DSSSL optional arguments.  The sample implementation open codes specialized versions of algorithms for intervals and arrays of dimension no greater than 4, but a simple implementation could employ only the general algorithms that are used for dimensions greater than 4.")
 (<p> "There is a "(<a> href: (string-append "https://github.com/scheme-requests-for-implementation/srfi-" SRFI) "git repository")" of this document, a sample implementation, a test file, and other materials.")
-(<h2> "Relationship to other array libraries")
-(<h3> "Other SRFIs")
+(<h2> (<a> id: "relationship" "Relationship to other array libraries"))
+
+(<h3> (<a> id: "NumPy" "NumPy arrays"))
+(<p> (<a> href: "https://numpy.org/doc/stable/" "NumPy")" has a popular "(<a> href: "https://numpy.org/doc/stable/reference/index.html" "array library")", upon which  "(<a> href: "https://pytorch.org/" "PyTorch")", a machine-learning tensor library, is built.")
+(<p> "We list some of the correspondences between the routines of this SRFI and the array routines of NumPy.  As we are in no way experienced NumPy programmers, we do not claim any level of completeness in this correspondence.")
+(<table>
+ border: 1
+ cellpadding: 10
+ cellspacing: 2
+ (<tr> (<th> "SRFI 231")
+       (<th> "NumPy"))
+ (<tr> (<td> "array-assign!")
+       (<td> "copyto"))
+ (<tr> (<td> "array-domain")
+       (<td> "shape"))
+ (<tr> (<td> "specialized-array-reshape")
+       (<td> "reshape"))
+ (<tr> (<td> "array-permute with index-first, index-last, index-rotate, index-swap")
+       (<td> "move-axis, transpose, swap-axes"))
+ (<tr> (<td> "array-tile")
+       (<td> "split, array-split, dsplit, hsplit, vsplit, array slicing notation"))
+ (<tr> (<td> "array-reverse")
+       (<td> "flip, fliplr, flipud"))
+ (<tr> (<td> "Combine array-reverse and array-permute")
+       (<td> "rot90"))
+ (<tr> (<td> "array-append")
+       (<td> "concatenate"))
+ (<tr> (<td> "array-stack, array-decurry")
+       (<td> "stack, vstack, hstack, dstack, column_stack, row_stack"))
+ (<tr> (<td> "array-block")
+       (<td> "block"))
+ (<tr> (<td> "array-map with array-copy, array-copy!, or array-assign!")
+       (<td> "Elementwise array operations"))
+ (<tr> (<td> "array-translate")
+       (<td> "No correspondence (array indices always start at 0)"))
+ (<tr> (<td> "array-sample")
+       (<td> "array slicing notation"))
+ (<tr> (<td> "array-extract")
+       (<td> "array slicing notation"))
+ (<tr> (<td> "array-copy and array-copy!")
+       (<td> "Use the copy method"))
+ (<tr> (<td> "array-reduce")
+       (<td> "Use the reduce method"))
+ (<tr> (<td> "array-outer-product")
+       (<td> "Use the outer method"))
+ (<tr> (<td> "Combine array-curry, array-permute, and array-map")
+       (<td> "Operations specifying the axes along which they will be performed"))
+ (<tr> (<td> "make-array and array-copy or array-copy!")
+       (<td> "fromfunction"))
+ (<tr> (<td> "make-specialized-array-from-data")
+       (<td> "frombuffer, fromstring"))
+ (<tr> (<td> "list->array, list*->array, vector->array, vector*->array")
+       (<td> "asarray, asanyarray"))
+ (<tr> (<td> "array->list*")
+       (<td> "tolist"))
+ )
+
+(<h3> (<a> id: "othersrfis" "Other SRFIs"))
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI
 specialized arrays.  Many of the procedures in these previous SRFIs  have corresponding forms in this SRFI.  For example, from "(<a> href: "https://srfi.schemers.org/srfi-63/" "SRFI 63")", we can
@@ -3142,7 +3241,7 @@ translate: ")
  )
 
 
-(<h3> "Racket's array library")
+(<h3> (<a> id: "Racket" "Racket's array library"))
 (<p> "Racket has an extensive "(<a> href: "https://docs.racket-lang.org/math/array.html" "array library")", written by Neil Toronto, as part of its \"Math Library\".  I do not claim to have a complete understanding of Racket's array library, but attempt here to  give a superficial comparison of some aspects of Racket's library with this proposal:")
 (<ul>
  (<li> "Racket's library has what it calls "(<a> href: "https://docs.racket-lang.org/math/array_broadcasting.html" "broadcasting")" and "(<a> href: "https://docs.racket-lang.org/math/array_slicing.html" "slicing")"; this proposal lacks these features as primitives.")
@@ -3166,7 +3265,7 @@ translate: ")
  (<li> "I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.")
  )
 
-(<h2> "Other examples")
+(<h2> (<a> id: "otherexamples" "Other examples"))
 (<p> "Image processing applications provided significant motivation for this SRFI.")
 (<p> (<b> "Manipulating images in PGM format. ")"On a system with eight-bit chars, one
 can write procedures to read and write greyscale images in the PGM format of the "(<a> href: "http://netpbm.sourceforge.net/" "Netpbm package")" as follows.  The  lexicographical
@@ -4051,9 +4150,9 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
 =>
 2
 "))
-(<h2> "Acknowledgments")
+(<h2> (<a> id: "Acknowledgments" "Acknowledgments"))
 (<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, Jens Axel Søgaard, and Marc Nieper-Wißkirchen for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.")
-(<h2> "References")
+(<h2> (<a> id: "References" "References"))
 (<ol>
  (<li> (<a> id: 'bawden href: "https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ" "\"multi-dimensional arrays in R5RS?\"")
        ", by Alan Bawden.")
@@ -4063,7 +4162,7 @@ The code uses "(<code>'array-map)", "(<code>'array-assign!)", "(<code>'specializ
  (<li> (<a> id: 'SRFI-58 href: "https://srfi.schemers.org/srfi-58/" "SRFI 58: Array Notation")", by Aubrey Jaffer.")
  (<li> (<a> id: 'SRFI-63 href: "https://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer.")
  (<li> (<a> id: 'SRFI-164 href: "https://srfi.schemers.org/srfi-164/" "SRFI 164: Enhanced multi-dimensional Arrays")", by Per Bothner."))
-(<h2> "Copyright")
+(<h2> (<a> id: "Copyright" "Copyright"))
 (<p> (<unprotected> "&copy;")" 2016, 2018, 2020, 2022 Bradley J Lucier. All Rights Reserved.")
 (<p> "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: ")
 (<p> "The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.")

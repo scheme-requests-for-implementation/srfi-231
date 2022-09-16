@@ -3421,25 +3421,73 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (index-rotate 2 -1)
       "index-rotate: The second argument is not a fixnum between 0 and the first argument (inclusive): ")
 
-;;; Minimal testing of index-*
+(test (index-swap 'a 'b 'c)
+      "index-swap: The first argument is not a positive fixnum: ")
 
-(test (index-first 5 3)
-      '#(3 0 1 2 4))
+(test (index-swap -1 'b 'c)
+      "index-swap: The first argument is not a positive fixnum: ")
 
-(test (index-last 5 3)
-       '#(0 1 2 4 3))
+(test (index-swap 1 'b 'c)
+      "index-swap: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
 
-(test (index-rotate 5 3)
-      '#(3 4 0 1 2))
+(test (index-swap 1 -1 'c)
+      "index-swap: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
 
-(test (index-rotate 0 0)
-      '#())
+(test (index-swap 1 1 'c)
+      "index-swap: The second argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
 
-(test (index-rotate 2 2)
-      '#(0 1))
+(test (index-swap 2 0 'c)
+      "index-swap: The third argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
 
-(test (index-rotate 6 6)
-      '#(0 1 2 3 4 5))
+(test (index-swap 2 0 -1)
+      "index-swap: The third argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+(test (index-swap 2 0 2)
+      "index-swap: The third argument is not a fixnum between 0 (inclusive) and the first argument (exclusive): ")
+
+;;; Testing index-*
+
+(define (my-index-first n k)
+  (let ((identity (iota n)))
+    (list->vector
+     (cons k (append (take identity k)
+                     (drop identity (+ k 1)))))))
+
+(define (my-index-last n k)
+  (let ((identity (iota n)))
+    (list->vector
+     (append (take identity k)
+             (drop identity (+ k 1))
+             (list k)))))
+
+(define (my-index-rotate n k)
+  (let ((identity (iota n)))
+    (list->vector
+     (append (drop identity k)
+             (take identity k)))))
+
+(define (my-index-swap n i j)
+  (let ((result (list->vector (iota n))))
+    (vector-set! result i j)
+    (vector-set! result j i)
+    result))
+
+(do ((n 0 (+ n 1)))
+    ((= n 6))
+  (do ((i 0 (+ i 1)))
+      ((= i n)
+       (test (index-rotate n i)
+             (my-index-rotate n i)))
+    (test (index-first n i)
+          (my-index-first n i))
+    (test (index-last n i)
+          (my-index-last n i))
+    (test (index-rotate n i)
+          (my-index-rotate n i))
+    (do ((j 0 (+ j 1)))
+        ((= j n))
+      (test (index-swap n i j)
+            (my-index-swap n i j)))))
 
 (pp "interval-permute and array-permute tests")
 

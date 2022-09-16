@@ -41,7 +41,53 @@
     <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of the cross product of intervals of exact integers $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called $d$-<i>intervals</i>, or more briefly <a href="https://en.wikipedia.org/w/index.php?title=Interval_(mathematics)&amp;oldid=1091935326"><i>intervals</i></a>, that encapsulates this notion. (We borrow this terminology from, e.g.,  Elias Zakon's <a href="http://www.trillia.com/zakon1.html">Basic Concepts of Mathematics</a>.) Specialized variants of arrays provide portable programs with efficient representations for common use cases.</p>
     <p>This is a revised version of <a href="https://srfi.schemers.org/srfi-179/">SRFI 179</a>.</p>
-    <h2>Rationale</h2>
+    <h2>Contents</h2>
+    <ul>
+      <li><a href="#Rationale">Rationale</a></li>
+      <li><a href="#Overview">Overview</a>
+        <ul>
+          <li><a href="#Introductory">Introductory remarks</a></li>
+          <li><a href="#Bawden">Bawden-style arrays</a></li>
+          <li><a href="#extension">Our extensions of Bawden-style arrays</a></li>
+          <li><a href="#transformations">Common transformations on Bawden-style arrays</a></li>
+          <li><a href="#generalized">Generalized arrays</a></li>
+          <li><a href="#sharing">Sharing generalized arrays</a></li>
+          <li><a href="#convention">Notational convention</a></li>
+        </ul></li>
+      <li><a href="#Notes">Notes</a></li>
+      <li><a href="#Specification">Specification</a></li>
+      <li><a href="#Preliminary">Preliminary notes</a></li>
+      <li><a href="#Miscellaneous">Miscellaneous procedures</a>
+        <ul>
+          <li><a href="#miscprocedures">Procedures</a></li>
+        </ul></li>
+      <li><a href="#Intervals">Intervals</a>
+        <ul>
+          <li><a href="#intervalprocedures">Procedures</a></li>
+        </ul></li>
+      <li><a href="#Storage">Storage classes</a>
+        <ul>
+          <li><a href="#storageprocedures">Procedures</a></li>
+          <li><a href="#storageglobals">Global variables</a></li>
+        </ul></li>
+      <li><a href="#Arrays">Arrays</a>
+        <ul>
+          <li><a href="#parameters">Parameters</a></li>
+          <li><a href="#arrayprocedures">Procedures</a></li>
+        </ul></li>
+      <li><a href="#Implementation">Implementation</a></li>
+      <li><a href="#relationship">Relationship to other array libraries</a>
+        <ul>
+          <li><a href="#NumPy">NumPy arrays</a></li>
+          <li><a href="#othersrfis">Other SRFIs</a></li>
+          <li><a href="#Racket">Racket's array library</a></li>
+        </ul></li>
+      <li><a href="#otherexamples">Other examples</a></li>
+      <li><a href="#Acknowledgments">Acknowledgments</a></li>
+      <li><a href="#References">References</a></li>
+      <li><a href="#Copyright">Copyright</a></li>
+    </ul>
+    <h2><a id="Rationale">Rationale</a></h2>
     <p>This SRFI was motivated by a number of somewhat independent notions, which we outline here and which are explained below.</p>
     <ul>
       <li>Provide a <b>general API</b> (Application Program Interface) that specifies the minimal required properties of any given array, without requiring any specific implementation strategy from the programmer for that array.</li>
@@ -60,7 +106,7 @@
       <li>The SRFI 179 procedures <code>array-fold</code> and <code>array-fold-right</code> have been replaced by <a href="#array-foldl"><code>array-foldl</code></a> and <a href="#array-foldr"><code>array-foldr</code></a>, which follow the definition of the left and right folds in <a href="https://ocaml.org/api/List.html">Ocaml</a> and <a href="https://wiki.haskell.org/Fold">Haskell</a>. The left folds of Ocaml and Haskell differ from the (left) fold of <a href="https://srfi.schemers.org/srfi-1/">SRFI 1</a>, so <code>array-foldl</code> from this SRFI has different semantics to <code>array-fold</code> from SRFI 179.</li>
       <li><code>array-assign!</code> now requires that the source and destination have the same domain. Use <code>specialized-array-reshape</code> on the destination array to mimic the SRFI 179 version.</li>
       <li>If the first argument to <code>array-copy</code> is a specialized array, then omitted arguments are taken from the argument array and do not default to <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>.  Thus, by default, <code>array-copy</code> makes a true copy of a specialized array.</li>
-      <li>Procedures that generate useful permutations have been added: <a href="#index-rotate"><code>index-rotate</code></a>, <a href="#index-first"><code>index-first</code></a>, and <a href="#index-last"><code>index-last</code></a>.</li>
+      <li>Procedures that generate useful permutations have been added: <a href="#index-rotate"><code>index-rotate</code></a>, <a href="#index-first"><code>index-first</code></a>, <a href="#index-last"><code>index-last</code></a>, and <a href="#index-swap"><code>index-swap</code></a>.</li>
       <li><code>interval-rotate</code> and <code>array-rotate</code> have been removed; use <code>(array-permute A (index-rotate (array-dimension A) k))</code> instead of <code>(array-rotate A k)</code>.</li>
       <li><code>array-tile</code> is now more flexible in how you can decompose an array.</li>
       <li><code>array-elements-in-order?</code> has been renamed <code>array-packed?</code>.</li>
@@ -70,8 +116,8 @@
       <li>The sample implementation now provides call/cc-safe implementations of all procedures whose names do not end with <code>!</code>.  We define new procedures <a href="#array-copy!"><code>array-copy!</code></a>, <a href="#array-stack!"><code>array-stack!</code></a>, <a href="#array-decurry!"><code>array-decurry!</code></a>, <a href="#array-append!"><code>array-append!</code></a>, and <a href="#array-block!"><code>array-block!</code></a>, which are not guaranteed to be call/cc-safe but which may be faster or use less memory than the corresponding call/cc-safe versions.  See further discussion, with our definition of &quot;call/cc-safe&quot;, in the notes below.</li>
       <li>A new set of &quot;Introductory remarks&quot; surveys some of the more important procedures in this SRFI.</li>
     </ul>
-    <h2>Overview</h2>
-    <h3>Introductory remarks</h3>
+    <h2><a id="Overview">Overview</a></h2>
+    <h3><a id="Introductory">Introductory remarks</a></h3>
     <p>The next few sections talk perhaps too much about the mathematical ideas that underpin many of the procedures in this SRFI, so I discuss here some of the procedures and compare them to operations on spreadsheets,  matrices, and imaging.</p>
     <p>There are two procedures that simply create new arrays:</p>
     <ul>
@@ -82,7 +128,7 @@
     <ul>
       <li><a href="#array-extract"><code>array-extract</code></a>: Constructs a rectangular &quot;window&quot; or &quot;view&quot; into an existing array, like a rectangular region of a spreadsheet, or a submatrix of a matrix.</li>
       <li><a href="#array-translate"><code>array-translate</code></a>: Slides an array around, like changing the zero-based indexing of C arrays to the 1-based indexing of Fortran arrays. If you wanted to compare two subimages of the same number of rows and columns of pixels, for example, you could use array-extract to select each of the subimages, and then use array-translate to overlay one on the other, i.e., to use the same indexing for both.</li>
-      <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures <code>index-rotate</code>, <code>index-first</code>,  and <code>index-last</code> create commonly used permutations.</li>
+      <li><a href="#array-permute"><code>array-permute</code></a>: Swaps rows, columns, sheets, etc., of the original array, like swapping rows and columns in a spreadsheet or transposing a matrix.  The auxiliary procedures <code>index-rotate</code>, <code>index-first</code>,  <code>index-last</code>, and <code>index-swap</code> create commonly used permutations.</li>
       <li><a href="#array-reverse"><code>array-reverse</code></a>: Reverses the order of rows or columns (or both) of a spreadsheet.  Like flipping an image vertically or horizontally.</li>
       <li><a href="#array-sample"><code>array-sample</code></a>: Accesses every second (or third, etc.) row or column, or both, of an array.</li>
     </ul>
@@ -114,28 +160,28 @@
       <li><a href="#array-rarrow-list*"><code>array-&gt;list*</code></a>, <a href="#list*-rarrow-array"><code>list*-&gt;array</code></a>, <a href="#array-rarrow-vector*"><code>array-&gt;vector*</code></a>, and <a href="#vector*-rarrow-array"><code>vector*-&gt;array</code></a>: Either transfer the elements of an array to a nested list or vector, or construct a specialized array from the elements of a nested list or vector.</li>
     </ul>
     <p>I hope this brief discussion gives a flavor for the design of this SRFI.</p>
-    <h3>Bawden-style arrays</h3>
+    <h3><a id="Bawden">Bawden-style arrays</a></h3>
     <p>In a <a href="https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>, as well as <code>make-array</code> and <code>make-shared-array</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$.  I'll note that his procedure <code>array-set!</code> puts the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a procedure <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a procedure from the interval $[l_0,u_0)\times\cdots\times [l_{d-1},u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden called the mapping specified in <code>make-shared-array</code> <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
     <p>Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\vec i$ for a multi-index $i_0,\ldots,i_{d-1}$. (Multi-indices correspond to Scheme <code>values</code>.)  Arrays will be denoted by capital letters $A,B,\ldots$, the domain of the array $A$ will be denoted by $D_A$, and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$, will be denoted by $I_A$.  Initially, Bawden constructs $I_A$ such that $I_A(\vec i)$ steps consecutively through the values $0,1,\ldots,N-1$ as $\vec i$ steps through the multi-indices $(l_0,\ldots,l_{d-2},l_{d-1})$, $(l_0,\ldots,l_{d-2},l_{d-1}+1)$, $\ldots$, $(l_0,\ldots,l_{d-2}+1,l_{d-1})$, etc., in lexicographical order, which means that if $\vec i$ and $\vec j$ are two multi-indices, then $\vec i&lt;\vec j$ if and only if the least coordinate $k$ where $\vec i$ and $\vec j$ differ satisfies $\vec i_k&lt;\vec j_k$.  This ordering of multi-indices is also known as <a href="https://en.wikipedia.org/w/index.php?title=Row-_and_column-major_order&amp;oldid=995330290">row-major order</a>, which is used in the programming language C to order the elements of multi-dimensional arrays.  In contrast, the programming language Fortran uses column-major order to order the elements of multi-dimensional arrays.</p>
     <p>In <code>make-shared-array</code>, Bawden allows you to specify a new $r$-dimensional interval $D_B$ as the domain of a new array $B$, and a mapping $T_{BA}:D_B\to D_A$ of the form $T_{BA}(\vec i)=M\vec i+\vec b$; here $M$ is a $d\times r$ matrix of integer values and $\vec b$ is a $d$-vector.  So this mapping $T_{BA}$ is <i>affine</i>, in that $T_{BA}(\vec i)-T_{BA}(\vec j)=M(\vec i-\vec j)$ is <i>linear</i> (in a linear algebra sense) in $\vec i-\vec j$.  The new indexer of $B$ satisfies $I_B(\vec i)=I_A(T_{BA}(\vec i))$.</p>
     <p>A fact Bawden exploits in the code, but doesn't point out in the short post, is that $I_B$ is again an affine map, and indeed, the composition of <i>any</i> two affine maps is again affine.</p>
-    <h3>Our extensions of Bawden-style arrays</h3>
+    <h3><a id="extension">Our extensions of Bawden-style arrays</a></h3>
     <p>We incorporate Bawden-style arrays into this SRFI, but extend them in one minor way that we find useful.</p>
     <p>We introduce the notion of a <i>storage class</i>, an object that contains procedures that manipulate, store, check, etc., different types of values. The <code>generic-storage-class</code> can manipulate any Scheme value, whereas, e.g., a <code>u1-storage-class</code> can store only the values 0 and 1 in each element of a body.</p>
     <p>We also require that our affine maps be one-to-one, so that if $\vec i\neq\vec j$ then $T(\vec i)\neq T(\vec j)$.  Without this property, modifying the $\vec i$th component of $A$ would cause the $\vec j$th component to change.</p>
-    <h3>Common transformations on Bawden-style arrays</h3>
+    <h3><a id="transformations">Common transformations on Bawden-style arrays</a></h3>
     <p>Requiring the transformations $T_{BA}:D_B\to D_A$ to be affine may seem  esoteric and restricting, but in fact many common and useful array transformations can be expressed in this way.  We give several examples below: </p>
     <ul>
       <li><b>Restricting the domain of an array: </b>  If the domain of $B$, $D_B$, is a subset of the domain of $A$, then $T_{BA}(\vec i)=\vec i$ is a one-to-one affine mapping.  We define <code>array-extract</code> to define this common operation; it's like looking at a rectangular sub-part of a spreadsheet. We use it to extract the common part of overlapping domains of three arrays in an image processing example below. </li>
       <li><b>Tiling an array: </b>For various reasons (parallel processing, optimizing cache localization, GPU programming, etc.), one may wish to process a large array as a number of subarrays of the same dimension.  We call this <i>tiling</i> the array.  The procedure <code>array-tile</code> returns a new array, each entry of which is a subarray extracted (in the sense of <code>array-extract</code>) from the input array.</li>
       <li><b>Translating the domain of an array: </b>If $\vec d$ is a vector of integers, then $T_{BA}(\vec i)=\vec i-\vec d$ is a one-to-one affine map of $D_B=\{\vec i+\vec d\mid \vec i\in D_A\}$ onto $D_A$. We call $D_B$ the <i>translate</i> of $D_A$, and we define <code>array-translate</code> to provide this operation.</li>
-      <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. Several procedures build commonly used permutations: <code>(index-rotate <var>n</var> <var>k</var>)</code> rotates <code><var>n</var></code> indices <code><var>k</var></code> places to the left; <code>(index-first <var>n</var> <var>k</var>)</code> moves the $k$th of $n$ indices to be the first index, leaving the others in order; and <code>(index-last <var>n</var> <var>k</var>)</code> moves the $k$th of $n$ indices to be the last index, again leaving the others in order.</li>
+      <li><b>Permuting the coordinates of an array: </b>If $\pi$ <a href="https://en.wikipedia.org/wiki/Permutation">permutes</a> the coordinates of a multi-index $\vec i$, and $\pi^{-1}$ is the inverse of $\pi$, then $T_{BA}(\vec i)=\pi (\vec i)$ is a one-to-one affine map from $D_B=\{\pi^{-1}(\vec i)\mid \vec i\in D_A\}$ onto $D_A$.  We provide <code>array-permute</code> for this operation. Several procedures build commonly used permutations: <code>(index-rotate <var>n</var> <var>k</var>)</code> rotates <code><var>n</var></code> indices <code><var>k</var></code> places to the left; <code>(index-first <var>n</var> <var>k</var>)</code> moves the $k$th of $n$ indices to be the first index, leaving the others in order;  <code>(index-last <var>n</var> <var>k</var>)</code> moves the $k$th of $n$ indices to be the last index, again leaving the others in order; <code>(index-swap <var>n i j</var>)</code> swaps the $i$th and $j$th of $n$ indices, again leaving the others in order.</li>
       <li><b>Currying an array: </b>Let's denote the cross product of two intervals $\text{Int}_1$ and $\text{Int}_2$ by $\text{Int}_1\times\text{Int}_2$; if $\vec j=(j_0,\ldots,j_{r-1})\in \text{Int}_1$ and $\vec i=(i_0,\ldots,i_{s-1})\in \text{Int}_2$, then $\vec j\times\vec i$, which we define to be $(j_0,\ldots,j_{r-1},i_0,\ldots,i_{s-1})$, is in $\text{Int}_1\times\text{Int}_2$. If $D_A=\text{Int}_1\times\text{Int}_2$ and $\vec j\in\text{Int}_1$, then $T_{BA}(\vec i)=\vec j\times\vec i$ is a one-to-one affine mapping from $D_B=\text{Int}_2$ into $D_A$.  For each vector $\vec j$ we can compute a new array in this way; we provide <code>array-curry</code> for this operation, which returns an array whose domain is $\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\text{Int}_2$. Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.</li>
       <li><b>Traversing some indices in a multi-index in reverse order: </b>Consider an array $A$ with domain $D_A=[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for &quot;flip?&quot;). Then define $T_{BA}:D_B\to D_A$ by $i_j\to i_j$ if $F_j$ is <code>#f</code> and $i_j\to u_j+l_j-1-i_j$ if  $F_j$ is <code>#t</code>. In other words,  we reverse the ordering of the $j$th coordinate of $\vec i$ if and only if $F_j$ is true. $T_{BA}$ is an affine mapping from $D_B\to D_A$, which defines a new array $B$, and we can provide <code>array-reverse</code> for this operation. Applying <code>array-reverse</code> to a two-dimensional spreadsheet might reverse the order of the rows or columns (or both).</li>
       <li><b>Uniformly sampling an array: </b>Assume that $A$ is an array with domain $[0,u_1)\times\cdots\times[0,u_{d-1})$ (i.e., an interval all of whose lower bounds are zero). We'll also assume the existence of vector $S$ of scale factors, which are positive exact integers. Let $D_B$ be a new interval with $j$th lower bound equal to zero and $j$th upper bound equal to $\operatorname{ceiling}(u_j/S_j)$ and let $T_{BA}(\vec i)_j=i_j\times S_j$, i.e., the $j$th coordinate is scaled by $S_j$.  ($D_B$ contains precisely those multi-indices that $T_{BA}$ maps into $D_A$.) Then $T_{BA}$ is an affine one-to-one mapping, and we provide <code>interval-scale</code> and <code>array-sample</code> for these operations.</li>
     </ul>
     <p>We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these procedures are in some sense &quot;convenience&quot; procedures.  Second, because the composition of any number of affine mappings is again affine, accessing or changing the elements of a restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. Examples are given below.</p>
-    <h3>Generalized arrays</h3>
+    <h3><a id="generalized">Generalized arrays</a></h3>
     <p>Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\ldots,i_{d-1})$ of exact integers
       in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$, $l_k&lt;u_k$ — the <i>domain</i> of the array — to Scheme objects.
       Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.</p>
@@ -148,15 +194,15 @@
     <p>In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
       they may have hash tables or databases behind an implementation, or may read the values from a file, etc.</p>
     <p>In this SRFI, Bawden-style arrays are called <i>specialized</i>. A specialized array may be either mutable or immutable.</p>
-    <h3>Sharing generalized arrays</h3>
+    <h3><a id="sharing">Sharing generalized arrays</a></h3>
     <p>Even if an array $A$ is not a specialized array, it could be &quot;shared&quot; by specifying a new interval $D_B$ as the domain of a new array $B$ and an affine map $T_{BA}:D_B\to D_A$.  Each call to $B$ would then be computed as $B(\vec i)=A(T_{BA}(\vec i))$.</p>
     <p>One could again &quot;share&quot; $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\to D_B$, and then each access $C(\vec i)=A(T_{BA}(T_{CB}(\vec i)))$.  The composition $T_{BA}\circ T_{CB}:D_C\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\to D_A$, and $C(\vec i)=A(T_{CA}(\vec i))$ could be computed with the overhead of computing a single affine transformation.</p>
     <p>So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the procedure <code>specialized-array-share</code>, not a more general <code>array-share</code>.</p>
     <p>Certain ways of sharing generalized arrays, however, are relatively easy to code and are not expensive.  If we denote <code>(array-getter <var>A</var>)</code> by <code><var>A_</var></code>, then if <code><var>B</var></code> is the result of <code>array-extract</code> applied to <code><var>A</var></code>, then <code>(array-getter <var>B</var>)</code> is simply <code><var>A_</var></code>.  Similarly, if <code><var>A</var></code> is a two-dimensional array, and <code><var>B</var></code> is derived from <code><var>A</var></code> by applying the permutation $\pi((i,j))=(j,i)$, then <code>(array-getter <var>B</var>)</code> is <code>(lambda (i j) (<var>A_</var> j i))</code>.  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from <code><var>A_</var></code>, at least for arrays of small dimension.</p>
     <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific procedures <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>,  <code>array-curry</code>,  <code>array-reverse</code>, <code>array-tile</code>, and <code>array-sample</code>,  and we provide relatively efficient implementations of these procedures for arrays of dimension no greater than four.</p>
-    <h3>Notational convention</h3>
+    <h3><a id="convention">Notational convention</a></h3>
     <p>If <code><var>A</var></code> is an array, then we generally define <code><var>A_</var></code> to be <code>(array-getter <var>A</var>)</code> and  <code><var>A!</var></code> to be <code>(array-setter <var>A</var>)</code>.  The latter notation is motivated by the general Scheme convention that the names of procedures that modify the contents of data structures end in <code><var>!</var></code>, while the notation for the getter of an array is motivated by the TeX notation for subscripts.  See particularly the <a href="#Haar">Haar transform</a> example.</p>
-    <h2>Notes</h2>
+    <h2><a id="Notes">Notes</a></h2>
     <ul>
       <li><b>Empty and zero-dimensional arrays: </b>The vectors of upper and lower bounds of an interval can have zero elements, in which case the zero-dimensional interval itself has no elements, but zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme <code>box</code>.  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.</li>
       <li><b>This SRFI and <code>call-with-current-continuation</code>: </b>The Scheme procedure <code>call-with-current-continuation</code> captures and encapsulates as a procedure the continuation of the current computation, which, perforce, includes a certain amount of state that consists of the values of captured variables at the point the continuation is captured. This captured procedure can be invoked multiple times, as any procedure can.
@@ -173,14 +219,15 @@
       <li><b>Choice of procedures on intervals. </b>The choice of procedures for both arrays and intervals was motivated almost solely by what I needed for arrays.</li>
       <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would be a compatible extension of this SRFI.</li>
     </ul>
-    <h2>Specification</h2>
+    <h2><a id="Specification">Specification</a></h2>
     <dl>
       <dt>Miscellaneous Procedures</dt>
       <dd><a href="#translation?">translation?</a>,
         <a href="#permutation?">permutation?</a>,
         <a href="#index-rotate">index-rotate</a>,
         <a href="#index-first">index-first</a>,
-        <a href="#index-last">index-last</a>.</dd>
+        <a href="#index-last">index-last</a>,
+        <a href="#index-swap">index-swap</a>.</dd>
       <dt>Intervals</dt>
       <dd><a href="#make-interval">make-interval</a>,
         <a href="#interval?">interval?</a>,
@@ -296,14 +343,14 @@
         <a href="#array-ref">array-ref</a>,
         <a href="#array-set!">array-set!</a>,
         <a href="#specialized-array-reshape">specialized-array-reshape</a>.</dd></dl>
-    <h2>Preliminary notes</h2>
+    <h2><a id="Preliminary">Preliminary notes</a></h2>
     <p>We use <code>take</code> and <code>drop</code> from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a> to define various procedures.</p>
-    <h2>Miscellaneous Procedures</h2>
+    <h2><a id="Miscellaneous">Miscellaneous procedures</a></h2>
     <p>This document refers to <i>translations</i> and <i>permutations</i>.
        A translation is a vector of exact integers.  A permutation of dimension $n$
       is a vector whose entries are the exact integers $0,1,\ldots,n-1$, each occurring once, in any order.
       We provide three procedures that return useful permutations.</p>
-    <h3>Procedures</h3>
+    <h3><a id="miscprocedures">Procedures</a></h3>
     <p><b>Procedure: </b><code><a id="translation?">translation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a translation, and <code>#f</code> otherwise.</p>
     <p><b>Procedure: </b><code><a id="permutation?">permutation?</a> <var>object</var></code></p>
@@ -331,7 +378,10 @@
                           (drop identity-permutation (fx+ k 1))
                           (list k)))))</code></pre>
     <p>For example, <code>(index-last 5 3)</code> returns <code>'#(0 1 2 4 3)</code>. It is an error if the arguments do not satisfy these conditions.</p>
-    <h2>Intervals</h2>
+    <p><b>Procedure: </b><code><a id="index-swap">index-swap</a> <var>n</var> <var>i</var> <var>j</var></code></p>
+    <p>Assumes that <code><var>n</var></code> is a positive exact integer and that <code><var>i</var></code> and <code><var>j</var></code> are exact integers between 0 (inclusive) and <code><var>n</var></code> (exclusive). Returns a permuation of length <code><var>n</var></code> that swaps index <code><var>i</var></code> and index <code><var>j</var></code> and leaves the other indices in order.</p>
+    <p>For example, <code>(index-swap 5 3 0)</code> returns <code>#(3 1 2 0 4)</code>. It is an error if the arguments do not satisfy these assumptions.</p>
+    <h2><a id="Intervals">Intervals</a></h2>
     <p>An interval represents the set of all multi-indices of exact integers
       $i_0,\ldots,i_{d-1}$
       satisfying
@@ -344,7 +394,7 @@
       of the interval.</p>
     <p>If $l_k=u_k$ for some $k$ then the interval is <i>empty</i>; if $d=0$ then the interval is <i>zero-dimensional</i>.  So rather than mathematical objects, it is perhaps better to think of intervals as pairs of vectors $L$ and $U$ for which $L_k\leq U_k$; $L$ or $U$ could be empty (hence $d=0$).</p>
     <p>Intervals are a data type distinct from other Scheme data types.</p>
-    <h3>Procedures</h3>
+    <h3><a id="intervalprocedures">Procedures</a></h3>
     <p><b>Procedure: </b><code><a id="make-interval">make-interval</a> <var>arg1</var> #!optional <var>arg2</var></code></p>
     <p>Create a new interval. Assumes that <code><var>arg1</var></code> and <code><var>arg2</var></code> (if given) are vectors (of the same length) of exact integers.</p>
     <p>If <code><var>arg2</var></code> is not given, then the entries of <code><var>arg1</var></code>, if any, must be nonnegative, and they are taken as the <code><var>upper-bounds</var></code> of the interval, and  <code><var>lower-bounds</var></code> is set to a vector of the same length with exact zero entries.</p>
@@ -655,10 +705,10 @@
       (B (make-interval '#(1 2 3) '#(7 8 9)))
       (C (make-interval '#(0 0 1 2 3) '#(3 4 7 8 9))))
   (interval= (interval-cartesian-product A B) C))  ;; =&gt; #t</code></pre>
-    <h2>Storage classes</h2>
+    <h2><a id="Storage">Storage classes</a></h2>
     <p>Conceptually, a storage-class is a set of procedures to manage the backing store of a specialized array.
       The procedures allow one to make a backing store, to get values from the store, to set new values, to return the length of the store, to specify a default value for initial elements of the backing store, to recognize which data can be converted to a backing store of this storage class, and to convert data to a backing store of this storage class.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.</p>
-    <h3>Procedures</h3>
+    <h3><a id="storageprocedures">Procedures</a></h3>
     <p><b>Procedure: </b><code><a id="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>copier</var> <var>length</var> <var>default</var> <var>data?</var> <var>data-&gt;body</var></code></p>
     <p>Here we assume the following relationships between the arguments of <code>make-storage-class</code>.  Assume that the &quot;elements&quot; of
       the backing store are of some &quot;type&quot;, either heterogeneous (all Scheme types) or homogeneous (of some restricted type).</p>
@@ -687,7 +737,7 @@
     <blockquote><code>(make-storage-class <var>getter setter checker maker copier length default data? data-&gt;body</var>)</code>
     </blockquote>
     <p>Then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, <code>storage-class-copier</code> returns <code><var>copier</var></code>, <code>storage-class-length</code> returns <code><var>length</var></code>,  <code>storage-class-default</code> returns <code><var>default</var></code>, <code>storage-class-data?</code> returns <code><var>data?</var></code>, and <code>storage-class-data-&gt;body</code> returns <code><var>data-&gt;body</var></code>.  Otherwise, it is an error to call any of these procedures.</p>
-    <h3>Global Variables</h3>
+    <h3><a id="storageglobals">Global variables</a></h3>
     <p><b>Variable: </b><code><a id="generic-storage-class">generic-storage-class</a></code></p>
     <p><b>Variable: </b><code><a id="char-storage-class">char-storage-class</a></code></p>
     <p><b>Variable: </b><code><a id="s8-storage-class">s8-storage-class</a></code></p>
@@ -735,7 +785,7 @@
       <code>f<var>X</var>-storage-class</code> for <code><var>X</var></code>= 8, 16, 32, and 64 (which have default value 0.0 and manipulate 8-, 16-, 32-, and 64-bit floating-point numbers), and
       <code>c<var>X</var>-storage-class</code> for <code><var>X</var></code>= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively, 32- and 64-bit floating-point numbers as real and imaginary parts).</p>
     <p>Implementations with an appropriate homogeneous vector type should define the associated global variable using <code>make-storage-class</code>.  Otherwise, they shall define the associated global variable to <code>#f</code>.</p>
-    <h2>Arrays</h2>
+    <h2><a id="Arrays">Arrays</a></h2>
     <p>Arrays are a data type distinct from other Scheme data types.</p>
     <p>In the examples we use a procedure <code>array-unveil</code> that lists the multi-indices and elements of an array in lexicographical order: </p>
     <pre><code>(define (array-unveil A)
@@ -764,12 +814,12 @@
  1 1 1 =&gt; (1 1 1)
  1 2 0 =&gt; (1 2 0)
  1 2 1 =&gt; (1 2 1)</code></pre>
-    <h3>Parameters</h3>
+    <h3><a id="parameters">Parameters</a></h3>
     <p><b>Parameter: </b><code><a id="specialized-array-default-safe?">specialized-array-default-safe?</a></code></p>
     <p>A parameter as specified in <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a>. Initially, <code>(specialized-array-default-safe?)</code> returns <code>#f</code>. It is an error to call <code>(specialized-array-default-safe? <var>arg</var>)</code> if <code><var>arg</var></code> is not a boolean.</p>
     <p><b>Parameter: </b><code><a id="specialized-array-default-mutable?">specialized-array-default-mutable?</a></code></p>
     <p>A parameter as specified in <a href="https://srfi.schemers.org/srfi-39/">SRFI 39</a>. Initially, <code>(specialized-array-default-mutable?)</code> returns <code>#t</code>. It is an error to call <code>(specialized-array-default-mutable? <var>arg</var>)</code> if <code><var>arg</var></code> is not a boolean.</p>
-    <h3>Procedures</h3>
+    <h3><a id="arrayprocedures">Procedures</a></h3>
     <p><b>Procedure: </b><code><a id="make-array">make-array</a> <var>interval</var> <var>getter</var> [ <var>setter</var> ]</code></p>
     <p>Assume first that the optional argument <code>setter</code> is not given.</p>
     <p>If <code><var>interval</var></code> is an interval and <code><var>getter</var></code> is a procedure from
@@ -2632,12 +2682,86 @@ A after assignment:
 ;;;    no minor faults
 ;;;    no major faults
 </code></pre>
-    <h2>Implementation</h2>
+    <h2><a id="Implementation">Implementation</a></h2>
     <p>We provide a <a href="https://github.com/scheme-requests-for-implementation/srfi-231">sample implementation</a> in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
       in the implementation are <code>define-structure</code>, <code>define-macro</code>, and DSSSL optional arguments.  The sample implementation open codes specialized versions of algorithms for intervals and arrays of dimension no greater than 4, but a simple implementation could employ only the general algorithms that are used for dimensions greater than 4.</p>
     <p>There is a <a href="https://github.com/scheme-requests-for-implementation/srfi-231">git repository</a> of this document, a sample implementation, a test file, and other materials.</p>
-    <h2>Relationship to other array libraries</h2>
-    <h3>Other SRFIs</h3>
+    <h2><a id="relationship">Relationship to other array libraries</a></h2>
+    <h3><a id="NumPy">NumPy arrays</a></h3>
+    <p><a href="https://numpy.org/doc/stable/">NumPy</a> has a popular <a href="https://numpy.org/doc/stable/reference/index.html">array library</a>, upon which  <a href="https://pytorch.org/">PyTorch</a>, a machine-learning tensor library, is built.</p>
+    <p>We list some of the correspondences between the routines of this SRFI and the array routines of NumPy.  As we are in no way experienced NumPy programmers, we do not claim any level of completeness in this correspondence.</p>
+    <table cellspacing="2" cellpadding="10" border="1">
+      <tr>
+        <th>SRFI 231</th>
+        <th>NumPy</th></tr>
+      <tr>
+        <td>array-assign!</td>
+        <td>copyto</td></tr>
+      <tr>
+        <td>array-domain</td>
+        <td>shape</td></tr>
+      <tr>
+        <td>specialized-array-reshape</td>
+        <td>reshape</td></tr>
+      <tr>
+        <td>array-permute with index-first, index-last, index-rotate, index-swap</td>
+        <td>move-axis, transpose, swap-axes</td></tr>
+      <tr>
+        <td>array-tile</td>
+        <td>split, array-split, dsplit, hsplit, vsplit, array slicing notation</td></tr>
+      <tr>
+        <td>array-reverse</td>
+        <td>flip, fliplr, flipud</td></tr>
+      <tr>
+        <td>Combine array-reverse and array-permute</td>
+        <td>rot90</td></tr>
+      <tr>
+        <td>array-append</td>
+        <td>concatenate</td></tr>
+      <tr>
+        <td>array-stack, array-decurry</td>
+        <td>stack, vstack, hstack, dstack, column_stack, row_stack</td></tr>
+      <tr>
+        <td>array-block</td>
+        <td>block</td></tr>
+      <tr>
+        <td>array-map with array-copy, array-copy!, or array-assign!</td>
+        <td>Elementwise array operations</td></tr>
+      <tr>
+        <td>array-translate</td>
+        <td>No correspondence (array indices always start at 0)</td></tr>
+      <tr>
+        <td>array-sample</td>
+        <td>array slicing notation</td></tr>
+      <tr>
+        <td>array-extract</td>
+        <td>array slicing notation</td></tr>
+      <tr>
+        <td>array-copy and array-copy!</td>
+        <td>Use the copy method</td></tr>
+      <tr>
+        <td>array-reduce</td>
+        <td>Use the reduce method</td></tr>
+      <tr>
+        <td>array-outer-product</td>
+        <td>Use the outer method</td></tr>
+      <tr>
+        <td>Combine array-curry, array-permute, and array-map</td>
+        <td>Operations specifying the axes along which they will be performed</td></tr>
+      <tr>
+        <td>make-array and array-copy or array-copy!</td>
+        <td>fromfunction</td></tr>
+      <tr>
+        <td>make-specialized-array-from-data</td>
+        <td>frombuffer, fromstring</td></tr>
+      <tr>
+        <td>list-&gt;array, list*-&gt;array, vector-&gt;array, vector*-&gt;array</td>
+        <td>asarray, asanyarray</td></tr>
+      <tr>
+        <td>array-&gt;list*</td>
+        <td>tolist</td></tr>
+    </table>
+    <h3><a id="othersrfis">Other SRFIs</a></h3>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
       specialized arrays.  Many of the procedures in these previous SRFIs  have corresponding forms in this SRFI.  For example, from <a href="https://srfi.schemers.org/srfi-63/">SRFI 63</a>, we can
@@ -2657,7 +2781,7 @@ A after assignment:
       <dd><code>(let ((A_ (array-getter A))) ... (A_ k1 ...) ... )</code> or <code>(array-ref A k1 ...)</code></dd>
       <dt><code>(array-set! A object k1 ...)</code></dt>
       <dd><code>(let ((A! (array-setter A))) ... (A! object k1 ...) ...)</code> or <code>(array-set! A object k1 ...)</code></dd></dl>
-    <h3>Racket's array library</h3>
+    <h3><a id="Racket">Racket's array library</a></h3>
     <p>Racket has an extensive <a href="https://docs.racket-lang.org/math/array.html">array library</a>, written by Neil Toronto, as part of its &quot;Math Library&quot;.  I do not claim to have a complete understanding of Racket's array library, but attempt here to  give a superficial comparison of some aspects of Racket's library with this proposal:</p>
     <ul>
       <li>Racket's library has what it calls <a href="https://docs.racket-lang.org/math/array_broadcasting.html">broadcasting</a> and <a href="https://docs.racket-lang.org/math/array_slicing.html">slicing</a>; this proposal lacks these features as primitives.</li>
@@ -2678,7 +2802,7 @@ A after assignment:
       <li>I don't see procedures in Racket's library corresponding to <code>array-curry</code>, <code>array-decurry</code>, <code>array-tile</code>, <code>array-block</code>, <code>array-reverse</code>, or <code>array-sample</code>.</li>
       <li>I don't see a procedure in Racket's library that corresponds to specialized-array-share in this SRFI.</li>
     </ul>
-    <h2>Other examples</h2>
+    <h2><a id="otherexamples">Other examples</a></h2>
     <p>Image processing applications provided significant motivation for this SRFI.</p>
     <p><b>Manipulating images in PGM format. </b>On a system with eight-bit chars, one
       can write procedures to read and write greyscale images in the PGM format of the <a href="http://netpbm.sourceforge.net/">Netpbm package</a> as follows.  The  lexicographical
@@ -3522,9 +3646,9 @@ Reconstructed image:
 =&gt;
 2
 </code></pre>
-    <h2>Acknowledgments</h2>
+    <h2><a id="Acknowledgments">Acknowledgments</a></h2>
     <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, Jens Axel S&#248;gaard, and Marc Nieper-Wi&#223;kirchen for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.</p>
-    <h2>References</h2>
+    <h2><a id="References">References</a></h2>
     <ol>
       <li><a id="bawden" href="https://groups.google.com/g/comp.lang.scheme/c/7nkx58Kv6RI/m/a5hdsduFL2wJ">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
       <li><a id="SRFI-4" href="https://srfi.schemers.org/srfi-4/">SRFI 4:  Homogeneous Numeric Vector Datatypes</a>, by Marc Feeley.</li>
@@ -3534,7 +3658,7 @@ Reconstructed image:
       <li><a id="SRFI-63" href="https://srfi.schemers.org/srfi-63/">SRFI 63: Homogeneous and Heterogeneous Arrays</a>, by Aubrey Jaffer.</li>
       <li><a id="SRFI-164" href="https://srfi.schemers.org/srfi-164/">SRFI 164: Enhanced multi-dimensional Arrays</a>, by Per Bothner.</li>
     </ol>
-    <h2>Copyright</h2>
+    <h2><a id="Copyright">Copyright</a></h2>
     <p>&copy; 2016, 2018, 2020, 2022 Bradley J Lucier. All Rights Reserved.</p>
     <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: </p>
     <p>The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.</p>
