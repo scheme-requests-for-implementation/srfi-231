@@ -1200,6 +1200,7 @@ indexer:       (lambda multi-index
     <p>If <code><var>array</var></code> is a specialized array, then if any of <code><var>storage-class</var></code>, <code><var>mutable?</var></code>, <code><var>safe?</var></code> are omitted,  their values are assigned <code>(array-storage-class <var>array</var>)</code>, <code>(mutable-array? <var>array</var>)</code>, and <code>(array-safe? <var>array</var>)</code>, respectively.</p>
     <p>Otherwise, omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
+    <p><b>Example: </b> The <a href="#PGM">example of reading PGM files</a> exploits the fact that <code>array-&gt;list</code>, and hence <code>array-copy</code> and <code>array-copy!</code>, evaluates an array's getter in lexicographical order.</p>
     <p><b>Example: </b></p>
     <pre><code>(let* ((A (make-array (make-interval '#(2 2)) list))
        (B (array-copy A)))
@@ -2845,7 +2846,7 @@ A after assignment:
     </ul>
     <h2><a id="otherexamples">Other examples</a></h2>
     <p>Image processing applications provided significant motivation for this SRFI.</p>
-    <p><b>Manipulating images in PGM format. </b>On a system with eight-bit chars, one
+    <p><a id="PGM"><b>Manipulating images in PGM format. </b></a>On a system with eight-bit chars, one
       can write procedures to read and write greyscale images in the PGM format of the <a href="http://netpbm.sourceforge.net/">Netpbm package</a> as follows.  The  lexicographical
       order in <code>array-copy</code> guarantees the the correct order of execution of the input procedures:</p>
     <pre><code>(define make-pgm   cons)

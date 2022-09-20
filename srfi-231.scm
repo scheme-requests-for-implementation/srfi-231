@@ -1513,6 +1513,7 @@ indexer:       (lambda multi-index
 (<p> "If "(<code>(<var>'array))" is a specialized array, then if any of "(<code>(<var>'storage-class))", "(<code>(<var>'mutable?))", "(<code>(<var>'safe?))" are omitted,  their values are assigned "(<code>"(array-storage-class "(<var>'array)")")", "(<code>"(mutable-array? "(<var>'array)")")", and "(<code>"(array-safe? "(<var>'array)")")", respectively.")
 (<p> "Otherwise, omitted arguments are assigned the values "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")", respectively.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
+(<p>(<b> "Example: ")" The "(<a> href: "#PGM" "example of reading PGM files")" exploits the fact that "(<code>'array->list)", and hence "(<code>'array-copy)" and "(<code>'array-copy!)", evaluates an array's getter in lexicographical order.")
 (<p>(<b> "Example: "))(<pre>(<code>"(let* ((A (make-array (make-interval '#(2 2)) list))
        (B (array-copy A)))
   (display (specialized-array? A)) (newline)
@@ -3304,7 +3305,7 @@ translate: ")
 
 (<h2> (<a> id: "otherexamples" "Other examples"))
 (<p> "Image processing applications provided significant motivation for this SRFI.")
-(<p> (<b> "Manipulating images in PGM format. ")"On a system with eight-bit chars, one
+(<p> (<a> id: "PGM" (<b> "Manipulating images in PGM format. "))"On a system with eight-bit chars, one
 can write procedures to read and write greyscale images in the PGM format of the "(<a> href: "http://netpbm.sourceforge.net/" "Netpbm package")" as follows.  The  lexicographical
 order in "(<code>'array-copy)" guarantees the the correct order of execution of the input procedures:")
 
