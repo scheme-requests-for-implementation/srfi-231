@@ -587,9 +587,48 @@
 2 1 =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="interval-foldl">interval-foldl</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
     <p><b>Procedure: </b><code><a id="interval-foldr">interval-foldr</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
-    <p>These procedures assume that <code><var>f</var></code> is a procedure whose domain includes elements of <code><var>interval</var></code>, that <code><var>operator</var></code> is a procedure of two arguments, and that <code><var>interval</var></code> is an interval.</p>
-    <p>They return <code>(array-foldl <var> operator identity </var>(make-array <var>f interval</var>))</code> and <code>(array-foldr <var> operator identity </var>(make-array <var>f interval</var>))</code>, respectively.</p>
-    <p>Please see the examples for <a href="#array-foldl"><code>array-foldl</code></a> and <a href="#array-foldr"><code>array-foldr</code></a>.</p>
+    <p>These  procedures are analogous to the left and right folds of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
+    <pre><code>(define (foldl operator identity lst)
+  (if (null? lst)
+      identity
+      (foldl operator (operator identity (car lst)) (cdr lst))))
+
+(define (foldr operator identity lst)
+  (if (null? lst)
+      identity
+      (operator (car lst) (foldr operator identity (cdr lst)))))</code></pre>
+    <p>These procedures  assume that <code><var>f</var></code> is a procedure whose domain includes elements of <code><var>interval</var></code>, that <code><var>operator</var></code> is a procedure of two arguments, and that <code><var>interval</var></code> is an interval.</p>
+    <p>If <code><var>interval</var></code> is empty, these procedures return <code><var>identity</var></code>.  If <code><var>interval</var></code> is zero-dimensional, then <code>interval-foldl</code> returns <code>(<var>operator</var> <var>identity</var> (<var>f</var>))</code> and <code>interval-foldr</code> returns <code>(<var>operator</var> (<var>f</var>) <var>identity</var>)</code>.</p>
+    <p>Otherwise, assume that there is a procedure <code>(next-multi-index multi-index interval)</code> which, given an interval and a list representing a multi-index in that interval, returns either a list representing the next valid multi-index in the interval, or, <code>#f</code> if no such multi-index exists.</p>
+    <p>Then these procedures can be defined as</p>
+    <pre><code>(define (interval-foldl f operator identity interval)
+  (cond ((interval-empty? interval)
+         identity)
+        ((zero? (interval-dimension interval))
+         (operator identity (f)))
+        (else
+         (let loop ((result identity)
+                    (multi-index (interval-lower-bounds-&gt;list interval)))
+           (let* ((item (apply f multi-index))
+                  (new-result (operator result item))
+                  (next (next-multi-index multi-index interval)))
+             (if next
+                 (loop new-result next)
+                 new-result))))))
+
+(define (interval-foldr f operator identity interval)
+  (cond ((interval-empty? interval)
+         identity)
+        ((zero? (interval-dimension interval))
+         (operator (f) identity))
+        (else
+         (let loop ((multi-index (interval-lower-bounds-&gt;list interval)))
+           (if multi-index
+               (let* ((item (apply f multi-index))
+                      (tail-result (loop (next-multi-index multi-index interval))))
+                 (operator item tail-result))
+               identity)))))</code></pre>
+    <p>Note that <code>interval-foldl</code> alternates evaluations of <code><var>f</var></code> and <code><var>operator</var></code>, while <code>interval-foldr</code> evaluates <code><var>f</var></code> at all multi-indices before applying <code><var>operator</var></code> to any arguments.</p>
     <p>It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Example: </b>One can compute the <a href="https://en.wikipedia.org/w/index.php?title=Sieve_of_Eratosthenes&amp;oldid=1101704798">Sieve of Eratosthenes</a> with </p>
     <pre><code>(define (eratosthenes n)
@@ -1801,14 +1840,24 @@ B:
 3
 4</code></pre>
     <p><b>Procedure: </b><code><a id="array-foldl">array-foldl</a> <var>operator</var> <var>identity</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
-    <pre><code>(define (foldl operator identity  . lsts)
-  (if (null? (car lsts))
-      id
-      (apply foldl operator (apply operator identity (map car lsts)) (map cdr lsts))))</code></pre>
-    <p>Then conceptually <code>(array-foldl operator identity array . arrays)</code> returns </p>
-    <pre><code>(apply foldl operator identity (array-&gt;list (apply array-map list array arrays)))</code></pre>
-    <p>It is an error if <code>(cons <var>array arrays</var>)</code> is not a list of arrays with the same domains, or if <code><var>operator</var></code> is not a procedure.</p>
+    <p><b>Procedure: </b><code><a id="array-foldr">array-foldr</a> <var>operator</var> <var>identity</var> <var>array</var> . <var>arrays</var></code></p>
+    <p>These procedures assume that <code><var>operator</var></code> is a procedure and <code>(cons <var>array arrays</var>)</code> is a list of arrays all with the same domain.</p>
+    <p>These procedures can be defined as:</p>
+    <pre><code>(define (array-foldl operator identity array . arrays)
+  (interval-foldl (array-getter (apply array-map list array arrays))
+                  (lambda (identity array-elements)
+                    (apply operator identity array-elements))
+                  identity
+                  (array-domain array)))
+
+(define (array-foldr operator identity array . arrays)
+  (interval-foldr (array-getter (apply array-map list array arrays))
+                  (lambda (array-elements identity)
+                    (apply operator (append array-elements (list identity))))
+                  identity
+                  (array-domain array)))</code></pre>
+    <p>See the notes for <code>interval-foldl</code> and <code>interval-foldr</code>.</p>
+    <p>It is an error if the arguments do not satisfy these assumptions.</p>
     <p><b>Note: </b> One can fold over empty arrays, which returns <code><var>identity</var></code>, but it is an error to call <code>array-reduce</code> on an empty array, because <code>array-reduce</code> must evaluate at least one element of the argument array.</p>
     <p><b>Example: </b> One can define an APL-style <code>array-depth</code> by:</p>
     <pre><code>(define (array-depth a)
@@ -1822,15 +1871,6 @@ B:
                (array-foldl op id a))
              (array-curry a dims)))</code></pre>
     <p>which folds over only the <code>dims</code> rightmost dimensions and returns an array of results.  (Note that this works even if <code>dims</code> is <code>(array-dimension array)</code>, in which case the result is a zero-dimensional array containing the left fold of the entire array.)</p>
-    <p><b>Procedure: </b><code><a id="array-foldr">array-foldr</a> <var>operator</var> <var>identity</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>This procedure is analogous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:</p>
-    <pre><code>(define (foldr operator identity . lsts)
-  (if (null? (car lsts))
-      id
-      (apply fold operator (apply operator (append (map car lsts) (list identity))) (map cdr lsts))))</code></pre>
-    <p>Then conceptually <code>(array-foldr operator identity array . arrays)</code> returns </p>
-    <pre><code>(apply foldr operator identity (array-&gt;list (apply array-map list array arrays)))</code></pre>
-    <p>It is an error if <code>(cons <var>array arrays</var>)</code> is not a list of arrays with the same domain, or if <code><var>operator</var></code> is not a procedure.</p>
     <p><b>Example: </b>If <code><var>op</var></code> is associative with two-sided identity <code><var>id</var></code>, then <code>array-foldl</code> and <code>array-foldr</code> return the same results, but see:</p>
     <pre><code>(define a (make-array (make-interval '#(10)) (lambda (i) i)))
 (array-foldl cons '() a)

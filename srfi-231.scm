@@ -804,9 +804,50 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
 
         (format-lambda-list '(interval-foldl f operator identity interval))
         (format-lambda-list '(interval-foldr f operator identity interval))
-        (<p> "These procedures assume that "(<code>(<var>'f))" is a procedure whose domain includes elements of "(<code>(<var>'interval))", that "(<code>(<var>'operator))" is a procedure of two arguments, and that "(<code>(<var>'interval))" is an interval.")
-        (<p> "They return "(<code>"(array-foldl "(<var>" operator identity ")"(make-array "(<var>"f interval")"))")" and "(<code>"(array-foldr "(<var>" operator identity ")"(make-array "(<var>"f interval")"))")", respectively.")
-        (<p> "Please see the examples for "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))".")
+        (<p> "These  procedures are analogous to the left and right folds of Ocaml or Haskell, which can be defined on lists in Scheme as:")
+        (<pre>(<code>
+"(define (foldl operator identity lst)
+  (if (null? lst)
+      identity
+      (foldl operator (operator identity (car lst)) (cdr lst))))
+
+(define (foldr operator identity lst)
+  (if (null? lst)
+      identity
+      (operator (car lst) (foldr operator identity (cdr lst)))))"))
+
+        (<p> "These procedures  assume that "(<code>(<var>'f))" is a procedure whose domain includes elements of "(<code>(<var>'interval))", that "(<code>(<var>'operator))" is a procedure of two arguments, and that "(<code>(<var>'interval))" is an interval.")
+        (<p> "If "(<code>(<var>'interval))" is empty, these procedures return "(<code>(<var>'identity))".  If "(<code>(<var>'interval))" is zero-dimensional, then "(<code>'interval-foldl)" returns "(<code>"("(<var>'operator)" "(<var>'identity)" ("(<var>'f)"))")" and "(<code>'interval-foldr)" returns "(<code>"("(<var>'operator)" ("(<var>'f)") "(<var>'identity)")")".")
+        (<p> "Otherwise, assume that there is a procedure "(<code>"(next-multi-index multi-index interval)")" which, given an interval and a list representing a multi-index in that interval, returns either a list representing the next valid multi-index in the interval, or, "(<code> #f)" if no such multi-index exists.")
+        (<p> "Then these procedures can be defined as")
+        (<pre>(<code>"(define (interval-foldl f operator identity interval)
+  (cond ((interval-empty? interval)
+         identity)
+        ((zero? (interval-dimension interval))
+         (operator identity (f)))
+        (else
+         (let loop ((result identity)
+                    (multi-index (interval-lower-bounds->list interval)))
+           (let* ((item (apply f multi-index))
+                  (new-result (operator result item))
+                  (next (next-multi-index multi-index interval)))
+             (if next
+                 (loop new-result next)
+                 new-result))))))
+
+(define (interval-foldr f operator identity interval)
+  (cond ((interval-empty? interval)
+         identity)
+        ((zero? (interval-dimension interval))
+         (operator (f) identity))
+        (else
+         (let loop ((multi-index (interval-lower-bounds->list interval)))
+           (if multi-index
+               (let* ((item (apply f multi-index))
+                      (tail-result (loop (next-multi-index multi-index interval))))
+                 (operator item tail-result))
+               identity)))))"))
+        (<p> "Note that "(<code>'interval-foldl)" alternates evaluations of "(<code>(<var>'f))" and "(<code>(<var>'operator))", while "(<code>'interval-foldr)" evaluates "(<code>(<var>'f))" at all multi-indices before applying "(<code>(<var>'operator))" to any arguments.")
         (<p> "It is an error if the arguments do not satisfy these assumptions.")
         (<p> (<b> "Example: ")"One can compute the "(<a> href: "https://en.wikipedia.org/w/index.php?title=Sieve_of_Eratosthenes&oldid=1101704798" "Sieve of Eratosthenes")" with ")(<pre>(<code>"(define (eratosthenes n)
   ;; Compute all primes <= n
@@ -2212,17 +2253,24 @@ calls")
 4"))
 
 (format-lambda-list '(array-foldl operator identity array #\. arrays))
-(<p> "This procedure is analogous to the left fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
-(<pre>(<code>
-"(define (foldl operator identity  . lsts)
-  (if (null? (car lsts))
-      id
-      (apply foldl operator (apply operator identity (map car lsts)) (map cdr lsts))))"))
-(<p> "Then conceptually "(<code>"(array-foldl operator identity array . arrays)")" returns ")
-(<pre>
- (<code>
-"(apply foldl operator identity (array->list (apply array-map list array arrays)))"))
-(<p> "It is an error if "(<code>"(cons "(<var> "array arrays")")")" is not a list of arrays with the same domains, or if "(<code>(<var>'operator))" is not a procedure.")
+(format-lambda-list '(array-foldr operator identity array #\. arrays))
+(<p> "These procedures assume that "(<code>(<var>'operator))" is a procedure and "(<code>"(cons "(<var>"array arrays")")")" is a list of arrays all with the same domain.")
+(<p> "These procedures can be defined as:")
+(<pre>(<code>"(define (array-foldl operator identity array . arrays)
+  (interval-foldl (array-getter (apply array-map list array arrays))
+                  (lambda (identity array-elements)
+                    (apply operator identity array-elements))
+                  identity
+                  (array-domain array)))
+
+(define (array-foldr operator identity array . arrays)
+  (interval-foldr (array-getter (apply array-map list array arrays))
+                  (lambda (array-elements identity)
+                    (apply operator (append array-elements (list identity))))
+                  identity
+                  (array-domain array)))"))
+(<p> "See the notes for "(<code>'interval-foldl)" and "(<code>'interval-foldr)".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 (<p>(<b>"Note: ")" One can fold over empty arrays, which returns "(<code>(<var>'identity))", but it is an error to call "(<code>'array-reduce)" on an empty array, because "(<code>'array-reduce)" must evaluate at least one element of the argument array.")
 
@@ -2243,18 +2291,6 @@ calls")
 (<p> "which folds over only the "(<code>'dims)" rightmost dimensions and returns an array of results.  (Note that this works even if "
      (<code>'dims)" is "(<code>"(array-dimension array)")", in which case the result is a zero-dimensional array containing the left fold of the entire array.)")
 
-(format-lambda-list '(array-foldr operator identity array #\. arrays))
-(<p> "This procedure is analogous to the right fold of Ocaml or Haskell, which can be defined on lists in Scheme as:")
-(<pre>(<code>
-"(define (foldr operator identity . lsts)
-  (if (null? (car lsts))
-      id
-      (apply fold operator (apply operator (append (map car lsts) (list identity))) (map cdr lsts))))"))
-(<p> "Then conceptually "(<code>"(array-foldr operator identity array . arrays)")" returns ")
-(<pre>
- (<code>
-"(apply foldr operator identity (array->list (apply array-map list array arrays)))"))
-(<p> "It is an error if "(<code>"(cons "(<var> "array arrays")")")" is not a list of arrays with the same domain, or if "(<code>(<var>'operator))" is not a procedure.")
 (<p> (<b>"Example: ")"If "(<code>(<var>'op))" is associative with two-sided identity "(<code>(<var>'id))", then "(<code>'array-foldl)" and "(<code>'array-foldr)" return the same results, but see:")
 (<pre>(<code>
 "(define a (make-array (make-interval '#(10)) (lambda (i) i)))
