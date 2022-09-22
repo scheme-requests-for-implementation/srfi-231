@@ -876,6 +876,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%interval-foldr f operator identity interval)
 
+  (declare (not lambda-lift))
+
   (define-macro (generate-code)
 
     (define (symbol-append . args)
@@ -4280,14 +4282,16 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (%%array->reversed-list array)
   ;; safe in the face of (%%array-getter array) capturing
-  ;; the continuation using call/cc
+  ;; the continuation using call/cc, as long as the
+  ;; resulting list is not modified.
   (%%interval-foldl (%%array-getter array)
                      (lambda (a b) (cons b a))
                      '()
                      (%%array-domain array)))
 
 (define (%%array->list array)
-  (reverse! (%%array->reversed-list array)))
+  ;; This is faster than using %%interval-foldr
+  (reverse (%%array->reversed-list array)))
 
 (define (array->list array)
   (cond ((not (array? array))
