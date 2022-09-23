@@ -21,7 +21,7 @@
     interval-contains-multi-index?
     interval-projections
     interval-for-each
-    interval-foldl interval-foldr
+    interval-fold-left interval-fold-right
     interval-dilate
     interval-intersect
     interval-translate
@@ -91,8 +91,8 @@
     array-inner-product
     array-map
     array-for-each
-    array-foldl
-    array-foldr
+    array-fold-left
+    array-fold-right
     array-reduce
     array-any
     array-every

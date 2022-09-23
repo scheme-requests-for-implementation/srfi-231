@@ -586,15 +586,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (let ((interval   (make-interval '#(1 2 3) '#(4 5 6)))
       (interval-2 (make-interval '#(10 11 12) '#(13 14 15))))
-  (if (not (array-foldl (lambda (result x)
-                          (and result (apply interval-contains-multi-index? interval x)))
-                        #t
-                        (make-array interval list)))
+  (if (not (array-fold-left (lambda (result x)
+                              (and result (apply interval-contains-multi-index? interval x)))
+                            #t
+                            (make-array interval list)))
       (error "these should all be true"))
-  (if (not (array-foldl (lambda (result x)
-                          (and result (not (apply interval-contains-multi-index? interval x))))
-                        #t
-                        (make-array interval-2 list)))
+  (if (not (array-fold-left (lambda (result x)
+                              (and result (not (apply interval-contains-multi-index? interval x))))
+                            #t
+                            (make-array interval-2 list)))
       (error "these should all be false")))
 
 (pp "interval-for-each error tests")
@@ -641,25 +641,25 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
-(pp "interval-foldl and interval-foldr error tests")
+(pp "interval-fold-left and interval-fold-right error tests")
 
-(test (interval-foldl 1 2 3 4)
-      "interval-foldl: The fourth argument is not an interval: ")
+(test (interval-fold-left 1 2 3 4)
+      "interval-fold-left: The fourth argument is not an interval: ")
 
-(test (interval-foldl 1 2 3 (make-interval '#(2 2)))
-      "interval-foldl: The second argument is not a procedure: ")
+(test (interval-fold-left 1 2 3 (make-interval '#(2 2)))
+      "interval-fold-left: The second argument is not a procedure: ")
 
-(test (interval-foldl 1 values 3 (make-interval '#(2 2)))
-      "interval-foldl: The first argument is not a procedure: ")
+(test (interval-fold-left 1 values 3 (make-interval '#(2 2)))
+      "interval-fold-left: The first argument is not a procedure: ")
 
-(test (interval-foldr 1 2 3 4)
-      "interval-foldr: The fourth argument is not an interval: ")
+(test (interval-fold-right 1 2 3 4)
+      "interval-fold-right: The fourth argument is not an interval: ")
 
-(test (interval-foldr 1 2 3 (make-interval '#(2 2)))
-      "interval-foldr: The second argument is not a procedure: ")
+(test (interval-fold-right 1 2 3 (make-interval '#(2 2)))
+      "interval-fold-right: The second argument is not a procedure: ")
 
-(test (interval-foldr 1 values 3 (make-interval '#(2 2)))
-      "interval-foldr: The first argument is not a procedure: ")
+(test (interval-fold-right 1 values 3 (make-interval '#(2 2)))
+      "interval-fold-right: The first argument is not a procedure: ")
 
 ;;; We'll rely on tests for array-fold[lr] to test interval-fold[lr]
 
@@ -952,12 +952,12 @@ OTHER DEALINGS IN THE SOFTWARE.
         #f))
 
 (define (myindexer= indexer1 indexer2 interval)
-  (array-foldl (lambda (x y) (and x y))
-               #t
-               (make-array interval
-                           (lambda args
-                             (= (apply indexer1 args)
-                                (apply indexer2 args))))))
+  (array-fold-left (lambda (x y) (and x y))
+                   #t
+                   (make-array interval
+                               (lambda args
+                                 (= (apply indexer1 args)
+                                    (apply indexer2 args))))))
 
 
 (define (my-indexer base lower-bounds increments)
@@ -2459,40 +2459,40 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (pp "array-fold[lr] error tests")
 
-(test (array-foldl 1 1 1)
-      "array-foldl: The first argument is not a procedure: ")
+(test (array-fold-left 1 1 1)
+      "array-fold-left: The first argument is not a procedure: ")
 
-(test (array-foldl list 1 1)
-      "array-foldl: Not all arguments after the first two are arrays: ")
+(test (array-fold-left list 1 1)
+      "array-fold-left: Not all arguments after the first two are arrays: ")
 
-(test (array-foldl list 1 (make-array (make-interval '#()) list) 1)
-      "array-foldl: Not all arguments after the first two are arrays: ")
+(test (array-fold-left list 1 (make-array (make-interval '#()) list) 1)
+      "array-fold-left: Not all arguments after the first two are arrays: ")
 
-(test (array-foldl list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
-      "array-foldl: Not all arrays have the same domain: ")
+(test (array-fold-left list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
+      "array-fold-left: Not all arrays have the same domain: ")
 
-(test (array-foldl cons '() (make-array (make-interval '#()) (lambda () 42)))
+(test (array-fold-left cons '() (make-array (make-interval '#()) (lambda () 42)))
       '(() . 42))
 
-(test (array-foldr cons 42 (make-array (make-interval '#(0)) error))
+(test (array-fold-right cons 42 (make-array (make-interval '#(0)) error))
       42)
 
-(test (array-foldr 1 1 1)
-      "array-foldr: The first argument is not a procedure: ")
+(test (array-fold-right 1 1 1)
+      "array-fold-right: The first argument is not a procedure: ")
 
-(test (array-foldr list 1 1)
-      "array-foldr: Not all arguments after the first two are arrays: ")
+(test (array-fold-right list 1 1)
+      "array-fold-right: Not all arguments after the first two are arrays: ")
 
-(test (array-foldr list 1 (make-array (make-interval '#()) list) 1)
-      "array-foldr: Not all arguments after the first two are arrays: ")
+(test (array-fold-right list 1 (make-array (make-interval '#()) list) 1)
+      "array-fold-right: Not all arguments after the first two are arrays: ")
 
-(test (array-foldr list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
-      "array-foldr: Not all arrays have the same domain: ")
+(test (array-fold-right list 1 (make-array (make-interval '#()) list) (make-array (make-interval '#(1)) list))
+      "array-fold-right: Not all arrays have the same domain: ")
 
-(test (array-foldr cons '() (make-array (make-interval '#()) (lambda () 42)))
+(test (array-fold-right cons '() (make-array (make-interval '#()) (lambda () 42)))
       '(42))
 
-(test (array-foldr cons 42 (make-array (make-interval '#(0)) error))
+(test (array-fold-right cons 42 (make-array (make-interval '#(0)) error))
       42)
 
 (pp "array-for-each error tests")
@@ -2515,13 +2515,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                                   list))
       "array-for-each: Not all arrays have the same domain: ")
 
-(pp "array-map, array-foldr, and array-for-each result tests")
+(pp "array-map, array-fold-right, and array-for-each result tests")
 
 (let ((list-of-60 (iota 60)))
   (for-each (lambda (divisor)   ;; 1 through 5
               ;; Break up list-of-60 into equivalence classes modulo divisor
               ;; Convert these to arrays.
-              ;; Do a simple test on array-foldl and array-foldr with cons and '()
+              ;; Do a simple test on array-fold-left and array-fold-right with cons and '()
               (let* ((specialized-parts
                       (map (lambda (remainder)
                              (list*->array
@@ -2535,25 +2535,25 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (make-array (array-domain a)
                                          (array-getter a)))
                            specialized-parts)))
-                (test (apply array-foldl
+                (test (apply array-fold-left
                              (lambda (id . lst)
                                (foldl cons id lst))
                              '()
                              specialized-parts)
                       (foldl cons '() list-of-60))
-                (test (apply array-foldr
+                (test (apply array-fold-right
                              (lambda args
                                (foldr cons (list-ref args divisor) (take args divisor)))
                              '()
                              specialized-parts)
                       (foldr cons '() list-of-60))
-                (test (apply array-foldl
+                (test (apply array-fold-left
                              (lambda (id . lst)
                                (foldl cons id lst))
                              '()
                              generalized-parts)
                       (foldl cons '() list-of-60))
-                (test (apply array-foldr
+                (test (apply array-fold-right
                              (lambda args
                                (foldr cons (list-ref args divisor) (take args divisor)))
                              '()
@@ -2622,9 +2622,9 @@ OTHER DEALINGS IN THE SOFTWARE.
       (test (myarray= result-array-2 result-array-3)
             #t)
       (test (vector->list (array-body result-array-2))
-            (array-foldr (lambda (x y) (cons x y))
-                         '()
-                         result-array-2))
+            (array-fold-right (lambda (x y) (cons x y))
+                              '()
+                              result-array-2))
       (test (vector->list (array-body result-array-2))
             (reverse (let ((result '()))
                        (array-for-each (lambda (f)
@@ -2690,9 +2690,9 @@ OTHER DEALINGS IN THE SOFTWARE.
       (test (myarray= result-array-2 result-array-3)
             #t)
       (test (vector->list (array-body result-array-2))
-            (array-foldr cons
-                         '()
-                         result-array-2))
+            (array-fold-right cons
+                              '()
+                              result-array-2))
       (test (vector->list (array-body result-array-2))
             (reverse (let ((result '()))
                        (array-for-each (lambda (f)
@@ -2747,10 +2747,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     i 1)))))
 
 (test (array-reduce 2x2-multiply A)
-      (array-foldr 2x2-multiply (matrix 1 0 0 1) A))
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A))
 
 (test (array-reduce 2x2-multiply A)
-      (array-foldl 2x2-multiply (matrix 1 0 0 1) A))
+      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A))
 
 
 (define A_2 (make-array (make-interval '#(1 1) '#(3 7))
@@ -2762,10 +2762,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i -1)))))
 
 (test (array-reduce 2x2-multiply A_2)
-      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_2))
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_2))
 
 (test (array-reduce 2x2-multiply A_2)
-      (array-foldl 2x2-multiply (matrix 1 0 0 1) A_2))
+      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A_2))
 
 (test (equal? (array-reduce 2x2-multiply A_2)
               (array-reduce 2x2-multiply (array-permute A_2 (index-rotate (array-dimension A_2) 1))))
@@ -2780,10 +2780,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i -1)))))
 
 (test (array-reduce 2x2-multiply A_3)
-      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_3))
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_3))
 
 (test (array-reduce 2x2-multiply A_3)
-      (array-foldl 2x2-multiply (matrix 1 0 0 1) A_3))
+      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A_3))
 
 (test (equal? (array-reduce 2x2-multiply A_3)
               (array-reduce 2x2-multiply (array-permute A_3 (index-rotate (array-dimension A_3) 1))))
@@ -2798,10 +2798,10 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i j)))))
 
 (test (array-reduce 2x2-multiply A_4)
-      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_4))
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_4))
 
 (test (array-reduce 2x2-multiply A_4)
-      (array-foldl 2x2-multiply (matrix 1 0 0 1) A_4))
+      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A_4))
 
 (test (equal? (array-reduce 2x2-multiply A_4)
               (array-reduce 2x2-multiply (array-permute A_4 (index-rotate (array-dimension A_4) 1))))
@@ -2816,7 +2816,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                       i j)))))
 
 (test (array-reduce 2x2-multiply A_5)
-      (array-foldr 2x2-multiply (matrix 1 0 0 1) A_5))
+      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_5))
 
 
 (test (equal? (array-reduce 2x2-multiply A_5)
@@ -4811,13 +4811,13 @@ OTHER DEALINGS IN THE SOFTWARE.
           '("" "a" "aa" "ab" "aba" "abc" "abba" "abca" "abbc"))
 
 (let ((a (make-array (make-interval '#(10)) (lambda (i) i))))
-  (test (array-foldl cons '() a)
+  (test (array-fold-left cons '() a)
         '((((((((((() . 0) . 1) . 2) . 3) . 4) . 5) . 6) . 7) . 8) . 9))
-  (test (array-foldr cons '() a)
+  (test (array-fold-right cons '() a)
         '(0 1 2 3 4 5 6 7 8 9))
-  (test (array-foldl - 0 a)
+  (test (array-fold-left - 0 a)
         -45)
-  (test (array-foldr - 0 a)
+  (test (array-fold-right - 0 a)
         -5))
 
 
@@ -4975,7 +4975,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 where
 
 (define (array-dot-product a b)
-  (array-foldl (lambda (x y)
+  (array-fold-left (lambda (x y)
                  (+ x y))
                0
                (array-map
@@ -5019,7 +5019,7 @@ that computes the componentwise products when we need them, the times are
     no major faults
             |#
                 (lambda (i j)
-                  (array-foldl
+                  (array-fold-left
                    (lambda (p q)
                      (+ p q))
                    0
@@ -5069,7 +5069,7 @@ that computes the componentwise products when we need them, the times are
             (pgm-pixels test-pgm)
             edge-filter))))
         (max-pixel
-         (array-foldl max 0 edge-array))
+         (array-fold-left max 0 edge-array))
         (normalizer
          (inexact (/ greys max-pixel))))
    (write-pgm
@@ -5085,9 +5085,9 @@ that computes the componentwise products when we need them, the times are
 (define m (array-copy (make-array (make-interval '#(0 0) '#(40 30)) (lambda (i j) (exact->inexact (+ i j))))))
 
 (define (array-sum a)
-  (array-foldl + 0 a))
+  (array-fold-left + 0 a))
 (define (array-max a)
-  (array-foldl max -inf.0 a))
+  (array-fold-left max -inf.0 a))
 
 (define (max-norm a)
   (array-max (array-map abs a)))
