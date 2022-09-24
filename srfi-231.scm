@@ -90,6 +90,7 @@ MathJax.Hub.Config({
          (<li> "Draft #15 published: 2022-08-12")
          (<li> "Draft #16 published: 2022-08-16")
          (<li> "Draft #17 published: 2022-09-17")
+         (<li> "Draft #18 published: 2022-09-22")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
@@ -149,7 +150,7 @@ MathJax.Hub.Config({
          (<li> "Provide a "(<b> "general API")" (Application Program Interface) that specifies the minimal required properties of any given array, without requiring any specific implementation strategy from the programmer for that array.")
          (<li> "Provide a "(<b> "single, efficient implementation for dense arrays")" (which we call "(<i>"specialized arrays")").")
          (<li> "Provide "(<b> "useful array transformations")".")
-         (<li> "Separate "(<b>"the procedures that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the procedures that actually do the work")" ("(<code>'array-copy)", "(<code>'array-assign!)", "(<code>'array-foldl)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
+         (<li> "Separate "(<b>"the procedures that specify the work to be done")" ("(<code>'array-map)", "(<code>'array-outer-product)", etc.) from "(<b>"the procedures that actually do the work")" ("(<code>'array-copy)", "(<code>'array-assign!)", "(<code>'array-fold-left)", etc.). This approach "(<b> "avoids temporary intermediate arrays")" in computations.")
          (<li> "Encourage " (<b> "bulk processing of arrays")" rather than word-by-word operations.")
          )
         (<p> "This SRFI differs from the finalized " (<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")" in the following ways:")
@@ -159,7 +160,7 @@ MathJax.Hub.Config({
          (<li>  (<code>'list->array)" is now called as "(<code>"(list->array interval list ...)")"; i.e., the order of the first two arguments has been reversed.")
          (<li> (<code> "array-copy")" no longer allows changing the domain of the result. Use "(<code>"(specialized-array-reshape (array-copy ...) "(<var>'new-domain)")")" instead.")
          (<li> (<code> "make-specialized-array")" now accepts an optional initial value with which to fill the new array.")
-         (<li> "The SRFI 179 procedures "(<code>'array-fold)" and "(<code>'array-fold-right)" have been replaced by "(<a> href: "#array-foldl" (<code>'array-foldl))" and "(<a> href: "#array-foldr" (<code>'array-foldr))", which follow the definition of the left and right folds in "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")". The left folds of Ocaml and Haskell differ from the (left) fold of "(<a> href: "https://srfi.schemers.org/srfi-1/" "SRFI 1")", so "(<code>' array-foldl)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
+         (<li> "The SRFI 179 procedure "(<code>'array-fold)" has been replaced by "(<a> href: "#array-fold-left" (<code>'array-fold-left))". Now "(<code>'array-fold-left)" and "(<code>'array-fold-right)" follow the definition of the left and right folds in "(<a> href: "http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-4.html" "R6RS")" (as well as "(<a> href: "https://ocaml.org/api/List.html" "Ocaml")" and "(<a> href: "https://wiki.haskell.org/Fold" "Haskell")"). "(<code>' array-fold-left)" from this SRFI has different semantics to "(<code>'array-fold)" from SRFI 179.")
          (<li> (<code>'array-assign!)" now requires that the source and destination have the same domain. Use "(<code>'specialized-array-reshape)" on the destination array to mimic the SRFI 179 version.")
          (<li> "If the first argument to "(<code>'array-copy)" is a specialized array, then omitted arguments are taken from the argument array and do not default to "(<code>'generic-storage-class)", "(<code>"(specialized-array-default-mutable?)")", and "(<code>"(specialized-array-default-safe?)")".  Thus, by default, "(<code>'array-copy)" makes a true copy of a specialized array.")
          (<li> "Procedures that generate useful permutations have been added: "(<a> href: "#index-rotate" (<code>'index-rotate))", "(<a> href: "#index-first" (<code>'index-first))", "(<a> href: "#index-last" (<code>'index-last))", and "(<a> href: "#index-swap" (<code>'index-swap))".")
@@ -172,8 +173,8 @@ MathJax.Hub.Config({
                (<a> href: "#interval-width" (<code>'interval-width))", "
                (<a> href: "#interval-widths" (<code>'interval-widths))", "
                (<a> href: "#interval-empty?" (<code>'interval-empty?))", "
-               (<a> href: "#interval-foldl" (<code>'interval-foldl))", "
-               (<a> href: "#interval-foldr" (<code>'interval-foldr))", "
+               (<a> href: "#interval-fold-left" (<code>'interval-fold-left))", "
+               (<a> href: "#interval-fold-right" (<code>'interval-fold-right))", "
                (<a> href: "#storage-class-data?" (<code>'storage-class-data?))", "
                (<a> href: "#storage-class-data-rarrow-body" (<code>'storage-class-data->body))", "
                (<a> href: "#array-empty?" (<code>'array-empty?))", "
@@ -256,8 +257,8 @@ MathJax.Hub.Config({
                ": Like concatenating a number of images left to right, or top to bottom. Returns a specialized array.  A partial inverse to "(<code>'array-tile)".")
          (<li> (<a> href: "#array-block"(<code>'array-block))
                ": Assumes that an array has been decomposed into blocks by cuts perpendicular to each coordinate axis; takes an array of those blocks as an argument, and returns a reconstructed array.  An inverse to "(<a> href: "#array-tile" (<code>'array-tile))"; a multi-dimensional version of array-append.")
-         (<li> (<a> href:"#array-foldl"(<code>'array-foldl))", "
-               (<a> href:"#array-foldr"(<code>'array-foldr))", "
+         (<li> (<a> href:"#array-fold-left"(<code>'array-fold-left))", "
+               (<a> href:"#array-fold-right"(<code>'array-fold-right))", "
                (<a> href:"#array-reduce"(<code>'array-reduce))", "
                (<a> href:"#array-for-each"(<code>'array-for-each))", "
                (<a> href:"#array-any"(<code>'array-any))", and "
@@ -441,8 +442,8 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#interval-contains-multi-index?" "interval-contains-multi-index?")END
                  (<a> href: "#interval-projections" "interval-projections")END
                  (<a> href: "#interval-for-each" "interval-for-each")END
-                 (<a> href: "#interval-foldl" "interval-foldl")END
-                 (<a> href: "#interval-foldr" "interval-foldr")END
+                 (<a> href: "#interval-fold-left" "interval-fold-left")END
+                 (<a> href: "#interval-fold-right" "interval-fold-right")END
                  (<a> href: "#interval-dilate" "interval-dilate")END
                  (<a> href: "#interval-intersect" "interval-intersect")END
                  (<a> href: "#interval-translate" "interval-translate")END
@@ -514,8 +515,8 @@ they may have hash tables or databases behind an implementation, or may read the
                  (<a> href: "#array-inner-product" "array-inner-product") END
                  (<a> href: "#array-map" "array-map")END
                  (<a> href: "#array-for-each" "array-for-each")END
-                 (<a> href: "#array-foldl" "array-foldl")END
-                 (<a> href: "#array-foldr" "array-foldr")END
+                 (<a> href: "#array-fold-left" "array-fold-left")END
+                 (<a> href: "#array-fold-right" "array-fold-right")END
                  (<a> href: "#array-reduce" "array-reduce") END
                  (<a> href: "#array-any" "array-any")END
                  (<a> href: "#array-every" "array-every")END
@@ -804,25 +805,13 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
 2 0 => #t
 2 1 => #f"))
 
-        (format-lambda-list '(interval-foldl f operator identity interval))
-        (format-lambda-list '(interval-foldr f operator identity interval))
-        (<p> "These  procedures are analogous to the left and right folds of Ocaml or Haskell, which can be defined on lists in Scheme as:")
-        (<pre>(<code>
-"(define (foldl operator identity lst)
-  (if (null? lst)
-      identity
-      (foldl operator (operator identity (car lst)) (cdr lst))))
-
-(define (foldr operator identity lst)
-  (if (null? lst)
-      identity
-      (operator (car lst) (foldr operator identity (cdr lst)))))"))
-
+        (format-lambda-list '(interval-fold-left f operator identity interval))
+        (format-lambda-list '(interval-fold-right f operator identity interval))
         (<p> "These procedures  assume that "(<code>(<var>'f))" is a procedure whose domain includes elements of "(<code>(<var>'interval))", that "(<code>(<var>'operator))" is a procedure of two arguments, and that "(<code>(<var>'interval))" is an interval.")
-        (<p> "If "(<code>(<var>'interval))" is empty, these procedures return "(<code>(<var>'identity))".  If "(<code>(<var>'interval))" is zero-dimensional, then "(<code>'interval-foldl)" returns "(<code>"("(<var>'operator)" "(<var>'identity)" ("(<var>'f)"))")" and "(<code>'interval-foldr)" returns "(<code>"("(<var>'operator)" ("(<var>'f)") "(<var>'identity)")")".")
-        (<p> "Otherwise, assume that there is a procedure "(<code>"(next-multi-index multi-index interval)")" which, given an interval and a list representing a multi-index in that interval, returns either a list representing the next valid multi-index in the interval, or, "(<code> #f)" if no such multi-index exists.")
+        (<p> "If "(<code>(<var>'interval))" is empty, these procedures return "(<code>(<var>'identity))".  If "(<code>(<var>'interval))" is zero-dimensional, then "(<code>'interval-fold-left)" returns "(<code>"("(<var>'operator)" "(<var>'identity)" ("(<var>'f)"))")" and "(<code>'interval-fold-right)" returns "(<code>"("(<var>'operator)" ("(<var>'f)") "(<var>'identity)")")".")
+        (<p> "Otherwise, assume that there is a procedure "(<code>"(next-multi-index multi-index interval)")" which, given an interval and a list representing a multi-index in that interval, returns either a list representing the next valid multi-index in the interval or "(<code> #f)" if no such multi-index exists.")
         (<p> "Then these procedures can be defined as")
-        (<pre>(<code>"(define (interval-foldl f operator identity interval)
+        (<pre>(<code>"(define (interval-fold-left f operator identity interval)
   (cond ((interval-empty? interval)
          identity)
         ((zero? (interval-dimension interval))
@@ -837,7 +826,7 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
                  (loop new-result next)
                  new-result))))))
 
-(define (interval-foldr f operator identity interval)
+(define (interval-fold-right f operator identity interval)
   (cond ((interval-empty? interval)
          identity)
         ((zero? (interval-dimension interval))
@@ -849,7 +838,7 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
                       (tail-result (loop (next-multi-index multi-index interval))))
                  (operator item tail-result))
                identity)))))"))
-        (<p> "Note that "(<code>'interval-foldl)" alternates evaluations of "(<code>(<var>'f))" and "(<code>(<var>'operator))", while "(<code>'interval-foldr)" evaluates "(<code>(<var>'f))" at all multi-indices before applying "(<code>(<var>'operator))" to any arguments.")
+        (<p> "Note that "(<code>'interval-fold-left)" alternates evaluations of "(<code>(<var>'f))" and "(<code>(<var>'operator))", while "(<code>'interval-fold-right)" evaluates "(<code>(<var>'f))" at all multi-indices before applying "(<code>(<var>'operator))" to any arguments.")
         (<p> "It is an error if the arguments do not satisfy these assumptions.")
         (<p> (<b> "Example: ")"One can compute the "(<a> href: "https://en.wikipedia.org/w/index.php?title=Sieve_of_Eratosthenes&oldid=1101704798" "Sieve of Eratosthenes")" with ")(<pre>(<code>"(define (eratosthenes n)
   ;; Compute all primes <= n
@@ -862,13 +851,13 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
          (A! (array-setter A)))
     (do ((i 2 (+ i 1)))
         ((> i sqrt-n)
-         (interval-foldr identity
-                         (lambda (i result)
-                           (if (eqv? (A_ i) 1)
-                               (cons i result)
-                               result))
-                         '()
-                         (array-domain A)))
+         (interval-fold-right identity
+                              (lambda (i result)
+                                (if (eqv? (A_ i) 1)
+                                    (cons i result)
+                                    result))
+                              '()
+                              (array-domain A)))
       (if (eqv? (A_ i) 1)
           (do ((j (square i) (+ j i)))
               ((> j n))
@@ -2255,24 +2244,24 @@ calls")
 3
 4"))
 
-(format-lambda-list '(array-foldl operator identity array #\. arrays))
-(format-lambda-list '(array-foldr operator identity array #\. arrays))
+(format-lambda-list '(array-fold-left operator identity array #\. arrays))
+(format-lambda-list '(array-fold-right operator identity array #\. arrays))
 (<p> "These procedures assume that "(<code>(<var>'operator))" is a procedure and "(<code>"(cons "(<var>"array arrays")")")" is a list of arrays all with the same domain.")
 (<p> "These procedures can be defined as:")
-(<pre>(<code>"(define (array-foldl operator identity array . arrays)
-  (interval-foldl (array-getter (apply array-map list array arrays))
-                  (lambda (identity array-elements)
-                    (apply operator identity array-elements))
-                  identity
-                  (array-domain array)))
+(<pre>(<code>"(define (array-fold-left operator identity array . arrays)
+  (interval-fold-left (array-getter (apply array-map list array arrays))
+                      (lambda (identity array-elements)
+                        (apply operator identity array-elements))
+                      identity
+                      (array-domain array)))
 
-(define (array-foldr operator identity array . arrays)
-  (interval-foldr (array-getter (apply array-map list array arrays))
-                  (lambda (array-elements identity)
-                    (apply operator (append array-elements (list identity))))
-                  identity
-                  (array-domain array)))"))
-(<p> "See the notes for "(<code>'interval-foldl)" and "(<code>'interval-foldr)".")
+(define (array-fold-right operator identity array . arrays)
+  (interval-fold-right (array-getter (apply array-map list array arrays))
+                       (lambda (array-elements identity)
+                         (apply operator (append array-elements (list identity))))
+                       identity
+                       (array-domain array)))"))
+(<p> "See the notes for "(<code>'interval-fold-left)" and "(<code>'interval-fold-right)".")
 (<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 (<p>(<b>"Note: ")" One can fold over empty arrays, which returns "(<code>(<var>'identity))", but it is an error to call "(<code>'array-reduce)" on an empty array, because "(<code>'array-reduce)" must evaluate at least one element of the argument array.")
@@ -2281,7 +2270,7 @@ calls")
 (<pre>(<code>
 "(define (array-depth a)
   (if (array? a)
-      (+ 1 (array-foldl max 0 (array-map array-depth a)))
+      (+ 1 (array-fold-left max 0 (array-map array-depth a)))
       0))"))
 (<p> "Here non-arrays have depth 0, and each level of array \"nesting\" increases the depth by 1.")
 
@@ -2289,21 +2278,21 @@ calls")
 (<pre>(<code>
 "(define (array-foldl-on op id array dims)
   (array-map (lambda (a)
-               (array-foldl op id a))
+               (array-fold-left op id a))
              (array-curry a dims)))"))
 (<p> "which folds over only the "(<code>'dims)" rightmost dimensions and returns an array of results.  (Note that this works even if "
      (<code>'dims)" is "(<code>"(array-dimension array)")", in which case the result is a zero-dimensional array containing the left fold of the entire array.)")
 
-(<p> (<b>"Example: ")"If "(<code>(<var>'op))" is associative with two-sided identity "(<code>(<var>'id))", then "(<code>'array-foldl)" and "(<code>'array-foldr)" return the same results, but see:")
+(<p> (<b>"Example: ")"If "(<code>(<var>'op))" is associative with two-sided identity "(<code>(<var>'id))", then "(<code>'array-fold-left)" and "(<code>'array-fold-right)" return the same results, but see:")
 (<pre>(<code>
 "(define a (make-array (make-interval '#(10)) (lambda (i) i)))
-(array-foldl cons '() a)
+(array-fold-left cons '() a)
 => ((((((((((() . 0) . 1) . 2) . 3) . 4) . 5) . 6) . 7) . 8) . 9)
-(array-foldr cons '() a)
+(array-fold-right cons '() a)
 => (0 1 2 3 4 5 6 7 8 9)
-(array-foldl - 0 a)
+(array-fold-left - 0 a)
 => -45
-(array-foldr - 0 a)
+(array-fold-right - 0 a)
 => -5
 "))
 
@@ -2316,12 +2305,12 @@ calls")
 "(define array-reduce
   (let ((reduce-base (list 1))) ;; any unique object
     (lambda (sum array)
-      (array-foldl (lambda (id entry)
-                     (if (eq? id reduce-base)
-                         entry
-                         (sum id entry)))
-                   reduce-base
-                   array))))"))
+      (array-fold-left (lambda (id entry)
+                         (if (eq? id reduce-base)
+                             entry
+                             (sum id entry)))
+                       reduce-base
+                       array))))"))
 (<p> "The implementation is allowed to use the associativity of "(<code>(<var>'operator))" to reorder the computations in "(<code>'array-reduce)". It is an error if the arguments do not satisfy these conditions.")
 (<p> (<b>"Example: ")"We consider the finite sum:
 $$
@@ -3293,7 +3282,7 @@ translate: ")
  (<pre>(<code>
 "(define (array-axis-fold arr k f init)
   (array-map (lambda (pencil)
-               (array-foldl f init pencil))
+               (array-fold-left f init pencil))
              (array-curry
               (array-permute arr (index-last (array-dimension arr) k))
               1)))"))
@@ -3488,7 +3477,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
                        (interval-upper-bounds->vector filter-domain)))))
     (make-array result-domain
                 (lambda (i j)
-                  (array-foldl
+                  (array-fold-left
                    (lambda (p q)
                      (+ p q))
                    0
@@ -3548,7 +3537,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
            (pgm-pixels test-pgm)
            edge-filter))))
        (max-pixel
-        (array-foldl max 0 edge-array))
+        (array-fold-left max 0 edge-array))
        (normalizer
         (inexact (/ greys max-pixel))))
   (write-pgm

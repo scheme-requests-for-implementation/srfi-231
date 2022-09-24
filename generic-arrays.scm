@@ -754,11 +754,11 @@ OTHER DEALINGS IN THE SOFTWARE.
          (%%interval-for-each f interval))))
 
 (define (%%interval-for-each f interval)
-  (%%interval-foldl f
-                    (lambda (ignore f_i)
-                      #t)   ;; just compute (apply f multi-index)
-                    'ignore
-                    interval)
+  (%%interval-fold-left f
+                        (lambda (ignore f_i)
+                          #t)   ;; just compute (apply f multi-index)
+                        'ignore
+                        interval)
   (void))
 
 ;;; Calculates
@@ -767,17 +767,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;;
 ;;; where multi-index_1, multi-index_2, ... are the elements of interval in lexicographical order
 
-(define (interval-foldl f operator identity interval)
+(define (interval-fold-left f operator identity interval)
   (cond ((not (interval? interval))
-         (error "interval-foldl: The fourth argument is not an interval: " f operator identity interval))
+         (error "interval-fold-left: The fourth argument is not an interval: " f operator identity interval))
         ((not (procedure? operator))
-         (error "interval-foldl: The second argument is not a procedure: " f operator identity interval))
+         (error "interval-fold-left: The second argument is not a procedure: " f operator identity interval))
         ((not (procedure? f))
-         (error "interval-foldl: The first argument is not a procedure: " f operator identity interval))
+         (error "interval-fold-left: The first argument is not a procedure: " f operator identity interval))
         (else
-         (%%interval-foldl f operator identity interval))))
+         (%%interval-fold-left f operator identity interval))))
 
-(define (%%interval-foldl f operator identity interval)
+(define (%%interval-fold-left f operator identity interval)
 
   (define-macro (generate-code)
 
@@ -864,17 +864,17 @@ OTHER DEALINGS IN THE SOFTWARE.
       identity
       (generate-code)))
 
-(define (interval-foldr f operator identity interval)
+(define (interval-fold-right f operator identity interval)
   (cond ((not (interval? interval))
-         (error "interval-foldr: The fourth argument is not an interval: " f operator identity interval))
+         (error "interval-fold-right: The fourth argument is not an interval: " f operator identity interval))
         ((not (procedure? operator))
-         (error "interval-foldr: The second argument is not a procedure: " f operator identity interval))
+         (error "interval-fold-right: The second argument is not a procedure: " f operator identity interval))
         ((not (procedure? f))
-         (error "interval-foldr: The first argument is not a procedure: " f operator identity interval))
+         (error "interval-fold-right: The first argument is not a procedure: " f operator identity interval))
         (else
-         (%%interval-foldr f operator identity interval))))
+         (%%interval-fold-right f operator identity interval))))
 
-(define (%%interval-foldr f operator identity interval)
+(define (%%interval-fold-right f operator identity interval)
 
   (declare (not lambda-lift))
 
@@ -3118,7 +3118,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define (array-tile A slice-widths)
 
-  (define (%%vector-foldl op id v)
+  (define (%%vector-fold-left op id v)
     (let ((n (vector-length v)))
       (do ((i 0 (fx+ i 1))
            (id id (op id (vector-ref v i))))
@@ -3154,7 +3154,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                     (positive? S_k))
                                (and (vector? S_k)
                                     (%%vector-every (lambda (x) (and (exact-integer? x) (not (negative? x)))) S_k)
-                                    (= (%%vector-foldl + 0 S_k) (%%interval-width domain k))))
+                                    (= (%%vector-fold-left + 0 S_k) (%%interval-width domain k))))
                            (slice-widths-check (fx+ k 1))
                            (error (string-append "array-tile: Axis "
                                                  (number->string k)
@@ -4211,66 +4211,66 @@ OTHER DEALINGS IN THE SOFTWARE.
         (else
          (%%array-any f array arrays))))
 
-(define (array-foldl op id array . arrays)
+(define (array-fold-left op id array . arrays)
   (cond ((not (procedure? op))
-         (apply error "array-foldl: The first argument is not a procedure: " op id array arrays))
+         (apply error "array-fold-left: The first argument is not a procedure: " op id array arrays))
         ((not (%%every array? (cons array arrays)))
-         (apply error "array-foldl: Not all arguments after the first two are arrays: " op id array arrays))
+         (apply error "array-fold-left: Not all arguments after the first two are arrays: " op id array arrays))
         ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
-         (apply error "array-foldl: Not all arrays have the same domain: " op id array arrays))
+         (apply error "array-fold-left: Not all arrays have the same domain: " op id array arrays))
         ((null? arrays)
-         (%%interval-foldl (%%array-getter array) op id (%%array-domain array)))
+         (%%interval-fold-left (%%array-getter array) op id (%%array-domain array)))
         (else
-         (%%interval-foldl (%%array-getter (%%array-map list array arrays))
-                           (case (length arrays)
-                             ((1) (lambda (id elements)
-                                    (op id (car elements) (cadr elements))))
-                             ((2) (lambda (id elements)
-                                    (op id (car elements) (cadr elements) (caddr elements))))
-                             ((3) (lambda (id elements)
-                                    (op id (car elements) (cadr elements) (caddr elements) (cadddr elements))))
-                             (else
-                              (lambda (id elements)
-                                (apply op id elements))))
-                           id
-                           (%%array-domain array)))))
+         (%%interval-fold-left (%%array-getter (%%array-map list array arrays))
+                               (case (length arrays)
+                                 ((1) (lambda (id elements)
+                                        (op id (car elements) (cadr elements))))
+                                 ((2) (lambda (id elements)
+                                        (op id (car elements) (cadr elements) (caddr elements))))
+                                 ((3) (lambda (id elements)
+                                        (op id (car elements) (cadr elements) (caddr elements) (cadddr elements))))
+                                 (else
+                                  (lambda (id elements)
+                                    (apply op id elements))))
+                               id
+                               (%%array-domain array)))))
 
-(define (array-foldr op id array . arrays)
+(define (array-fold-right op id array . arrays)
   (cond ((not (procedure? op))
-         (apply error "array-foldr: The first argument is not a procedure: " op id array arrays))
+         (apply error "array-fold-right: The first argument is not a procedure: " op id array arrays))
         ((not (%%every array? (cons array arrays)))
-         (apply error "array-foldr: Not all arguments after the first two are arrays: " op id array arrays))
+         (apply error "array-fold-right: Not all arguments after the first two are arrays: " op id array arrays))
         ((not (%%every (lambda (a) (%%interval= (%%array-domain a) (%%array-domain array))) arrays))
-         (apply error "array-foldr: Not all arrays have the same domain: " op id array arrays))
+         (apply error "array-fold-right: Not all arrays have the same domain: " op id array arrays))
         ((null? arrays)
-         (%%interval-foldr (%%array-getter array) op id (%%array-domain array)))
+         (%%interval-fold-right (%%array-getter array) op id (%%array-domain array)))
         (else
-         (%%interval-foldr (%%array-getter (%%array-map list array arrays))
-                           (case (length arrays)
-                             ((1) (lambda (elements id)
-                                    (op (car elements) (cadr elements) id)))
-                             ((2) (lambda (elements id)
-                                    (op (car elements) (cadr elements) (caddr elements) id)))
-                             ((3) (lambda (elements id)
-                                    (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
-                             (else
-                              (lambda (elements id)
-                                (apply op (append elements (list id))))))
-                           id
-                           (%%array-domain array)))))
+         (%%interval-fold-right (%%array-getter (%%array-map list array arrays))
+                                (case (length arrays)
+                                  ((1) (lambda (elements id)
+                                         (op (car elements) (cadr elements) id)))
+                                  ((2) (lambda (elements id)
+                                         (op (car elements) (cadr elements) (caddr elements) id)))
+                                  ((3) (lambda (elements id)
+                                         (op (car elements) (cadr elements) (caddr elements) (cadddr elements) id)))
+                                  (else
+                                   (lambda (elements id)
+                                     (apply op (append elements (list id))))))
+                                id
+                                (%%array-domain array)))))
 
 (define %%array-reduce
   (let ((%%array-reduce-base (list 'base)))
     (lambda (sum A caller)
       (if (%%array-empty? A)
           (error (string-append caller "Attempting to reduce over an empty array: ") sum A)
-          (%%interval-foldl (%%array-getter A)
-                            (lambda (id a)
-                              (if (eq? id %%array-reduce-base)
-                                  a
-                                  (sum id a)))
-                            %%array-reduce-base
-                            (%%array-domain A))))))
+          (%%interval-fold-left (%%array-getter A)
+                                (lambda (id a)
+                                  (if (eq? id %%array-reduce-base)
+                                      a
+                                      (sum id a)))
+                                %%array-reduce-base
+                                (%%array-domain A))))))
 
 (define (array-reduce sum A)
   (cond ((not (array? A))
@@ -4284,13 +4284,13 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; safe in the face of (%%array-getter array) capturing
   ;; the continuation using call/cc, as long as the
   ;; resulting list is not modified.
-  (%%interval-foldl (%%array-getter array)
-                     (lambda (a b) (cons b a))
-                     '()
-                     (%%array-domain array)))
+  (%%interval-fold-left (%%array-getter array)
+                        (lambda (a b) (cons b a))
+                        '()
+                        (%%array-domain array)))
 
 (define (%%array->list array)
-  ;; This is faster than using %%interval-foldr
+  ;; This is faster than using %%interval-fold-right
   (reverse (%%array->reversed-list array)))
 
 (define (array->list array)
