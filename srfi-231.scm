@@ -90,6 +90,7 @@ MathJax.Hub.Config({
          (<li> "Draft #15 published: 2022-08-12")
          (<li> "Draft #16 published: 2022-08-16")
          (<li> "Draft #17 published: 2022-09-17")
+         (<li> "Draft #18 published: 2022-09-17")
          (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
          )
 
