@@ -670,8 +670,7 @@
  (make-interval '#(50 50))) =&gt; #t
 (interval-dilate
  (make-interval '#(100 100))
- '#(0 0) '#(-500 -50)) =&gt; error
-</code></pre>
+ '#(0 0) '#(-500 -50)) =&gt; error</code></pre>
     <p><b>Procedure: </b><code><a id="interval-intersect">interval-intersect</a> <var>interval</var> . <var>intervals</var></code></p>
     <p>Assumes that all the arguments are intervals of the same dimension.  If they have a valid intersection,
       then <code>interval-intersect</code> returns that intersection; otherwise it returns <code>#f</code>.</p>
@@ -933,8 +932,7 @@
 42
 &gt; (a! 23)
 &gt; (a_)
-23
-</code></pre>
+23</code></pre>
     <p><b>Procedure: </b><code><a id="array?">array?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if  <code><var>object</var></code> is an array and <code>#f</code> otherwise.</p>
     <p><b>Procedure: </b><code><a id="array-domain">array-domain</a> <var>array</var></code></p>
@@ -1188,8 +1186,7 @@ indexer:       (lambda multi-index
              (array-&gt;list array)
              storage-class
              mutable?
-             safe?)
-</code></pre>
+             safe?)</code></pre>
     <p>If <code><var>array</var></code> is a specialized array, then if any of <code><var>storage-class</var></code>, <code><var>mutable?</var></code>, <code><var>safe?</var></code> are omitted,  their values are assigned <code>(array-storage-class <var>array</var>)</code>, <code>(mutable-array? <var>array</var>)</code>, and <code>(array-safe? <var>array</var>)</code>, respectively.</p>
     <p>Otherwise, omitted arguments are assigned the values <code>generic-storage-class</code>, <code>(specialized-array-default-mutable?)</code>, and <code>(specialized-array-default-safe?)</code>, respectively.</p>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
@@ -1227,8 +1224,7 @@ indexer:       (lambda multi-index
       of whose elements is itself an (immutable) array and </p>
     <pre><code>(equal?
  (A_ i j k l)
- ((array-getter (B_ i j k)) l)) =&gt; #t
-</code></pre>
+ ((array-getter (B_ i j k)) l)) =&gt; #t</code></pre>
     <p>for all multi-indices <code>i j k l</code> in <code>interval</code>.</p>
     <p>The subarrays are immutable, mutable, or specialized according to whether the array argument is immutable, mutable, or specialized.</p>
     <p>More precisely, if </p>
@@ -1432,8 +1428,7 @@ B:
    (apply values
           (map -
                multi-index
-               (vector-&gt;list <var>translation</var>)))))
-</code></pre>
+               (vector-&gt;list <var>translation</var>)))))</code></pre>
     <p>that shares the body of <code><var>array</var></code>, as well as inheriting its safety and mutability.</p>
     <p>If <code><var>array</var></code> is not a specialized array but is a mutable array, returns a new mutable array</p>
     <pre><code>(make-array
@@ -1458,8 +1453,7 @@ B:
                      <var>translation</var>)
  (lambda multi-index
    (apply (array-getter <var>array</var>)
-          (map - multi-index (vector-&gt;list <var>translation</var>)))))
-</code></pre>
+          (map - multi-index (vector-&gt;list <var>translation</var>)))))</code></pre>
     <p>that employs the same getter as the original array.</p>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Example: </b></p>
@@ -1616,8 +1610,7 @@ B:
 (palindrome? &quot;abc&quot;) =&gt; #f
 (palindrome? &quot;abba&quot;) =&gt; #t
 (palindrome? &quot;abca&quot;) =&gt; #f
-(palindrome? &quot;abbc&quot;) =&gt; #f
-</code></pre>
+(palindrome? &quot;abbc&quot;) =&gt; #f</code></pre>
     <p><b>Procedure: </b><code><a id="array-sample">array-sample</a> <var>array</var> <var>scales</var></code></p>
     <p>Assumes that <code><var>array</var></code> is an array all of whose lower bounds are zero, and <code><var>scales</var></code> is a vector of positive exact integers whose length is the same as the dimension of <code><var>array</var></code>.</p>
     <p>Informally, if we construct a new matrix $S$ with the entries of <code><var>scales</var></code> on the main diagonal, then the $\vec i$th element of <code>(array-sample <var>array</var> <var>scales</var>)</code> is the $S\vec i$th element of <code><var>array</var></code>.</p>
@@ -1874,8 +1867,7 @@ B:
 (array-fold-left - 0 a)
 =&gt; -45
 (array-fold-right - 0 a)
-=&gt; -5
-</code></pre>
+=&gt; -5</code></pre>
     <p><b>Procedure: </b><code><a id="array-reduce">array-reduce</a> <var>operator</var> <var>array</var></code></p>
     <p>Assumes that <code><var>array</var></code> is a nonempty array and <code><var>operator</var></code> is a procedure of two arguments that is associative, i.e., <code>(<var>operator</var> (<var>operator</var> <var>x</var> <var>y</var>) <var>z</var>)</code> is the same as <code>(<var>operator</var> <var>x</var> (<var>operator</var>  <var>y</var> <var>z</var>))</code>.</p>
     <p>Then <code>(array-reduce <var>operator</var> <var>array</var>)</code> can be defined as</p>
@@ -1913,8 +1905,7 @@ B:
            (block-sum (array-map block-sum
                                  (array-tile A (vector (quotient N 1000)))))))))
 (array-reduce fl+ A) =&gt; 1.644934057834575
-(block-sum A)        =&gt; 1.6449340658482325
-</code></pre>
+(block-sum A)        =&gt; 1.6449340658482325</code></pre>
     <p>Since $\pi^2/6\approx{}$<code>1.6449340668482264</code>, we see  using the first method that the difference $\pi^2/6-{}$<code>1.644934057834575</code>${}\approx{}$<code>9.013651380840315e-9</code> and with the second we have $\pi^2/6-{}$<code>1.6449340658482325</code>${}\approx{}$<code>9.99993865491433e-10</code>.  The true difference should be between $\frac 1{1{,}000{,}000{,}001}\approx{}$<code>9.99999999e-10</code> and $\frac 1{1{,}000{,}000{,}000}={}$<code>1e-9</code>. The difference for the first method is about 10 times too big, and, in fact, will not change further because any further terms, when added to the partial sum, are too small to increase the sum after rounding-to-nearest in double-precision IEEE-754 floating-point arithmetic.</p>
     <p><b>Procedure: </b><code><a id="array-any">array-any</a> <var>predicate</var> <var>array</var> . <var>arrays</var></code></p>
     <p>Assumes that <code>(cons <var>array arrays</var>)</code> is a list of arrays, all with the same domain, which we'll call <code>interval</code>.  Also assumes that <code><var>predicate</var></code> is a procedure that takes as many arguments as there are arrays and returns a single value.</p>
@@ -2595,8 +2586,7 @@ A after assignment:
 
 ;;; Displays
 
-;;; (0 0)   (0 1)   (0 2)   (0 3)   (2 0)   (2 1)   (2 2)   (2 3)
-</code></pre>
+;;; (0 0)   (0 1)   (0 2)   (0 3)   (2 0)   (2 1)   (2 2)   (2 3)</code></pre>
     <p>The following examples succeed:</p>
     <pre><code>(specialized-array-reshape
  (array-copy (make-array (make-interval '#(2 1 3 1)) list))
@@ -2715,8 +2705,7 @@ A after assignment:
 ;;;    6 collections accounting for 0.006855 secs real time (0.006851 user, 0.000001 system)
 ;;;    71043024 bytes allocated
 ;;;    no minor faults
-;;;    no major faults
-</code></pre>
+;;;    no major faults</code></pre>
     <h2><a id="Implementation">Implementation</a></h2>
     <p>We provide a <a href="https://github.com/scheme-requests-for-implementation/srfi-231">sample implementation</a> in <a href="https://github.com/gambit/gambit">Gambit Scheme</a>; the nonstandard techniques used
       in the implementation are <code>define-structure</code>, <code>define-macro</code>, and DSSSL optional arguments.  The sample implementation open codes specialized versions of algorithms for intervals and arrays of dimension no greater than 4, but a simple implementation could employ only the general algorithms that are used for dimensions greater than 4.</p>
@@ -3024,8 +3013,7 @@ A after assignment:
                       (* (S_ (+ i k)
                              (+ j l))
                          (F_ k l))))))
-                )))
-</code></pre>
+                )))</code></pre>
     <p>together with some filters</p>
     <pre><code>(define sharpen-filter
   (list-&gt;array
@@ -3039,12 +3027,10 @@ A after assignment:
    (make-interval '#(-1 -1) '#(2 2))
    '(0 -1  0
     -1  4 -1
-     0 -1  0)))
-</code></pre>
+     0 -1  0)))</code></pre>
     <p>Our computations might results in pixel values outside the valid range, so we define </p>
     <pre><code>(define (round-and-clip pixel max-grey)
-  (max 0 (min (exact (round pixel)) max-grey)))
-</code></pre>
+  (max 0 (min (exact (round pixel)) max-grey)))</code></pre>
     <p>We can then compute edges and sharpen a test image as follows: </p>
     <pre><code>(define test-pgm (read-pgm &quot;girl.pgm&quot;))
 
@@ -3078,8 +3064,7 @@ A after assignment:
                  (- greys
                     (round-and-clip (* p normalizer) greys)))
                edge-array))
-   &quot;edge-test.pgm&quot;))
-</code></pre>
+   &quot;edge-test.pgm&quot;))</code></pre>
     <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> (index-first 3 1)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> (index-first 3 2)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.  Note that you want to have the head up in both the median and frontal views, so we use <code>index-first</code> to provide the appropriate permutations.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
@@ -3132,8 +3117,7 @@ A after assignment:
                       subdomain)))
                    result))))
               (else
-               (reverse result)))))))
-</code></pre>
+               (reverse result)))))))</code></pre>
     <p>We can define a small synthetic image of size 8x8 pixels and compute its second differences in various directions: </p>
     <pre><code>(define image
  (array-copy
@@ -3144,10 +3128,13 @@ A after assignment:
 (define (expose difference-images)
   (pretty-print (map (lambda (difference-image)
                        (list (array-domain difference-image)
-                             (array-&gt;list difference-image)))
+                             (array-&gt;list* difference-image)))
                      difference-images)))
 
 (begin
+  (display &quot;\nOriginal image:\n&quot;)
+  (pretty-print (list (array-domain image)
+                      (array-&gt;list* image)))
   (display
    &quot;\nSecond-differences in the direction $k\times (1,0)$:\n&quot;)
   (expose (all-second-differences image '#(1 0)))
@@ -3156,43 +3143,69 @@ A after assignment:
   (expose (all-second-differences image '#(1 1)))
   (display
    &quot;\nSecond-differences in the direction $k\times (1,-1)$:\n&quot;)
-  (expose (all-second-differences image '#(1 -1))))
-</code></pre>
+  (expose (all-second-differences image '#(1 -1))))</code></pre>
     <p>On Gambit 4.8.5, this yields (after some hand editing): </p>
-    <pre>
+    <pre>Original image:
+(#&lt;%%interval #53 dimension: 2 %%volume: 64 lower-bounds: #(0 0) upper-bounds: #(8 8)&gt;
+ ((0. 1. 4. 9. 16. 25. 36. 49.)
+  (1. 2. 5. 10. 17. 26. 37. 50.)
+  (4. 5. 8. 13. 20. 29. 40. 53.)
+  (9. 10. 13. 18. 25. 34. 45. 58.)
+  (16. 17. 20. 25. 32. 41. 52. 65.)
+  (25. 26. 29. 34. 41. 50. 61. 74.)
+  (36. 37. 40. 45. 52. 61. 72. 85.)
+  (49. 50. 53. 58. 65. 74. 85. 98.)))
+
 Second-differences in the direction $k\times (1,0)$:
 ((#&lt;##interval #2 lower-bounds: #(0 0) upper-bounds: #(6 8)&gt;
- (2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.
-  2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.
-  2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.))
+  ((2. 2. 2. 2. 2. 2. 2. 2.)
+   (2. 2. 2. 2. 2. 2. 2. 2.)
+   (2. 2. 2. 2. 2. 2. 2. 2.)
+   (2. 2. 2. 2. 2. 2. 2. 2.)
+   (2. 2. 2. 2. 2. 2. 2. 2.)
+   (2. 2. 2. 2. 2. 2. 2. 2.)))
  (#&lt;##interval #3 lower-bounds: #(0 0) upper-bounds: #(4 8)&gt;
-  (8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8.
-   8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8.))
+  ((8. 8. 8. 8. 8. 8. 8. 8.)
+   (8. 8. 8. 8. 8. 8. 8. 8.)
+   (8. 8. 8. 8. 8. 8. 8. 8.)
+   (8. 8. 8. 8. 8. 8. 8. 8.)))
  (#&lt;##interval #4 lower-bounds: #(0 0) upper-bounds: #(2 8)&gt;
-  (18. 18. 18. 18. 18. 18. 18. 18. 18.
-   18. 18. 18. 18. 18. 18. 18.)))
+  ((18. 18. 18. 18. 18. 18. 18. 18.)
+   (18. 18. 18. 18. 18. 18. 18. 18.))))
 
 Second-differences in the direction $k\times (1,1)$:
 ((#&lt;##interval #5 lower-bounds: #(0 0) upper-bounds: #(6 6)&gt;
-  (4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.
-   4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.))
+  ((4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)))
  (#&lt;##interval #6 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
-  (16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16.
-   16. 16.))
+  ((16. 16. 16. 16.)
+   (16. 16. 16. 16.)
+   (16. 16. 16. 16.)
+   (16. 16. 16. 16.)))
  (#&lt;##interval #7 lower-bounds: #(0 0) upper-bounds: #(2 2)&gt;
-  (36. 36. 36. 36.)))
+  ((36. 36.)
+   (36. 36.))))
 
 Second-differences in the direction $k\times (1,-1)$:
 ((#&lt;##interval #8 lower-bounds: #(0 2) upper-bounds: #(6 8)&gt;
-  (4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.
-   4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.))
+  ((4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)
+   (4. 4. 4. 4. 4. 4.)))
  (#&lt;##interval #9 lower-bounds: #(0 4) upper-bounds: #(4 8)&gt;
-  (16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16.
-   16. 16.))
+  ((16. 16. 16. 16.)
+   (16. 16. 16. 16.)
+   (16. 16. 16. 16.)
+   (16. 16. 16. 16.)))
  (#&lt;##interval #10 lower-bounds: #(0 6) upper-bounds: #(2 8)&gt;
-  (36. 36. 36. 36.)))
-
-</pre>
+  ((36. 36.)
+   (36. 36.))))</pre>
     <p>You can see that with differences in the direction of only the first coordinate, the domains of the difference arrays get smaller in the first coordinate while staying the same in the second coordinate, and with differences in the diagonal directions, the domains of the difference arrays get smaller in both coordinates.</p>
     <p><b>Separable operators. </b>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the <a href="https://arxiv.org/abs/1210.1944">Fast Hyperbolic Wavelet Transform</a>.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can define the multidimensional transform as follows:</p>
     <pre><code>(define (make-separable-transform 1D-transform)
@@ -3202,8 +3215,7 @@ Second-differences in the direction $k\times (1,-1)$:
           ((fx= d n))
         (array-for-each
          1D-transform
-         (array-curry (array-permute a (index-last n d)) 1))))))
-</code></pre>
+         (array-curry (array-permute a (index-last n d)) 1))))))</code></pre>
     <p>Here we put each axis in turn at the end and then apply <code>1D-transform</code> to each of the pencils along that axis.</p>
     <p>Wavelet transforms in particular are calculated by recursively applying a transform to an array and then downsampling the array; the inverse transform recursively downsamples and then applies a transform.  So we define the following primitives: </p>
     <pre><code>(define (recursively-apply-transform-and-downsample transform)
@@ -3224,8 +3236,7 @@ Second-differences in the direction $k\times (1,-1)$:
             (begin
               (helper (array-sample a sample-vector))
               (transform a))))
-      (helper a))))
-</code></pre>
+      (helper a))))</code></pre>
     <p>By adding a single loop that calculates scaled sums and differences of adjacent elements in a one-dimensional array, we can define various <a id="Haar">Haar wavelet transforms</a> as follows:</p>
     <pre><code>(define (1D-Haar-loop a)
   (let ((a_ (array-getter a))
@@ -3258,8 +3269,7 @@ Second-differences in the direction $k\times (1,-1)$:
 
 (define Haar-inverse-transform
   (recursively-downsample-and-apply-transform
-   (make-separable-transform 1D-Haar-loop)))
-</code></pre>
+   (make-separable-transform 1D-Haar-loop)))</code></pre>
     <p>We then define an image that is a multiple of a single, two-dimensional hyperbolic Haar wavelet, compute its hyperbolic Haar transform (which should have only one nonzero coefficient), and then the inverse transform:</p>
     <pre><code>(let ((image
        (array-copy
@@ -3273,43 +3283,36 @@ Second-differences in the direction $k\times (1,-1)$:
 Initial image:
 &quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image)))
+                      (array-&gt;list* image)))
   (hyperbolic-Haar-transform image)
   (display &quot;\nArray of hyperbolic Haar wavelet coefficients: \n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image)))
+                      (array-&gt;list* image)))
   (hyperbolic-Haar-inverse-transform image)
   (display &quot;\nReconstructed image: \n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image))))
-</code></pre>
+                      (array-&gt;list* image))))</code></pre>
     <p>This yields: </p>
     <pre>Initial image:
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
+ ((1. 1. 1. 1.)
+  (-1. -1. -1. -1.)
+  (0. 0. 0. 0.)
+  (0. 0. 0. 0.)))
 
 Array of hyperbolic Haar wavelet coefficients:
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (0. 0. 0. 0. 2.8284271247461894 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.))
+ ((0. 0. 0. 0.)
+  (2.8284271247461894 0. 0. 0.)
+  (0. 0. 0. 0.)
+  (0. 0. 0. 0.)))
 
 Reconstructed image:
 (#&lt;##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (.9999999999999996
-  .9999999999999996
-  .9999999999999996
-  .9999999999999996
-  -.9999999999999996
-  -.9999999999999996
-  -.9999999999999996
-  -.9999999999999996
-  0.
-  0.
-  0.
-  0.
-  0.
-  0.
-  0.
-  0.))
+ ((.9999999999999996 .9999999999999996 .9999999999999996 .9999999999999996)
+  (-.9999999999999996 -.9999999999999996 -.9999999999999996 -.9999999999999996)
+  (0. 0. 0. 0.)
+  (0. 0. 0. 0.)))
 </pre>
     <p>In perfect arithmetic, this hyperbolic Haar transform is <i>orthonormal</i>, in that the sum of the squares of the elements of the image is the same as the sum of the squares of the hyperbolic Haar coefficients of the image.  We can see that this is approximately true here.</p>
     <p>We can apply the (nonhyperbolic) Haar transform to the same image as follows: </p>
@@ -3323,44 +3326,36 @@ Reconstructed image:
                         (else 0.)))))))
   (display &quot;\nInitial image:\n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image)))
+                      (array-&gt;list* image)))
   (Haar-transform image)
   (display &quot;\nArray of Haar wavelet coefficients: \n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image)))
+                      (array-&gt;list* image)))
   (Haar-inverse-transform image)
   (display &quot;\nReconstructed image: \n&quot;)
   (pretty-print (list (array-domain image)
-                      (array-&gt;list image))))
-</code></pre>
+                      (array-&gt;list* image))))</code></pre>
     <p>This yields: </p>
     <pre>Initial image:
 (#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (1. 1. 1. 1. -1. -1. -1. -1. 0. 0. 0. 0. 0. 0. 0. 0.))
+ ((1. 1. 1. 1.)
+  (-1. -1. -1. -1.)
+  (0. 0. 0. 0.)
+  (0. 0. 0. 0.)))
 
 Array of Haar wavelet coefficients:
 (#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (0. 0. 0. 0. 1.9999999999999998 0. 1.9999999999999998 0. 0. 0. 0. 0. 0. 0. 0. 0.))
+ ((0. 0. 0. 0.)
+  (1.9999999999999998 0. 1.9999999999999998 0.)
+  (0. 0. 0. 0.)
+  (0. 0. 0. 0.)))
 
 Reconstructed image:
 (#&lt;##interval #12 lower-bounds: #(0 0) upper-bounds: #(4 4)&gt;
- (.9999999999999997
-  .9999999999999997
-  .9999999999999997
-  .9999999999999997
-  -.9999999999999997
-  -.9999999999999997
-  -.9999999999999997
-  -.9999999999999997
-  0.
-  0.
-  0.
-  0.
-  0.
-  0.
-  0.
-  0.))
-</pre>
+ ((.9999999999999997 .9999999999999997 .9999999999999997 .9999999999999997)
+  (-.9999999999999997 -.9999999999999997 -.9999999999999997 -.9999999999999997)
+  (0. 0. 0. 0.)
+  (0. 0. 0. 0.)))</pre>
     <p>You see in this example that this particular image has two, not one, nonzero coefficients in the two-dimensional Haar transform, which is again approximately orthonormal.</p>
     <p><b>Matrix multiplication and Gaussian elimination. </b>While we have avoided conflating matrices and arrays, we give here some examples of matrix operations defined using operations from this SRFI.</p>
     <p>Given a nonsingular square matrix $A$ we can overwrite $A$ with lower-triangular matrix $L$ with ones on the diagonal and upper-triangular
@@ -3417,8 +3412,7 @@ Reconstructed image:
          subarray
          (array-map -
                     subarray
-                    (array-outer-product * column row)))))))
-</code></pre>
+                    (array-outer-product * column row)))))))</code></pre>
     <p>We then define a $4\times 4$ <a href="https://en.wikipedia.org/wiki/Hilbert_matrix">Hilbert matrix</a>:</p>
     <pre><code>(define A
   (array-copy
@@ -3461,9 +3455,7 @@ Reconstructed image:
 ;;; 1       1/2     1/3     1/4
 ;;; 1/2     1/12    1/12    3/40
 ;;; 1/3     1       1/180   1/120
-;;; 1/4     9/10    3/2     1/2800
-
-</code></pre>
+;;; 1/4     9/10    3/2     1/2800</code></pre>
     <p>We can now define matrix multiplication as follows to check our result:</p>
     <pre><code>;;; Functions to extract the lower- and upper-triangular
 ;;; matrices of the LU decomposition of A.
@@ -3524,8 +3516,7 @@ Reconstructed image:
 ;;; 1       1/2     1/3     1/4
 ;;; 1/2     1/3     1/4     1/5
 ;;; 1/3     1/4     1/5     1/6
-;;; 1/4     1/5     1/6     1/7
-</code></pre>
+;;; 1/4     1/5     1/6     1/7</code></pre>
     <p><b><a href="https://en.wikipedia.org/w/index.php?title=Conway%27s_Game_of_Life&amp;oldid=1071836488">Conway's Game of Life</a>. </b>Alex Hars&#225;nyi <a href="https://racket.discourse.group/t/game-of-life-using-math-array/584">implemented</a> Conway's Game of Life using Racket's <a href="https://docs.racket-lang.org/math/array.html">array library</a>; here we implement the game using this SRFI.</p>
     <p>Our strategy is to extend the original array periodically to an array dilated by one row and column above and below, left and right: </p>
     <pre><code>(define (array-pad-periodically a N)
@@ -3679,8 +3670,7 @@ Reconstructed image:
 
 (array-&gt;list* (array-inner-product X + (lambda (x y) (if (= x y) 1 0)) Y))
 =&gt;
-2
-</code></pre>
+2</code></pre>
     <h2><a id="Acknowledgments">Acknowledgments</a></h2>
     <p>The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, Per Bothner,  Alex Shinn, Jens Axel S&#248;gaard, and Marc Nieper-Wi&#223;kirchen for their comments and suggestions, and Arthur A. Gleckler, SRFI Editor, for his guidance and patience.</p>
     <h2><a id="References">References</a></h2>
