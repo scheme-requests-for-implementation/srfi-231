@@ -8,7 +8,7 @@ keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]]
 
 This repository hosts [[https://srfi.schemers.org/srfi-231/][SRFI 231]]: Intervals and Generalized Arrays, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
 
-This SRFI is in /draft/ status.
+This SRFI is in /final/ status.
 
 See also [[https://srfi.schemers.org/srfi-122/][SRFI 122: Nonempty Intervals and Generalized Arrays]], [[https://srfi.schemers.org/srfi-164/][SRFI 164: Enhanced multi-dimensional Arrays]], and [[https://srfi.schemers.org/srfi-179/][SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)]].
 
