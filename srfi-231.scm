@@ -60,7 +60,7 @@ MathJax.Hub.Config({
         (<p> " by Bradley J. Lucier")
 
         (<h2> id: 'status "Status")
-        (<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
+        (<p> "This SRFI is currently in " (<em> "final") " status.  Here is "
              (<a> href: "https://srfi.schemers.org/srfi-process.html" "an explanation")
              " of each status that a SRFI can hold.  To provide input on this SRFI, please send email to "
              (<code> (<a> href: (string-append "mailto:srfi+minus+" SRFI "+at+srfi+dotschemers+dot+org")
@@ -72,7 +72,6 @@ MathJax.Hub.Config({
 
         (<ul>
          (<li> "Received: 2022-01-05")
-         (<li> "60-day deadline: 2022-03-08")
          (<li> "Draft #1 published: 2022-01-07")
          (<li> "Draft #2 published: 2022-01-20")
          (<li> "Draft #3 published: 2022-01-26")
@@ -92,7 +91,7 @@ MathJax.Hub.Config({
          (<li> "Draft #17 published: 2022-09-17")
          (<li> "Draft #18 published: 2022-09-22")
          (<li> "Draft #19 published: 2022-09-23")
-         (<li> "Bradley Lucier's "(<a> href: "https://github.com/gambiteer/srfi-231" "personal Git repo for this SRFI")" for reference while the SRFI is in "(<em>'draft)" status.")
+         (<li> "Finalized: 2022-09-25")
          )
 
         (<h2> "Abstract")
@@ -105,7 +104,7 @@ MathJax.Hub.Config({
          "called $d$-"(<i> 'intervals)", or more briefly "(<a> href: "https://en.wikipedia.org/w/index.php?title=Interval_(mathematics)&oldid=1091935326" (<i>'intervals))", that encapsulates this notion. (We borrow this terminology from, e.g., "
          " Elias Zakon's "(<a> href: "http://www.trillia.com/zakon1.html" "Basic Concepts of Mathematics")".) "
          "Specialized variants of arrays provide portable programs with efficient representations for common use cases.")
-        (<p> "This is a revised version of "(<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")".")
+        (<p> "This is a revised and improved version of "(<a> href: "https://srfi.schemers.org/srfi-179/" "SRFI 179")".")
         (<h2> "Contents")
         (<ul>
          (<li> (<a> href: "#Rationale" "Rationale"))
@@ -230,7 +229,7 @@ MathJax.Hub.Config({
         (<p> "The following two procedures decompose arrays in different ways.  They return "(<i>"generalized arrays")" whose elements are themselves arrays. Like the procedures described immediately above, the resulting subarrays share elements with their argument.")
         (<ul>
          (<li> (<a> href: "#array-curry"(<code>"array-curry"))
-               ": Represents a $d$-dimensional array as a $d'$ dimensional array whose entries are themselves arrays of dimension $d-d'$.  Like thinking of a three-dimensional CT scan as a one-dimensional array of two-dimensional slices, or thinking of a matrix as a one-dimensional array of one-dimensional rows.  You could combine this operation with "(<code>'array-permute)" to think of a matrix as am array of columns, or look at slices in different orientations of a three-dimensional CT scan.  Considering a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying. The subarrays share elements with the original array.  The procedures "(<code>'array-decurry)" and "(<code>'array-stack)", described below, reverse this process.")
+               ": Represents a $d$-dimensional array as a $d'$-dimensional array whose entries are themselves arrays of dimension $d-d'$.  Like thinking of a three-dimensional CT scan as a one-dimensional array of two-dimensional slices, or thinking of a matrix as a one-dimensional array of one-dimensional rows.  You could combine this operation with "(<code>'array-permute)" to think of a matrix as an array of columns, or look at slices in different orientations of a three-dimensional CT scan.  Considering a video as a one-dimensional sequence (in time) of two-dimensional stills (in space) is another example of currying. The subarrays share elements with the original array.  The procedures "(<code>'array-decurry)" and "(<code>'array-stack)", described below, reverse this process.")
          (<li> (<a> href: "#array-tile" (<code>'array-tile))
                ": Decomposes a $d$-dimensional array into $d$-dimensional sub-blocks with cuts parallel to the coordinate axes, and returns the subarrays in an array.  Like breaking a large matrix into smaller matrices for block matrix operations. The subarrays share elements with the original array.  The procedures "(<code>'array-block)" and "(<code>'array-append)", described below, reverse this process.")
          )
@@ -394,7 +393,7 @@ they may have hash tables or databases behind an implementation, or may read the
                (<br>)
                "No procedure in the sample implementation itself calls "(<code>'call-with-current-continuation)", but the procedural arguments to, e.g., "(<code>'make-array)", "(<code>'specialized-array-share)", "(<code>'array-map)", etc., may themselves call "(<code>'call-with-current-continuation)"."
                (<br>)
-               "All procedures in the sample implementation whose names do not end with an exclamation point (!) are writtten in a way that does not modify the state of any data captured by a continuation. We call such procedures "(<i>"call/cc safe")"."
+               "All procedures in the sample implementation whose names do not end with an exclamation point (!) are written in a way that does not modify the state of any data captured by a continuation. We call such procedures "(<i>"call/cc safe")"."
                (<br>)
                "It is intended that all procedures in this library whose names do not end with an exclamation point (!) be implemented in a call/cc-safe way."
                (<br>)
@@ -549,7 +548,7 @@ they may have hash tables or databases behind an implementation, or may read the
         (<p> "This document refers to "(<i> 'translations)" and "(<i> 'permutations)".
  A translation is a vector of exact integers.  A permutation of dimension $n$
 is a vector whose entries are the exact integers $0,1,\\ldots,n-1$, each occurring once, in any order.
-We provide three procedures that return useful permutations.")
+We provide four procedures that return useful permutations.")
         (<h3> (<a> id: "miscprocedures" "Procedures"))
         (format-lambda-list '(translation? object))
         (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a translation, and "(<code> '#f)" otherwise.")
@@ -582,7 +581,7 @@ We provide three procedures that return useful permutations.")
                           (list k)))))"))
         (<p> "For example, "(<code>"(index-last 5 3)")" returns "(<code>"'#(0 1 2 4 3)")". It is an error if the arguments do not satisfy these conditions.")
         (format-lambda-list '(index-swap n i j))
-        (<p> "Assumes that "(<code>(<var>'n))" is a positive exact integer and that "(<code>(<var>'i))" and "(<code>(<var>'j))" are exact integers between 0 (inclusive) and "(<code>(<var>'n))" (exclusive). Returns a permuation of length "(<code>(<var>'n))" that swaps index "(<code>(<var>'i))" and index "(<code>(<var>'j))" and leaves the other indices in order.")
+        (<p> "Assumes that "(<code>(<var>'n))" is a positive exact integer and that "(<code>(<var>'i))" and "(<code>(<var>'j))" are exact integers between 0 (inclusive) and "(<code>(<var>'n))" (exclusive). Returns a permutation of length "(<code>(<var>'n))" that swaps index "(<code>(<var>'i))" and index "(<code>(<var>'j))" and leaves the other indices in order.")
         (<p> "For example, "(<code>"(index-swap 5 3 0)")" returns "(<code>"#(3 1 2 0 4)")". It is an error if the arguments do not satisfy these assumptions.")
 
 (<h2> (<a> id: "Intervals" "Intervals"))
@@ -2663,7 +2662,7 @@ A after assignment:
 
 (format-lambda-list '(array-stack k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (format-lambda-list '(array-stack! k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
+(<p> "Assumes that "(<code>(<var>'arrays))" is a nonempty list of arrays with identical domains,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (inclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
 (<p> "Returns a specialized array equivalent to")
 (<pre>(<code>"(array-copy
  (make-array
@@ -2766,7 +2765,7 @@ A after assignment:
 
 (format-lambda-list '(array-append k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
 (format-lambda-list '(array-append! k arrays #\[ storage-class #\[ mutable? #\[ safe? #\] #\] #\]))
-(<p> "Assumes that "(<code>(<var>'arrays))" is a nonnull list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
+(<p> "Assumes that "(<code>(<var>'arrays))" is a nonempty list of arrays with domains that differ at most in the "(<code>(<var>'k))"'th axis,  "(<code>(<var>'k))" is an exact integer between 0 (inclusive) and the dimension of the array domains (exclusive), and, if given, "(<code>(<var>'storage-class))" is a storage class, "(<code>(<var>'mutable?))" is a boolean, and "(<code>(<var>'safe?))" is a boolean.")
 (<p> "This routine appends, or concatenates, the argument arrays along the "(<var>'k)"'th axis, with the lower bound of this axis set to 0.")
 (<p> "Returns a specialized array equivalent to the result of")
 (<pre>(<code>"(define (array-append k arrays)
