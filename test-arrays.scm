@@ -4921,7 +4921,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   (define (skip-to-end-of-line port)
     (let loop ((ch (read-char port)))
-      (if (not (eq? ch #\newline))
+      (if (not (eqv? ch #\newline))
           (loop (read-char port)))))
 
   (define (white-space? ch)
@@ -4932,7 +4932,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   (define (skip-white-space port)
     (let ((ch (peek-char port)))
       (cond ((white-space? ch) (read-char port) (skip-white-space port))
-            ((eq? ch #\#) (skip-to-end-of-line port)(skip-white-space port))
+            ((eqv? ch #\#) (skip-to-end-of-line port)(skip-white-space port))
             (else #f))))
 
   (call-with-input-file

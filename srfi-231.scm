@@ -3308,7 +3308,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
 
   (define (skip-to-end-of-line port)
     (let loop ((ch (read-char port)))
-      (if (not (eq? ch #\\newline))
+      (if (not (eqv? ch #\\newline))
           (loop (read-char port)))))
 
   (define (white-space? ch)
@@ -3321,7 +3321,7 @@ order in "(<code>'array-copy)" guarantees the the correct order of execution of 
       (cond ((white-space? ch)
              (read-char port)
              (skip-white-space port))
-            ((eq? ch #\\#)
+            ((eqv? ch #\\#)
              (skip-to-end-of-line port)
              (skip-white-space port))
             (else #f))))
