@@ -351,7 +351,7 @@
                        =>
                        (lambda (character-value)
                          (if (char? character-value)
-                             (if (eq? character-value #\newline)
+                             (if (eqv? character-value #\newline)
                                  (begin
                                    (##write-substring x start end port)
                                    (go-to-new-line)
@@ -375,7 +375,7 @@
                =>
                (lambda (character-value)
                  (if (char? character-value)
-                     (if (eq? character-value #\newline)
+                     (if (eqv? character-value #\newline)
                          (go-to-new-line)
                          (display character-value port))
                      (##write-substring character-value 0 (string-length character-value) port))))
