@@ -2065,7 +2065,7 @@ B:
 (<p> "This operation can be considered a partial inverse to "(<code>'array-curry)".  It is an error if the arguments do not satisfy these assumptions.")
 (<p> (<b> "Note: ")"You can see from the above definition that if "(<code>(<var>'C))" is "(<code>"(array-outer-product "(<var>'operator)" "(<var>'A)" "(<var>'B)")")", then each call to "(<code>"(array-getter "(<var>'C)")")
      " will call "(<code>(<var>'operator))" as well as "(<code>"(array-getter "(<var>'A)")")" and "(<code>"(array-getter "(<var>'B)")")".  This means that if all elements of "(<code>(<var>'C))" are eventually accessed, then "
-     (<code>"(array-getter "(<var>'A)")")" will be called "(<code>"(array-volume "(<var>'B)")")" times; similarly "(<code>"(array-getter "(<var>'B)")")" will be called "(<code>"(array-volume "(<var>'A)")")" times. ")
+     (<code>"(array-getter "(<var>'A)")")" will be called "(<code>"(interval-volume (array-domain "(<var>'B)"))")" times; similarly "(<code>"(array-getter "(<var>'B)")")" will be called "(<code>"(interval-volume (array-domain "(<var>'A)"))")" times. ")
 (<p> "This implies that if "(<code>"(array-getter "(<var>'A)")")" is expensive to compute (for example, if it's returning an array, as does "(<code>'array-curry)") then the elements of "(<code>(<var>'A))
      " should be precomputed if necessary and stored in a specialized array, typically using "(<code>'array-copy)", before that specialized array is passed as an argument to "(<code>'array-outer-product)".  In the examples below, "
      "the code for Gaussian elimination applies "(<code>'array-outer-product)" to shared specialized arrays, which are of course themselves specialized arrays; the code for "(<code>'array-inner-product)
