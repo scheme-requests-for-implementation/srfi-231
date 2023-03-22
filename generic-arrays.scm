@@ -1224,11 +1224,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (make-standard-storage-classes)
 
-;;; This sample implementation does not implement the following.
-
-(define f16-storage-class #f)
-(define f8-storage-class #f)
-
 ;;; for bit-arrays, body is a vector, the first element of which is the actual number of elements,
 ;;; the second element of which is a u16vector that contains the bit string
 
@@ -1348,6 +1343,224 @@ OTHER DEALINGS IN THE SOFTWARE.
     result))
 
 (make-complex-storage-classes)
+
+;;; And now we define a small float storage class:
+
+;;; Since there is no native f16 in most schemes, we represent an f16 object
+;;; with an integer between 0 (inclusive) and 65536 (exclusive), with the
+;;; body of f16-storage-class represented by a u16vector.  We assume that
+;;; integers in this range are fixnums.
+
+;;; It takes noticeable computations and boxing a double to extract the
+;;; object represented by an element of an f16-storage-class array, and
+;;; even more computations to take a double object and convert it to the
+;;; representation of its f16 rounded value.  So I may add "hidden" entries
+;;; to f16-storage-class to extract and insert the representation of an
+;;; f16 value directly, instead of converting to a double and back.
+
+(define-macro (macro-make-representation->double name mantissa-width exponent-width exponent-bias)
+
+  (define (append-symbols . args)
+    (string->symbol
+     (apply string-append (map (lambda (arg)
+                                 (cond ((symbol? arg) (symbol->string arg))
+                                       ((number? arg) (number->string arg))
+                                       ((string? arg) arg)
+                                       (else
+                                        (apply error "append-symbols: unknown argument: " arg))))
+                               args))))
+
+  (let* ((exponent-mask (- (fxarithmetic-shift-left 1 exponent-width) 1))
+         (mantissa-mask (- (fxarithmetic-shift-left 1 mantissa-width) 1))
+         (2^mantissa-width (fxarithmetic-shift-left 1 mantissa-width))
+         (result
+          `(define (,(append-symbols name '->double) x)
+             (let ((e (fxand ,exponent-mask (fxarithmetic-shift-right x ,mantissa-width)))
+                   (m (fxand ,mantissa-mask x))
+                   (s (fxarithmetic-shift-right x ,(+ mantissa-width exponent-width))))
+               (cond ((fx= e ,exponent-mask)
+                      (if (fxzero? m)
+                          (if (fxzero? s) +inf.0 -inf.0)
+                          +nan.0))
+                     ((fx> e 0)
+                      (let* ((abs-numerator (fx+ ,2^mantissa-width m))
+                             (numerator (if (fxzero? s) abs-numerator (fx- abs-numerator))))
+                        (flscalbn (fl* (fixnum->flonum numerator) ,(fl/ (fixnum->flonum 2^mantissa-width))) (fx- e ,exponent-bias))))
+                     ((fxzero? m)
+                      (if (fxzero? s) +0. -0.))
+                     (else
+                      (let* ((abs-numerator m)
+                             (numerator (if (fxzero? s) abs-numerator (fx- abs-numerator))))
+                        (flscalbn (fl* (fixnum->flonum numerator) ,(fl/ (fixnum->flonum 2^mantissa-width))) ,(fx- 1 exponent-bias)))))))))
+    ;; (pp result)
+    result))
+
+(define-macro (macro-make-double->representation name mantissa-width exponent-width exponent-bias)
+
+  (define (append-symbols . args)
+    (string->symbol
+     (apply string-append (map (lambda (arg)
+                                 (cond ((symbol? arg) (symbol->string arg))
+                                       ((number? arg) (number->string arg))
+                                       ((string? arg) arg)
+                                       (else
+                                        (apply error "append-symbols: unknown argument: " arg))))
+                               args))))
+
+  (let* ((exponent-mask (- (fxarithmetic-shift-left 1 exponent-width) 1))
+         (mantissa-mask (- (fxarithmetic-shift-left 1 mantissa-width) 1))
+         (2^mantissa-width (fxarithmetic-shift-left 1 mantissa-width))
+         (sign-rep (fxarithmetic-shift-left 1 (+ exponent-width mantissa-width)))
+         (max-exponent (fxarithmetic-shift-left exponent-mask mantissa-width))
+         (+inf-rep max-exponent)
+         (-inf-rep (fxior sign-rep max-exponent))
+         (+nan-rep (fxior max-exponent mantissa-mask))
+         (result
+          `(define (,(append-symbols 'double-> name) x)
+
+             (declare (inline))
+
+             (define (construct-representation sign-bit biased-exponent mantissa)
+               (fxior (fxarithmetic-shift-left sign-bit ,(+ exponent-width mantissa-width))
+                      (fxior (fxarithmetic-shift-left biased-exponent ,mantissa-width)
+                             mantissa)))
+
+             (let ((sign-bit
+                    (if (flnegative? (##flcopysign 1. x)) 1 0)))
+               (cond ((not (flfinite? x))
+                      (if (flnan? x)
+                          (construct-representation sign-bit ,exponent-mask ,mantissa-mask)
+                          ;; an infinity
+                          (construct-representation sign-bit ,exponent-mask 0)))
+                     ((flzero? x)
+                      ;; a zero
+                      (construct-representation sign-bit 0 0))
+                     (else
+                      ;; finite
+                      (let ((exponent (flilogb x)))
+                        (cond ((fx<=  ,(- exponent-mask exponent-bias) exponent)
+                               ;; infinity, because the exponent is too large
+                               (construct-representation sign-bit ,exponent-mask 0))
+                              ((fx< ,(fx- exponent-bias) exponent)
+                               ;; probably normal, finite in representation, unless overflow
+                               (let ((possible-mantissa
+                                      (##flonum->fixnum (flround (flscalbn (flabs x) (fx- ,mantissa-width exponent))))))
+                                 (if (fx< possible-mantissa ,(fx* 2 2^mantissa-width))
+                                     ;; no overflow
+                                     (construct-representation sign-bit
+                                                               (fx+ exponent ,exponent-bias)
+                                                               (fxand possible-mantissa ,mantissa-mask))
+                                     ;; overflow
+                                     (if (fx= exponent ,exponent-bias)
+                                         ;; maximum finite exponent, overflow to infinity
+                                         (construct-representation sign-bit ,exponent-mask 0)
+                                         ;; increase exponent by 1, mantissa is zero, no double rounding
+                                         (construct-representation sign-bit (fx+ exponent ,(fx+ exponent-bias 1)) 0)))))
+                              (else
+                               ;; usally subnormal
+                               (let ((possible-mantissa
+                                      (##flonum->fixnum (flround (flscalbn (flabs x) ,(fx+ exponent-bias mantissa-width -1))))))
+                                 (if (fx< possible-mantissa ,2^mantissa-width)
+                                     ;; doesn't overflow to normal
+                                     (construct-representation sign-bit 0 possible-mantissa)
+                                     ;; overflow to smallest normal
+                                     (construct-representation sign-bit 1 0))))))))))))
+    ;; (pp result)
+    result))
+
+(macro-make-representation->double f16 10 5 15)
+(macro-make-double->representation f16 10 5 15)
+
+(define f16-storage-class
+  (make-storage-class
+   ;; getter
+   (lambda (body i)
+     (f16->double (u16vector-ref body i)))
+   ;; setter
+   (lambda (body i obj)
+     (u16vector-set! body i (double->f16 obj)))
+   ;; checker
+   (lambda (obj)
+     (flonum? obj))
+   ;; maker
+   (lambda (n val)
+     (make-u16vector n (double->f16 val)))
+   ;; copier
+   u16vector-copy!
+   ;; length
+   (lambda (body)
+     (u16vector-length body))
+   ;; default
+   0.
+   ;; data?
+   (lambda (data)
+     (u16vector? data))
+   ;; data->body
+   (lambda (data)
+     (if (u16vector? data)
+         data
+         (error "Expecting a u16vector passed to (storage-class-data->body f16-storage-class): " data)))))
+
+#|
+
+;;; The test code for the conversion routines:
+
+(define (test)
+
+  (declare (inlining-limit 0))
+
+  (define (compose-f16 sign exponent mantissa)
+    (bitwise-ior (arithmetic-shift sign 15)
+                 (arithmetic-shift exponent 10)
+                 mantissa))
+
+  (define-macro (check i expr)
+    `(if (not (= ,i ,expr))
+         (begin
+           (pp (list ,i , expr ',expr))
+           (error "crap"))))
+
+  ;; The general strategy is: for the representation of each finite f16 number,
+  ;; 1.  Compute the double (x) associated with that representation, the one before (previous-x)
+  ;;     and the one after (next-x).
+  ;; 2.  Choose a random double strictly between the halfway point between x and each of next-x
+  ;;     and previous-x, and see that it rounds to the f16 representation of x.  (It's strict
+  ;;     for f16, double, and the reference implementation of SRFI 27.)
+  ;; 3.  If the representation is even, check that the double exactly between s and next-x, and
+  ;;     x and previous x rounds to x.  (Round to even rule.)
+  ;; Some care must be taken for the representation of the largest normal f16 number and the representation of 0.
+
+  (do ((i 1 (fx+ i 1)))                  ;; representation of smallest positive number
+      ((fx= i (compose-f16 0 30 1023)))  ;; representation of largest finite number
+    (let* ((x (f16->double i))
+           (next-x (f16->double (+ i 1)))
+           (previous-x (f16->double (- i 1))))
+      (check i (double->f16 (+ x (* 0.5 (random-real) (- next-x x)))))
+      (check i (double->f16 (+ x (* 0.5 (random-real) (- previous-x x)))))
+      (if (even? i)
+          (begin
+            (check i (double->f16 (+ x (* 0.5 (- next-x x)))))
+            (check i (double->f16 (+ x (* 0.5 (- previous-x x)))))))))
+  ;; i = 0
+  (let* ((i 0)
+         (x (f16->double i))
+         (next-x (f16->double (+ i 1)))) ;; no previous-x
+    (check i (double->f16 (+ x (* 0.5 (random-real) (- next-x x)))))
+    (check i (double->f16 (+ x (* 0.5 (- next-x x))))))
+  ;; largest normal
+  (let* ((i (compose-f16 0 30 1023))
+         (x (f16->double i))
+         (previous-x (f16->double (- i 1)))) ;; no next-x
+    (check i (double->f16 (+ x (* 0.5 (random-real) (- previous-x x)))))
+    (check i (double->f16 (+ x (* 0.5 (random-real) (- x previous-x))))) ;; if next-x were finite, this would be the same
+    (check (+ i 1) (double->f16 (+ x (* 0.5 (- x previous-x))))))        ;; check that 1/2 the difference rounds up to +inf.0
+  )
+
+|#
+
+;;; This sample implementation does not implement the following.
+
+(define f8-storage-class #f)
 
 ;;;
 ;;; Conceptually, an indexer is itself a 1-1 array that maps one interval to another; thus, it is
@@ -1871,6 +2084,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                     '(generic s8       u8       s16       u16       s32       u32       s64       u64       f32       f64       char)
                     '(vector  s8vector u8vector s16vector u16vector s32vector u32vector s64vector u64vector f32vector f64vector string))
              (else
+              ;; There are conversion routines required for getters and setters of other standard storage classes.
               ,expr)))
 
     (define-macro (expand-getters expr)
@@ -2388,10 +2602,15 @@ OTHER DEALINGS IN THE SOFTWARE.
    (list s32-storage-class
          s64-storage-class)
    (list s64-storage-class)
-   (list f32-storage-class
+   (list f16-storage-class
+         f32-storage-class
          f64-storage-class)
-   (list f64-storage-class    ;; the checker for these classes are the same, no point in checking
-         f32-storage-class)   ;; going from f64-storage-class to f32-storage-class
+   (list f32-storage-class    ;; the checkers for these classes are the same, no point in checking
+         f64-storage-class    ;; going from f32-storage-class to f16-storage-class
+         f16-storage-class)
+   (list f64-storage-class    ;; the checkers for these classes are the same, no point in checking
+         f32-storage-class    ;; going from f64-storage-class to f32-storage-class or f16-storage-class
+         f16-storage-class)
    (list char-storage-class)
    (list c64-storage-class
          c128-storage-class)
