@@ -38,6 +38,15 @@ OTHER DEALINGS IN THE SOFTWARE.
          (mostly-fixnum)
          (not safe))
 
+;;; VOID: Since the results returned by <whatever>vector-set! is not defined,
+;;; and Gambit returns the vector itself when code is compiled with
+;;; (declare (standard-bindings) (not safe)),
+;;; we follow all setters with the nonstandard procedure (void).
+;;; If your Scheme doesn't have (void) you can
+;;; (define (void) (if #f #f))
+;;; This doesn't work on Racket, which disallows one-armed if's, but Racket
+;;; already defines (void).
+
 ;;; INLINING: Gambit's inlining directives are a bit of a coarse tool.
 ;;; So what I've decided to do is not inline by default, and inline
 ;;; small accessors, etc., by hand.  Let's hope I catch them all.
@@ -1140,7 +1149,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (,ref v i))
                     ;; setter
                     (lambda (v i val)
-                      (,set! v i val))
+                      (,set! v i val) (void))
                     ;; checker
                     ,checker           ;; already expanded
                     ;; maker
@@ -1246,7 +1255,8 @@ OTHER DEALINGS IN THE SOFTWARE.
            (bodyv (vector-ref v  1)))
        (u16vector-set! bodyv index (fxior (fxarithmetic-shift-left val shift)
                                           (fxand (u16vector-ref bodyv index)
-                                                 (fxnot  (fxarithmetic-shift-left 1 shift)))))))
+                                                 (fxnot  (fxarithmetic-shift-left 1 shift)))))
+       (void)))
    ;; checker
    (lambda (val)
      (and (fixnum? val)
@@ -1292,7 +1302,8 @@ OTHER DEALINGS IN THE SOFTWARE.
             ;; setter
             (lambda (body i obj)
               (,(symbol-concatenate floating-point-prefix 'vector-set!) body (fx* 2 i)         (real-part obj))
-              (,(symbol-concatenate floating-point-prefix 'vector-set!) body (fx+ (fx* 2 i) 1) (imag-part obj)))
+              (,(symbol-concatenate floating-point-prefix 'vector-set!) body (fx+ (fx* 2 i) 1) (imag-part obj))
+              (void))
             ;; checker
             (lambda (obj)
               (and (complex? obj)
@@ -1410,11 +1421,6 @@ OTHER DEALINGS IN THE SOFTWARE.
   (let* ((exponent-mask (- (fxarithmetic-shift-left 1 exponent-width) 1))
          (mantissa-mask (- (fxarithmetic-shift-left 1 mantissa-width) 1))
          (2^mantissa-width (fxarithmetic-shift-left 1 mantissa-width))
-         (sign-rep (fxarithmetic-shift-left 1 (+ exponent-width mantissa-width)))
-         (max-exponent (fxarithmetic-shift-left exponent-mask mantissa-width))
-         (+inf-rep max-exponent)
-         (-inf-rep (fxior sign-rep max-exponent))
-         (+nan-rep (fxior max-exponent mantissa-mask))
          (result
           `(define (,(append-symbols 'double-> name) x)
 
@@ -1478,7 +1484,7 @@ OTHER DEALINGS IN THE SOFTWARE.
      (f16->double (u16vector-ref body i)))
    ;; setter
    (lambda (body i obj)
-     (u16vector-set! body i (double->f16 obj)))
+     (u16vector-set! body i (double->f16 obj)) (void))
    ;; checker
    (lambda (obj)
      (flonum? obj))
@@ -2217,12 +2223,12 @@ OTHER DEALINGS IN THE SOFTWARE.
                                         (storage-class-setter body (apply indexer multi-index) value)))))))
                       (else
                        (case (%%interval-dimension domain)
-                         ((0)  (expand-setters (lambda (value)               (storage-class-setter body (indexer)                   value))))
-                         ((1)  (expand-setters (lambda (value i)             (storage-class-setter body (indexer i)                 value))))
-                         ((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value))))
-                         ((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value))))
-                         ((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value))))
-                         (else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value))))))))))
+                         ((0)  (expand-setters (lambda (value)               (storage-class-setter body (indexer)                   value) (void))))
+                         ((1)  (expand-setters (lambda (value i)             (storage-class-setter body (indexer i)                 value) (void))))
+                         ((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value) (void))))
+                         ((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value) (void))))
+                         ((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value) (void))))
+                         (else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value) (void))))))))))
       (make-%%array domain
                     getter
                     setter
@@ -2756,15 +2762,14 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (set! index (fx+ index 1))))))
                              domain))
                           "In order, no checks needed, generic-storage-class")
-                         ((and (specialized-array? source)
-                               (or (eq? (%%array-storage-class source)
-                                        destination-storage-class)
-                                   (let ((compatibility-list
-                                          (assq (%%array-storage-class source)
-                                                %%storage-class-compatibility-alist)))
-                                     (and compatibility-list
-                                          (memq destination-storage-class
-                                                compatibility-list)))))
+                         ((or (eq? (%%array-storage-class source)
+                                   destination-storage-class)
+                              (let ((compatibility-list
+                                     (assq (%%array-storage-class source)
+                                           %%storage-class-compatibility-alist)))
+                                (and compatibility-list
+                                     (memq destination-storage-class
+                                           compatibility-list))))
                           ;; No checks needed
                           (let ((setter (storage-class-setter destination-storage-class))
                                 (body (%%array-body destination)))

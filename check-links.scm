@@ -26,7 +26,7 @@
                                      'format-parameter))
                            (set! result (cons (cadadr obj) result)))
                           ((and (not (null? obj))
-                                (eq? (car obj) '<a>)
+                                (memq (car obj) '(<a> <br>))
                                 (memq id: obj))
                            => (lambda (tail)
                                 (let ((name (cadr tail)))
