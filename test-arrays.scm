@@ -32,7 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; A test program for SRFI 231:
 ;;; Intervals and Generalized Arrays
 
-'(begin
+(begin
   ;; Uncomment this line to run test-arrays.scm in Gambit.
   (include "generic-arrays.scm"))
 
@@ -6587,7 +6587,8 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (set! array-list (cons (array-copy A) array-list))
+  (let ((temp (array-copy A)))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6613,7 +6614,8 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (set! array-list (cons (array-append 1 (list A B)) array-list))
+  (let ((temp (array-append 1 (list A B))))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6639,7 +6641,8 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (set! array-list (cons (array-stack 1 (list A B)) array-list))
+  (let ((temp (array-stack 1 (list A B))))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6666,7 +6669,8 @@ that computes the componentwise products when we need them, the times are
        (A (make-array domain A_))
        (C (list*->array 2 (list (list A B))))
        (array-list '()))
-  (set! array-list (cons (array-block C) array-list))
+  (let ((temp (array-block C)))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6693,7 +6697,8 @@ that computes the componentwise products when we need them, the times are
        (A (make-array domain A_))
        (C (list*->array 1 (list A B)))
        (array-list '()))
-  (set! array-list (cons (array-decurry C) array-list))
+  (let ((temp (array-decurry C)))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6720,7 +6725,8 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (set! array-list (cons (array-copy! A) array-list))
+  (let ((temp (array-copy! A)))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6740,7 +6746,8 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (set! array-list (cons (array-append 1 (list A B)) array-list))
+  (let ((temp (array-append 1 (list A B))))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6760,7 +6767,8 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (set! array-list (cons (array-stack! 1 (list A B)) array-list))
+  (let ((temp (array-stack! 1 (list A B))))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6781,7 +6789,8 @@ that computes the componentwise products when we need them, the times are
        (A (make-array domain A_))
        (C (list*->array 2 (list (list A B))))
        (array-list '()))
-  (set! array-list (cons (array-block! C) array-list))
+  (let ((temp (array-block! C)))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
@@ -6802,7 +6811,8 @@ that computes the componentwise products when we need them, the times are
        (A (make-array domain A_))
        (C (list*->array 1 (list A B)))
        (array-list '()))
-  (set! array-list (cons (array-decurry! C) array-list))
+  (let ((temp (array-decurry! C)))
+    (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
         (set! call-cont #f)
