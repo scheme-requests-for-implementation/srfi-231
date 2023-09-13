@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Commentary on SRFI 231: Intervals and Generalized Arrays</title>
+    <link type="image/png" sizes="192x192" rel="icon" href="/favicon.png">
+    <link type="text/css" rel="stylesheet" href="https://srfi.schemers.org/srfi.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+      });</script>
+    <script integrity="sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  </head>
+  <body>
+    <h1>Commentary on <a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo"></a>231: Intervals and Generalized Arrays</h1>
+    <p> by Bradley J. Lucier</p>
+    <h2 id="status">Status</h2>
+    <p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+231+at+srfi+dotschemers+dot+org">srfi-231@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-231/">archive</a>.</p>
+    <h2>Some comparisons to NumPy.</h2>
+    <p>The <a href="https://numpy.org/doc/stable/user/index.html">NumPy array library</a> is a popular library for scientific computing that extends <a href="https://www.python.org/">the Python programming language</a>. I'd like to compare some of the properties of NumPy arrays and SRFI 231 arrays.  I should state from the outset that (1) I am not in any an expert in Python or NumPy, and (2) this commentary is not meant in any way as a criticism of NumPy, which has had tremendous success.  We refer in the following to the NumPY API Reference section on <a href="https://numpy.org/doc/stable/reference/routines.array-manipulation.html">Array manipulation routines.</a>
+      <p>NumPy sometimes has a series of routines that do similar things, but along different axes.</p>
+      <p>For example, there is this section in the API reference:</p>
+      <table>
+        <th colspan="2">Joining arrays</th>
+        <tr>
+          <td>concatenate([axis, out, dtype, casting])</td>
+          <td>Join a sequence of arrays along an existing axis</td></tr>
+        <tr>
+          <td>stack(arrays[, axis, out, dtype, casting])</td>
+          <td>Join a sequence of arrays along a new axis.</td></tr>
+        <tr>
+          <td>block(arrays)</td>
+          <td>Assemble an nd-array from nested lists of blocks.</td></tr>
+        <tr>
+          <td>vstack(tup, *[, dtype, casting])</td>
+          <td>Stack arrays in sequence vertically (row wise).</td></tr>
+        <tr>
+          <td>hstack(tup, *[, dtype, casting])</td>
+          <td>Stack arrays in sequence horizontally (column wise).</td></tr>
+        <tr>
+          <td>dstack(tup, *[, dtype, casting])</td>
+          <td>Stack arrays in sequence depth wise (along the third axis).</td></tr>
+        <tr>
+          <td>column_stack(tup)</td>
+          <td>Stack 1-D arrays as columns into a 2-D array.</td></tr>
+        <tr>
+          <td>row_stack(tup, *[, dtype, casting])</td>
+          <td>Stack arrays in sequence vertically (row wise)</td></tr>
+      </table>
+      <p>What may not be clear is that <code>concatenate</code> and <code>block</code> are related, in that the dimension of the resulting array is the same as the input arrays, and all the <code>*-stack</code> routines are related, in that the resulting array has dimension that is one more than the dimensions of the argument arrays.</p>
+      <p>SRFI 231 has <code>array-stack</code>, which does what <code>numpy.stack</code> does, which covers the semantics of all the other <code>*stack</code> routines.</p>
+      <p>SRFI 231 also has <code>array-decurry</code>, which takes as an argument an array of arrays, allows simultaneous &quot;stacking&quot; of arrays in multiple directions.  In this case, all the new axes are placed before the axes of the argument arrays; these new axes can be redistributed with SRFI 231's <code>array-permute</code>. I don't see a corresponding routine in NumPy, i.e., a multi-axis &quot;stack&quot; routine.</p>
+      <p>NumPy's <code>concatenate</code> and SRFI 231's <code>array-concatenate</code> do pretty much the same thing.</p>
+      <p>NumPy's <code>block</code> takes a nested list of arrays and assembles them into one large array of the same dimension, but for some reason doesn't have the same optional arguments as the other routines.  I don't know whether there are other routines that can operate on nested lists in NumPy.  SRFI 231's <code>array-block</code>, inspired by <code>numpy.block</code>,  takes an array of arrays as an argument.</p>
+      <p>For &quot;splitting&quot; arrays, NumPy has the following routines:</p>
+      <table>
+        <th colspan="2">Splitting arrays</th>
+        <tr>
+          <td>split(ary, indices_or_sections[, axis])</td>
+          <td>Split an array into multiple sub-arrays as views into ary.</td></tr>
+        <tr>
+          <td>array_split(ary, indices_or_sections[, axis])</td>
+          <td>Split an array into multiple sub-arrays.</td></tr>
+        <tr>
+          <td>dsplit(ary, indices_or_sections)</td>
+          <td>Split array into multiple sub-arrays along the 3rd axis (depth).</td></tr>
+        <tr>
+          <td>hsplit(ary, indices_or_sections)</td>
+          <td>Split an array into multiple sub-arrays horizontally (column-wise).</td></tr>
+        <tr>
+          <td>vsplit(ary, indices_or_sections)</td>
+          <td>Split an array into multiple sub-arrays vertically (row-wise).</td></tr>
+      </table>
+      <p>All these routines from NumPy have similar functionality to SRFI 231's <code>array-tile</code>, but some NumPy routines are limited to acting in one dimension per procedure call.</p>
+      <p>The NumPy routines <code>*split</code> are undone by NumPy's <code>concatenate</code>.  I know of no NumPy routine that will decompose an array into sections appropriate to be reconstructed with NumPy's <code>block</code>.</p>
+      <p>NumPy has powerful syntactic notation for considering various views and slices of arrays, but I know of no NumPy routine that decomposes an array in a way that is reconstituted with the various NumPy <code>*stack</code> routines. In contrast, one can combine SRFI 231's <code>array-permute</code> and <code>array-curry</code> to decompose an array by dimension, which is reconstituted with SRFI 231's <code>array-stack</code> (if along only one dimension) or <code>array-decurry</code> (if along several dimensions at once).</p>
+      <p>NumPy has routines that it categorizes as &quot;Rearranging elements&quot;:</p>
+      <table>
+        <th colspan="2">Rearranging elements</th>
+        <tr>
+          <td>flip(m[, axis])</td>
+          <td>Reverse the order of elements in an array along the given axis.</td></tr>
+        <tr>
+          <td>fliplr(m)</td>
+          <td>Reverse the order of elements along axis 1 (left/right).</td></tr>
+        <tr>
+          <td>flipud(m)</td>
+          <td>Reverse the order of elements along axis 0 (up/down).</td></tr>
+        <tr>
+          <td>reshape(a, newshape[, order])</td>
+          <td>Gives a new shape to an array without changing its data.</td></tr>
+        <tr>
+          <td>roll(a, shift[, axis])</td>
+          <td>Roll array elements along a given axis.</td></tr>
+        <tr>
+          <td>rot90(m[, k, axes])</td>
+          <td>Rotate an array by 90 degrees in the plane specified by axes.</td></tr>
+      </table>
+      <p>NumPy's various &quot;flip&quot; routines are achieved by the more general <code>array-reverse</code> of SRFI 231.  NumPy's <code>reshape</code> motivated, and is basically the same as, SRFI 231's <code>array-reshape</code>.  SRFI 231 does not have builtin functionality mimicking NumPy's <code>roll</code>.  NumPy's <code>rot90</code> routine is a special case of combining SRFI 231's <code>array-reverse</code> and <code>array-permute</code>.  Indeed, by combining one call to <code>array-reverse</code> with one call to <code>array-permute</code>, <a href="https://srfi-email.schemers.org/srfi-231/msg/22460166/">SRFI 231 can generate all &quot;symmetries&quot; of a multi-dimensional hypercube</a>.</p>
+      <p>NumPy has what it calls &quot;Transpose-like operations:</p>
+      <table>
+        <th colspan="2">Transpose-like operations</th>
+        <tr>
+          <td>moveaxis(a, source, destination)</td>
+          <td>Move axes of an array to new positions.</td></tr>
+        <tr>
+          <td>rollaxis(a, axis[, start])</td>
+          <td>Roll the specified axis backwards, until it lies in a given position.</td></tr>
+        <tr>
+          <td>swapaxes(a, axis1, axis2)</td>
+          <td>Interchange two axes of an array.</td></tr>
+        <tr>
+          <td>ndarray.T</td>
+          <td>View of the transposed array.</td></tr>
+        <tr>
+          <td>transpose(a[, axes])</td>
+          <td>Returns an array with axes transposed.</td></tr>
+      </table>
+      <p>All of NumPy's various transpose-like operations, the most general of which is <code>moveaxis</code>, are effected in SRFI 231 with <code>array-permute</code>.  SRFI 231 has a number of auxiliary routines that specify common useful permutations (rearrangements) of axes, or indices, as they're called here: <code>index-first</code>, <code>index-last</code>, <code>index-rotate</code>, and <code>index-swap</code>, the results of which are used as arguments to <code>array-permute</code>.</p></p>
+  </body>
+</html>
