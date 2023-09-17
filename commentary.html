@@ -54,7 +54,7 @@
     <p>What may not be clear is that <code>concatenate</code> and <code>block</code> are related, in that the dimension of the resulting array is the same as the input arrays, and all the <code>*-stack</code> routines are related, in that the resulting array has dimension that is one more than the dimensions of the argument arrays.</p>
     <p>SRFI 231 has <code>array-stack</code>, which does what <code>numpy.stack</code> does, which covers the semantics of all the other <code>*stack</code> routines.</p>
     <p>SRFI 231 also has <code>array-decurry</code>, which takes as an argument an array of arrays, allows simultaneous &quot;stacking&quot; of arrays in multiple directions.  In this case, all the new axes are placed before the axes of the argument arrays; these new axes can be redistributed with SRFI 231's <code>array-permute</code>. I don't see a corresponding routine in NumPy, i.e., a multi-axis &quot;stack&quot; routine.</p>
-    <p>NumPy's <code>concatenate</code> and SRFI 231's <code>array-concatenate</code> do pretty much the same thing.</p>
+    <p>NumPy's <code>concatenate</code> and SRFI 231's <code>array-append</code> do pretty much the same thing.</p>
     <p>NumPy's <code>block</code> takes a nested list of arrays and assembles them into one large array of the same dimension, but for some reason doesn't have the same optional arguments as the other routines.  I don't know whether there are other routines that can operate on nested lists in NumPy.  SRFI 231's <code>array-block</code>, inspired by <code>numpy.block</code>,  takes an array of arrays as an argument.</p>
     <p>For &quot;splitting&quot; arrays, NumPy has the following routines:</p>
     <table>

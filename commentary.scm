@@ -91,7 +91,7 @@ MathJax.Hub.Config({
         (<p> "What may not be clear is that "(<code>'concatenate)" and "(<code>'block)" are related, in that the dimension of the resulting array is the same as the input arrays, and all the "(<code>'*-stack)" routines are related, in that the resulting array has dimension that is one more than the dimensions of the argument arrays.")
         (<p> "SRFI 231 has "(<code>'array-stack)", which does what "(<code>'numpy.stack)" does, which covers the semantics of all the other "(<code>'*stack)" routines.")
         (<p> "SRFI 231 also has "(<code>'array-decurry)", which takes as an argument an array of arrays, allows simultaneous \"stacking\" of arrays in multiple directions.  In this case, all the new axes are placed before the axes of the argument arrays; these new axes can be redistributed with SRFI 231's "(<code>'array-permute)". I don't see a corresponding routine in NumPy, i.e., a multi-axis \"stack\" routine.")
-        (<p> "NumPy's "(<code>'concatenate)" and SRFI 231's "(<code>'array-concatenate)" do pretty much the same thing.")
+        (<p> "NumPy's "(<code>'concatenate)" and SRFI 231's "(<code>'array-append)" do pretty much the same thing.")
         (<p> "NumPy's "(<code>'block)" takes a nested list of arrays and assembles them into one large array of the same dimension, but for some reason doesn't have the same optional arguments as the other routines.  I don't know whether there are other routines that can operate on nested lists in NumPy.  SRFI 231's "(<code>'array-block)", inspired by "(<code>'numpy.block)",  takes an array of arrays as an argument.")
         (<p> "For \"splitting\" arrays, NumPy has the following routines:")
         (<table>
