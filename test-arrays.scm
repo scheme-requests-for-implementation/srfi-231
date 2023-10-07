@@ -2523,7 +2523,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-(pp "array-fold[lr] error tests")
+(pp "array-fold-left, array-fold-right error tests")
 
 (test (array-fold-left 1 1 1)
       "array-fold-left: The first argument is not a procedure: ")
@@ -6814,7 +6814,7 @@ that computes the componentwise products when we need them, the times are
                 1))))
        (A (make-array domain A_))
        (array-list '()))
-  (let ((temp (array-append 1 (list A B))))
+  (let ((temp (array-append! 1 (list A B))))
     (set! array-list (cons temp array-list)))
   (if call-cont
       (begin
@@ -6904,7 +6904,5 @@ that computes the componentwise products when we need them, the times are
       (begin
         (set! call-cont #f)
         (cont 4))))
-
-
 
 (for-each display (list "Failed " failed-tests " out of " total-tests " total tests.\n"))
