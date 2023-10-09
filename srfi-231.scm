@@ -95,6 +95,7 @@ MathJax.Hub.Config({
          (<li> "Revised to fix errata:"
                (<ul>
                 (<li> "2023-01-16 (Add "(<a> href: "#array-assign-erratum" "note")" about invoking the continuations of getters and setters in "(<code>'array-assign!)" more than once.)")))
+         (<li> (<a> href: "commentary.html" "Commentary")" added by author on 2023-09-19.")
          )
 
         (<h2> "Abstract")
