@@ -4835,7 +4835,8 @@ OTHER DEALINGS IN THE SOFTWARE.
         ((not (boolean? safe?))
          (error (string-append caller "Expecting a boolean as the fifth argument: ") k arrays storage-class mutable? safe?))
         (else
-         (%%%array-stack k arrays storage-class mutable? safe? caller call/cc-safe?))))
+         ;; We copy the arrays argument in case any of the array getters modify the arrays list argument
+         (%%%array-stack k (list-copy arrays) storage-class mutable? safe? caller call/cc-safe?))))
 
 (define (array-append k
                       arrays
@@ -4904,6 +4905,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                              (cdr arrays))))))
            (lambda (axis-subdividers kth-size)
              (let* ((arrays
+                     (list-copy arrays))  ;; in case any of the array getters modify the arrays list argument
+                    (arrays
                      (if call/cc-safe?
                          (map (lambda (A)
                                 (%%->specialized-array A storage-class caller))
