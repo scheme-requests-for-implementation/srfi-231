@@ -1124,7 +1124,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; is an error situation, but this is how the sample implementation currently deals with it.
 
 (let* ((string "123")
-       (array (make-specialized-array-from-data "123" char-storage-class #t)))
+       (array (make-specialized-array-from-data string char-storage-class #t)))
   (test (array? array) #t)
   (test (mutable-array? array)
         (##mutable? string)))
