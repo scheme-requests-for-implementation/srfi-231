@@ -49,7 +49,6 @@ OTHER DEALINGS IN THE SOFTWARE.
   (##namespace
    ("srfi/231#"
     ;; Internal SRFI 231 procedures that are either tested or called here.
-    %%test-moves           ;; TODO: Remove after testing
     %%compose-indexers
     make-%%array
     %%every
@@ -849,10 +848,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                    (symbol->string name)
                                    "): ")))
               (test ((storage-class-data->body class) 'a)
-                    message)
-              #;(test ((storage-class-data->body class) (maker 0))
-                    message)
-              ))
+                    message)))
           storage-class-names)
 
 (pp "array error tests")
@@ -1123,13 +1119,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (make-specialized-array-from-data 'a)
       "make-specialized-array-from-data: The first argument is not compatible with the storage class: ")
 
-;;; FIXME: When I figure out how to make immutable data in the interpreter, I'll get this test to work.
+;;; The string is mutable in the interpreter, and immutable in the compiler, and this passes both ways.
+;;; Passing immutable data to make-specialized-array-from-data with the mutable? argument #t
+;;; is an error situation, but this is how the sample implementation currently deals with it.
 
-#;
-(let ((array (make-specialized-array-from-data "123" char-storage-class #t)))
-  (test (and (array? array)
-             (not (mutable-array? array)))
-        #t))
+(let* ((string "123")
+       (array (make-specialized-array-from-data "123" char-storage-class #t)))
+  (test (array? array) #t)
+  (test (mutable-array? array)
+        (##mutable? string)))
 
 (let ((test-values
        (list ;;       storae-class   default other data
@@ -6625,7 +6623,6 @@ that computes the componentwise products when we need them, the times are
 
 (generations glider 5)
 
-#;(pp (reverse %%test-moves))
 
 ;;; Unit tests
 
