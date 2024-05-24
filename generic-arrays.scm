@@ -1188,7 +1188,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                                  data)))))))
             '(generic s8       u8       s16       u16       s32       u32       s64       u64       f32       f64       char)
             '(vector  s8vector u8vector s16vector u16vector s32vector u32vector s64vector u64vector f32vector f64vector string)
-            '(#f      0        0        0         0         0         0         0         0         0.0        0.0     #\0)
+            '(#f      0        0        0         0         0         0         0         0         0.0        0.0     #\null)
             `((lambda (x) #t)                        ; generic
               (lambda (x)                            ; s8
                 (and (fixnum? x)
