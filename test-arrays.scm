@@ -1132,7 +1132,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (let ((test-values
        (list ;;       storae-class   default other data
         (list generic-storage-class  #f 'a 1 #\c)
-        (list    char-storage-class  '#\0 '#\a '#\b)
+        (list    char-storage-class  '#\null '#\a '#\b)
         (list      u1-storage-class  0 1)
         (list      u8-storage-class  0 23)
         (list     u16-storage-class  0 500)
@@ -2228,6 +2228,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
               ;; We gotta make sure than the error checks work in all dimensions ...
+
+              (test (array-copy (make-array (make-interval '#()) list)
+                                u16-storage-class)
+                    (wrap "Not all elements of the source can be stored in destination: "))
 
               (test (array-copy (make-array (make-interval '#(1) '#(2))
                                             list)
