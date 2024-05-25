@@ -2802,7 +2802,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (define matrix vector)
 
-(define (2x2-multiply A B)
+(define (two-x-two-multiply A B)
   (let ((a_11 (vector-ref A 0)) (a_12 (vector-ref A 1))
         (a_21 (vector-ref A 2)) (a_22 (vector-ref A 3))
         (b_11 (vector-ref B 0)) (b_12 (vector-ref B 1))
@@ -2818,12 +2818,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                             (matrix 1 0
                                     i 1)))))
 
-(test (array-reduce 2x2-multiply A)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A))
-
-(test (array-reduce 2x2-multiply A)
-      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A))
-
 
 (define A_2 (make-array (make-interval '#(1 1) '#(3 7))
                         (lambda (i j)
@@ -2833,16 +2827,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (matrix 1 j
                                       i -1)))))
 
-(test (array-reduce 2x2-multiply A_2)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_2))
-
-(test (array-reduce 2x2-multiply A_2)
-      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A_2))
-
-(test (equal? (array-reduce 2x2-multiply A_2)
-              (array-reduce 2x2-multiply (array-permute A_2 (index-rotate (array-dimension A_2) 1))))
-      #f)
-
 (define A_3 (make-array (make-interval '#(1 1 1) '#(3 5 4))
                         (lambda (i j k)
                           (if (and (even? i) (even? j))
@@ -2851,15 +2835,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (matrix k j
                                       i -1)))))
 
-(test (array-reduce 2x2-multiply A_3)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_3))
-
-(test (array-reduce 2x2-multiply A_3)
-      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A_3))
-
-(test (equal? (array-reduce 2x2-multiply A_3)
-              (array-reduce 2x2-multiply (array-permute A_3 (index-rotate (array-dimension A_3) 1))))
-      #f)
 
 (define A_4 (make-array (make-interval '#(1 1 1 1) '#(3 2 4 3))
                         (lambda (i j k l)
@@ -2869,16 +2844,6 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (matrix l k
                                       i j)))))
 
-(test (array-reduce 2x2-multiply A_4)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_4))
-
-(test (array-reduce 2x2-multiply A_4)
-      (array-fold-left 2x2-multiply (matrix 1 0 0 1) A_4))
-
-(test (equal? (array-reduce 2x2-multiply A_4)
-              (array-reduce 2x2-multiply (array-permute A_4 (index-rotate (array-dimension A_4) 1))))
-      #f)
-
 (define A_5 (make-array (make-interval '#(1 1 1 1 1) '#(3 2 4 3 3))
                         (lambda (i j k l m)
                           (if (even? m)
@@ -2887,13 +2852,18 @@ OTHER DEALINGS IN THE SOFTWARE.
                               (matrix (- l m) k
                                       i j)))))
 
-(test (array-reduce 2x2-multiply A_5)
-      (array-fold-right 2x2-multiply (matrix 1 0 0 1) A_5))
 
+(for-each (lambda (A)
+            (test (array-reduce two-x-two-multiply A)
+                  (array-fold-right two-x-two-multiply (matrix 1 0 0 1) A))
 
-(test (equal? (array-reduce 2x2-multiply A_5)
-              (array-reduce 2x2-multiply (array-permute A_5 (index-rotate (array-dimension A_5) 1))))
-      #f)
+            (test (array-reduce two-x-two-multiply A)
+                  (array-fold-left two-x-two-multiply (matrix 1 0 0 1) A))
+
+            (test (equal? (array-reduce two-x-two-multiply A)
+                          (array-reduce two-x-two-multiply (array-reverse A)))
+                  #f))
+          (list A A_2 A_3 A_4 A_5))
 
 (pp "Some array-curry tests.")
 
@@ -2918,8 +2888,8 @@ OTHER DEALINGS IN THE SOFTWARE.
       ((> left-dim dim))
     (let* ((right-dim (- dim left-dim))
            (immutable-curry (array-curry immutable right-dim))
-           (mutable-curry(array-curry  mutable right-dim))
-           (special-curry (array-curry special right-dim)))
+           (mutable-curry   (array-curry  mutable right-dim))
+           (special-curry   (array-curry special right-dim)))
       (for-each (lambda (array)
                   (test (apply array-ref array (make-list left-dim 100))
                         "array-curry: domain does not contain multi-index: ")
@@ -3320,18 +3290,20 @@ OTHER DEALINGS IN THE SOFTWARE.
   (test (interval-translate int '#(1. 2.))
         "interval-translate: The second argument is not a vector of exact integers: ")
   (test (interval-translate int '#(1))
-        "interval-translate: The dimension of the first argument (an interval) does not equal the length of the second (a vector): ")
-  (do ((i 0 (+ i 1)))
-      ((= i random-tests))
-    (let* ((int (random-interval))
-           (lower-bounds (interval-lower-bounds->vector int))
-           (upper-bounds (interval-upper-bounds->vector int))
-           (translation (list->vector (map (lambda (x)
-                                             (random -10 10))
-                                           (local-iota 0 (vector-length lower-bounds))))))
-      (interval= (interval-translate int translation)
-                 (make-interval (vector-map + lower-bounds translation)
-                                (vector-map + upper-bounds translation))))))
+        "interval-translate: The dimension of the first argument (an interval) does not equal the length of the second (a vector): "))
+
+(do ((i 0 (+ i 1)))
+    ((= i random-tests))
+  (let* ((int (random-interval))
+         (lower-bounds (interval-lower-bounds->vector int))
+         (upper-bounds (interval-upper-bounds->vector int))
+         (translation (list->vector (map (lambda (x)
+                                           (random -10 10))
+                                         (local-iota 0 (vector-length lower-bounds))))))
+    (test (interval= (interval-translate int translation)
+                     (make-interval (vector-map + lower-bounds translation)
+                                    (vector-map + upper-bounds translation)))
+          #t)))
 
 (next-test-random-source-state!)
 
@@ -3425,8 +3397,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
   (test ((array-setter A) 'a 0 0)
         "The number of indices does not equal the array dimension: "))
-
-(next-test-random-source-state!)
 
 
 (pp "interval and array permutation tests")
