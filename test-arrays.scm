@@ -497,11 +497,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 (next-test-random-source-state!)
 
-
-(pp "interval-contains-multi-index? error tests")
-
-
-
 (pp "interval-volume error tests")
 
 (test (interval-volume #f)
@@ -3554,9 +3549,10 @@ OTHER DEALINGS IN THE SOFTWARE.
            (lower-bounds (interval-lower-bounds->vector int))
            (upper-bounds (interval-upper-bounds->vector int))
            (permutation (random-permutation (vector-length lower-bounds))))
-      (interval= (interval-permute int permutation)
-                 (make-interval (vector-permute lower-bounds permutation)
-                                (vector-permute upper-bounds permutation))))))
+      (test (interval= (interval-permute int permutation)
+                       (make-interval (vector-permute lower-bounds permutation)
+                                      (vector-permute upper-bounds permutation)))
+            #t))))
 
 (next-test-random-source-state!)
 
@@ -3988,18 +3984,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) 'a)
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(a a))
-      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
+      "array-tile: Element 0 of the second argument is neither a positive exact integer (allowed if the width of the first argument's corresponding axis is positive) nor a nonempty vector of nonnegative exact integers summing to the width of axis 0 of the first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(-1 1))
-      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
+      "array-tile: Element 0 of the second argument is neither a positive exact integer (allowed if the width of the first argument's corresponding axis is positive) nor a nonempty vector of nonnegative exact integers summing to the width of axis 0 of the first argument: ")
 (test (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list) '#(10))
       "array-tile: The second argument is not a vector of the same length as the dimension of the array first argument: ")
 (test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 -1 2)))
-      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
+      "array-tile: Element 0 of the second argument is neither a positive exact integer (allowed if the width of the first argument's corresponding axis is positive) nor a nonempty vector of nonnegative exact integers summing to the width of axis 0 of the first argument: ")
 (test (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 0 2)))
-      "array-tile: Axis 0 of the domain of the first argument has nonzero width, but element 0 of the second argument is neither an exact positive integer nor a vector of nonnegative exact integers summing to that width: ")
-
+      "array-tile: Element 0 of the second argument is neither a positive exact integer (allowed if the width of the first argument's corresponding axis is positive) nor a nonempty vector of nonnegative exact integers summing to the width of axis 0 of the first argument: ")
 (test (array-tile (make-array (make-interval '#(0)) list) '#(2))
-      "array-tile: Axis 0 of the domain of the first argument has width 0, but element 0 of the second argument is not a nonempty vector of exact zeros: ")
+      "array-tile: Element 0 of the second argument is neither a positive exact integer (allowed if the width of the first argument's corresponding axis is positive) nor a nonempty vector of nonnegative exact integers summing to the width of axis 0 of the first argument: ")
 
 (do ((d 1 (fx+ d 1)))
      ((fx= d 6))
@@ -5691,7 +5686,7 @@ that computes the componentwise products when we need them, the times are
 
 (test (array-inner-product (make-array (make-interval '#(1 10)) list)
                            list list
-                           (make-array (make-interval '#(0 10)) list))
+                           (make-array (make-interval '#(2 10)) list))
       "array-inner-product: The bounds of the last dimension of the first argument are not the same as the bounds of the first dimension of the fourth argument: ")
 
 
@@ -5713,10 +5708,9 @@ that computes the componentwise products when we need them, the times are
 
 
 (let* ((A (make-array (make-interval '#(4 0)) list))
-       (B (make-array (make-interval '#(0 4)) list))
-       (C (array-inner-product A list list B))) ;; should be no error
-  (test (array-ref C 0 0)
-        "array-inner-product: Attempting to reduce over an empty array: "))
+       (B (make-array (make-interval '#(0 4)) list)))
+  (test (array-inner-product A list list B)
+        "array-inner-product: The width of the first axis of the fourth argument is zero: "))
 
 
 (pp "array-append and array-append! tests")
@@ -6600,7 +6594,7 @@ that computes the componentwise products when we need them, the times are
 
 ;;; Unit tests
 
-(pp 'unit-tests)
+(pp "unit-tests")
 
 (let ((A (make-specialized-array (make-interval '#(5 5 5 5 5) '#(8 8 8 8 8))))
       (B (make-specialized-array (make-interval '#(5 5 5 5 5)))))
