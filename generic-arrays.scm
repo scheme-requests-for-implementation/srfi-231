@@ -313,7 +313,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                        (iota n))))
                (iota 5))))
      (define %%index-swaps
-       `,(list->vector
+       ',(list->vector
           (map (lambda (n)
                  (list->vector
                   (map (lambda (i)
