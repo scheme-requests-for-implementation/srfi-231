@@ -32,7 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ;;; A test program for SRFI 231:
 ;;; Intervals and Generalized Arrays
 
-'(begin
+(begin
   ;; Uncomment this line to run test-arrays.scm in Gambit.
   (include "generic-arrays.scm"))
 
