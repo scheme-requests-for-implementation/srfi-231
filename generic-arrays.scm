@@ -2018,7 +2018,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (uppers
                       (%%interval-upper-bounds->list domain))
                      (incremented-lowers
-                      (compute-multi-index-increments lowers uppers))
+                      (%%compute-multi-index-increments lowers uppers))
                      (base
                       (apply indexer lowers)))
                 (and
@@ -3124,7 +3124,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define array-copy! (%%make-array-copy #f))
 
 
-(define (compute-multi-index-increments lowers uppers)
+(define (%%compute-multi-index-increments lowers uppers)
   ;; lowers and uppers are lists of lower and upper bounds
   ;; This function returns all lowers first, then a list of
   ;; multi-indices where one of the lowers is incremented
@@ -3134,7 +3134,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; right
   (if (null? lowers)
       (list lowers)
-      (let* ((temp (compute-multi-index-increments (cdr lowers) (cdr uppers)))
+      (let* ((temp (%%compute-multi-index-increments (cdr lowers) (cdr uppers)))
              (lower (car lowers))
              (upper (car uppers))
              (next-index (+ lower 1)))
@@ -3162,7 +3162,7 @@ OTHER DEALINGS IN THE SOFTWARE.
              (uppers
               (%%interval-upper-bounds->list new-domain))
              (multi-indices
-              (compute-multi-index-increments lowers uppers))
+              (%%compute-multi-index-increments lowers uppers))
              (computed-offsets-for-multi-indices
               (map (lambda (multi-index)
                      (call-with-values
@@ -5258,7 +5258,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (uppers
               (%%interval-upper-bounds->list domain))
              (incremented-lowers
-              (compute-multi-index-increments lowers uppers))
+              (%%compute-multi-index-increments lowers uppers))
              (base
               (apply indexer (car incremented-lowers)))
              (strides
