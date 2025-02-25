@@ -152,10 +152,7 @@ OTHER DEALINGS IN THE SOFTWARE.
    test-random-source))
 
 (define test-random-real
-  (random-source-make-reals
-   test-random-source))
-
-
+  (random-source-make-reals test-random-source))
 
 (define (random a #!optional b)
   (if b
@@ -1054,6 +1051,9 @@ OTHER DEALINGS IN THE SOFTWARE.
       "make-specialized-array: The first argument is not an interval: ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) 'a)
+      "make-specialized-array: The second argument is not a storage-class: ")
+
+(test (make-specialized-array (make-interval '#(0) '#(10)) 'a 'a)
       "make-specialized-array: The second argument is not a storage-class: ")
 
 (test (make-specialized-array (make-interval '#(0) '#(10)) u16-storage-class 'a)
@@ -2015,13 +2015,13 @@ OTHER DEALINGS IN THE SOFTWARE.
                       (myarray= destination
                                 generalized-source
                                 (if (or (and (eq? source-storage-class c128-storage-class)
-                                                  (eq? destination-storage-class c64-storage-class))
-                                             (and (eq? source-storage-class f64-storage-class)
-                                                  (eq? destination-storage-class f32-storage-class))
-                                             (and (eq? source-storage-class f64-storage-class)
-                                                  (eq? destination-storage-class f16-storage-class))
-                                             (and (eq? source-storage-class f32-storage-class)
-                                                  (eq? destination-storage-class f16-storage-class)))
+                                             (eq? destination-storage-class c64-storage-class))
+                                        (and (eq? source-storage-class f64-storage-class)
+                                             (eq? destination-storage-class f32-storage-class))
+                                        (and (eq? source-storage-class f64-storage-class)
+                                             (eq? destination-storage-class f16-storage-class))
+                                        (and (eq? source-storage-class f32-storage-class)
+                                             (eq? destination-storage-class f16-storage-class)))
                                     sloppy-compare
                                     equal?)))
                     #t)

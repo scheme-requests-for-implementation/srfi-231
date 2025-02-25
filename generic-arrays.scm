@@ -846,7 +846,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
       `(case (%%interval-dimension interval)
          ((0) (operator identity (f)))
-         ,@(map do-one-case (iota 8 1))
+         ,@(map do-one-case (iota 4 1))
          (else
           (let ()
 
@@ -947,7 +947,7 @@ OTHER DEALINGS IN THE SOFTWARE.
       (let ((result
              `(case (%%interval-dimension interval)
                 ((0) (operator (f) identity))
-                ,@(map do-one-case (iota 8 1))
+                ,@(map do-one-case (iota 4 1))
                 (else
                  (let ()
 
@@ -2018,7 +2018,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                      (uppers
                       (%%interval-upper-bounds->list domain))
                      (incremented-lowers
-                      (compute-multi-index-increments lowers uppers))
+                      (%%compute-multi-index-increments lowers uppers))
                      (base
                       (apply indexer lowers)))
                 (and
@@ -2713,18 +2713,17 @@ OTHER DEALINGS IN THE SOFTWARE.
                                          (destination-setter destination-body d
                                                              (source-getter source-body s))
                                          (checker-error item)))))))
+
                         ;; Source and destination are not both packed, so we can't step
                         ;; through their bodies with step 1
+
                         (if (eq? destination-storage-class generic-storage-class)
                             ;; Out of order, no checks needed, generic-storage-class
                             (begin
                               (%%interval-for-each
                                (case (%%interval-dimension common-domain)
-                                 ((0)
-                                  (lambda ()
-                                    (vector-set! destination-body
-                                                 (destination-indexer)
-                                                 (source-getter source-body (source-indexer)))))
+                                 ;; Arrays of dimension zero, which contain only one
+                                 ;; element, are always packed, so there is no zero case.
                                  ((1)
                                   (lambda (i)
                                     (vector-set! destination-body
@@ -2765,11 +2764,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 (begin
                                   (%%interval-for-each
                                    (case (%%interval-dimension common-domain)
-                                     ((0)
-                                      (lambda ()
-                                        (destination-setter destination-body
-                                                            (destination-indexer)
-                                                            (source-getter source-body (source-indexer)))))
+                                     ;; Arrays of dimension zero, which contain only one
+                                     ;; element, are always packed, so there is no zero case.
                                      ((1)
                                       (lambda (i)
                                         (destination-setter destination-body
@@ -2801,14 +2797,8 @@ OTHER DEALINGS IN THE SOFTWARE.
                                 (begin
                                   (%%interval-for-each
                                    (case (%%interval-dimension common-domain)
-                                     ((0)
-                                      (lambda ()
-                                        (let ((item (source-getter source-body (source-indexer))))
-                                          (if (destination-checker item)
-                                              (destination-setter destination-body
-                                                                  (destination-indexer)
-                                                                  item)
-                                              (checker-error item)))))
+                                     ;; Arrays of dimension zero, which contain only one
+                                     ;; element, are always packed, so there is no zero case.
                                      ((1)
                                       (lambda (i)
                                         (let ((item (source-getter source-body (source-indexer i))))
@@ -3134,7 +3124,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 (define array-copy! (%%make-array-copy #f))
 
 
-(define (compute-multi-index-increments lowers uppers)
+(define (%%compute-multi-index-increments lowers uppers)
   ;; lowers and uppers are lists of lower and upper bounds
   ;; This function returns all lowers first, then a list of
   ;; multi-indices where one of the lowers is incremented
@@ -3144,7 +3134,7 @@ OTHER DEALINGS IN THE SOFTWARE.
   ;; right
   (if (null? lowers)
       (list lowers)
-      (let* ((temp (compute-multi-index-increments (cdr lowers) (cdr uppers)))
+      (let* ((temp (%%compute-multi-index-increments (cdr lowers) (cdr uppers)))
              (lower (car lowers))
              (upper (car uppers))
              (next-index (+ lower 1)))
@@ -3172,7 +3162,7 @@ OTHER DEALINGS IN THE SOFTWARE.
              (uppers
               (%%interval-upper-bounds->list new-domain))
              (multi-indices
-              (compute-multi-index-increments lowers uppers))
+              (%%compute-multi-index-increments lowers uppers))
              (computed-offsets-for-multi-indices
               (map (lambda (multi-index)
                      (call-with-values
@@ -4301,7 +4291,7 @@ OTHER DEALINGS IN THE SOFTWARE.
            ,(if (eq? name 'any) #f #t)
            (case (%%interval-dimension interval)
              ((0) (f))
-             ,@(map do-one-case (iota 8 1))
+             ,@(map do-one-case (iota 4 1))
              (else
               (let ()
 
@@ -4495,7 +4485,7 @@ OTHER DEALINGS IN THE SOFTWARE.
               l
               (list-copy l))))
     (if (eq? result-storage-class generic-storage-class)
-        ;; no element checking needed
+        ;; no element checking needed, setter is vector-set!
         (let loop ((i 0)
                    (local l))
           (if (or (fx= i n) (null? local))
@@ -4505,7 +4495,7 @@ OTHER DEALINGS IN THE SOFTWARE.
                       result)
                   (error (string-append caller "The volume of the first argument does not equal the length of the second: ") interval l))
               (let ((item (car local)))
-                (setter body i item)
+                (vector-set! body i item)
                 (loop (fx+ i 1)
                       (cdr local)))))
         (let loop ((i 0)
@@ -5268,7 +5258,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (uppers
               (%%interval-upper-bounds->list domain))
              (incremented-lowers
-              (compute-multi-index-increments lowers uppers))
+              (%%compute-multi-index-increments lowers uppers))
              (base
               (apply indexer (car incremented-lowers)))
              (strides
