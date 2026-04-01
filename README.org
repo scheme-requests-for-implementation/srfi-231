@@ -1,3 +1,6 @@
+
+# SPDX-FileCopyrightText: 2026 Arthur A. Gleckler
+# SPDX-License-Identifier: MIT
 * SRFI 231: Intervals and Generalized Arrays
 
 ** by Bradley J. Lucier
@@ -9,14 +12,11 @@ keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]]
 This repository hosts [[https://srfi.schemers.org/srfi-231/][SRFI 231]]: Intervals and Generalized Arrays, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
 
 This SRFI is in /final/ status.
-
-See also [[https://srfi.schemers.org/srfi-122/][SRFI 122: Nonempty Intervals and Generalized Arrays]], [[https://srfi.schemers.org/srfi-164/][SRFI 164: Enhanced multi-dimensional Arrays]], and [[https://srfi.schemers.org/srfi-179/][SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)]].
-
+See also [[/srfi-122/][SRFI 122: Nonempty Intervals and Generalized Arrays]], [[/srfi-164/][SRFI 164: Enhanced multi-dimensional Arrays]], [[/srfi-179/][SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)]], and [[/srfi-268/][SRFI 268: Multidimensional Array Literals]].
 The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-231/srfi-231.html][SRFI Document]].
 
 If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-231/][join the SRFI-231 mailing list]] and send your message there.
 
 Thank you.
-
 
 [[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]
