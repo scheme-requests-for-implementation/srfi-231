@@ -94,7 +94,9 @@ MathJax.Hub.Config({
          (<li> "Finalized: 2022-09-25")
          (<li> "Revised to fix errata:"
                (<ul>
-                (<li> "2023-01-16 (Add "(<a> href: "#array-assign-erratum" "note")" about invoking the continuations of getters and setters in "(<code>'array-assign!)" more than once.)")))
+                (<li> "2023-01-16 (Add "(<a> href: "#array-assign-erratum" "note")" about invoking the continuations of getters and setters in "(<code>'array-assign!)" more than once.)")
+                (<li> "2026-02-18 (Fix text about "(<a> href: "#zero-dimensional-arrays" "zero-dimensional arrays")".)")
+                (<li> "2026-09-08 (Fix definition of "(<a> href: "#array-inner-product" (<code>'array-inner-product))".)")))
          (<li> (<a> href: "commentary.html" "Commentary")" added by author on 2023-09-19.")
          )
 
@@ -392,7 +394,7 @@ they may have hash tables or databases behind an implementation, or may read the
 
         (<h2> (<a> id: "Notes" "Notes"))
         (<ul>
-         (<li> (<b> "Empty and zero-dimensional arrays: ")"The vectors of upper and lower bounds of an interval can have zero elements; zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme "(<code>'box)".  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.")
+         (<li> id: "zero-dimensional-arrays" (<b> "Empty and zero-dimensional arrays: ")"The vectors of upper and lower bounds of an interval can have zero elements; zero-dimensional arrays with this domain have getters and setters that take zero indices as arguments, and which return or set a single element, much like a Scheme "(<code>'box)".  If an interval has at least one upper and lower bound, and at least one of these upper bounds equals the associated lower bound, then that interval is empty, and arrays with empty intervals as domains have getters and setters that should raise an exception when called.")
          (<li> (<b> "This SRFI and "(<code>'call-with-current-continuation)": ")"The Scheme procedure "(<code>'call-with-current-continuation)" captures and encapsulates as a procedure the continuation of the current computation, which, perforce, includes a certain amount of state that consists of the values of captured variables at the point the continuation is captured. This captured procedure can be invoked multiple times, as any procedure can."
                (<br>)
                "No procedure in the sample implementation itself calls "(<code>'call-with-current-continuation)", but the procedural arguments to, e.g., "(<code>'make-array)", "(<code>'specialized-array-share)", "(<code>'array-map)", etc., may themselves call "(<code>'call-with-current-continuation)"."
@@ -2097,7 +2099,7 @@ B:
    (lambda ("(<var>"a b")")
      (array-reduce "(<var>'f)" (array-map "(<var>"g a b")")))
    (array-copy (array-curry "(<var>'A)" 1))
-   (array-copy (array-curry (array-permute "(<var>'B)" (index-rotate (array-dimension "(<var>'B)") 1)))))"))
+   (array-copy (array-curry (array-permute "(<var>'B)" (index-rotate (array-dimension "(<var>'B)") 1)) 1)))"))
 (<p> "We precompute and store the curried arrays using "(<code>'array-copy)" for efficiency reasons, as described in "(<a> href: "#array-outer-product" (<code>'array-outer-product))".")
 (<p> "It is an error if the arguments do not satisfy these constraints.")
 (<p> "See the extended examples below that use "(<code>'array-inner-product)".")

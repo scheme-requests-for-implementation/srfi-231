@@ -43,6 +43,7 @@
         <ul>
           <li>2023-01-16 (Add <a href="#array-assign-erratum">note</a> about invoking the continuations of getters and setters in <code>array-assign!</code> more than once.)</li>
           <li>2026-02-18 (Fix text about <a href="#zero-dimensional-arrays">zero-dimensional arrays</a>.)</li>
+          <li>2026-09-08 (Fix definition of <a href="#array-inner-product"><code>array-inner-product</code></a>.)</li>
         </ul></li>
       <li><a href="commentary.html">Commentary</a> added by author on 2023-09-19.</li>
     </ul>
@@ -1705,7 +1706,7 @@ B:
    (lambda (<var>a b</var>)
      (array-reduce <var>f</var> (array-map <var>g a b</var>)))
    (array-copy (array-curry <var>A</var> 1))
-   (array-copy (array-curry (array-permute <var>B</var> (index-rotate (array-dimension <var>B</var>) 1)))))</code></pre>
+   (array-copy (array-curry (array-permute <var>B</var> (index-rotate (array-dimension <var>B</var>) 1)) 1)))</code></pre>
     <p>We precompute and store the curried arrays using <code>array-copy</code> for efficiency reasons, as described in <a href="#array-outer-product"><code>array-outer-product</code></a>.</p>
     <p>It is an error if the arguments do not satisfy these constraints.</p>
     <p>See the extended examples below that use <code>array-inner-product</code>.</p>
