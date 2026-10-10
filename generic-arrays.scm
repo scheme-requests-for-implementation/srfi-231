@@ -5194,7 +5194,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                  #f)
                                    new-domain
                                    #f)
-                                  (error "specialized-array-reshape: Requested reshaping is impossible: " array new-domain))
+                                  (error "specialized-array-reshape: Cannot reshape array to new domain without copying: " array new-domain))
                               (loop-3 (fx+ ok 1)))
                           (begin
                             (vector-set! newstrides (fx- nj 1) (vector-ref oldstrides (fx- oj 1)))

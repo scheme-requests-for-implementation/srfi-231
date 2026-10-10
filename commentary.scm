@@ -142,7 +142,7 @@ MathJax.Hub.Config({
  (12 13 14 15))")
         (<p> "We then have ")
         (<pre>"
-(array->list* (array-scale A '#(1 2))) =>
+(array->list* (array-sample A '#(1 2))) =>
 ((0 2)
  (4 6)
  (8 10)
