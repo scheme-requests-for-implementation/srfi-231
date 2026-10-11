@@ -4904,22 +4904,22 @@ OTHER DEALINGS IN THE SOFTWARE.
         (array->list array)))
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f)) (make-interval '#(6)))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#t #f #f #f)) (make-interval '#(3 2)))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #f)) (make-interval '#(6)))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (test (specialized-array-reshape (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #t #t)) (make-interval '#(3 2)))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 3 1)) list)) '#(#f #f #f #t)) '#(1 1 2 1)) (make-interval '#(4)))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (test (specialized-array-reshape (array-sample (array-reverse (array-copy (make-array (make-interval '#(2 1 4 1)) list)) '#(#f #f #t #t)) '#(1 1 2 1)) (make-interval '#(4)))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (test (array? (specialized-array-reshape (make-specialized-array (make-interval '#(1 2 0 4)))
                                          (make-interval '#(2 0 4))))
@@ -5674,7 +5674,7 @@ that computes the componentwise products when we need them, the times are
 (array-display B)
 
 (test (array-display (specialized-array-reshape B (make-interval '#(8))))
-      "specialized-array-reshape: Requested reshaping is impossible: ")
+      "specialized-array-reshape: Cannot reshape array to new domain without copying: ")
 
 (array-display (specialized-array-reshape B (make-interval '#(8)) #t))
 
